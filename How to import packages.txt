@@ -1,0 +1,2 @@
+Write "]" to enter the pkg (Package manager).
+Then can use "add Package"

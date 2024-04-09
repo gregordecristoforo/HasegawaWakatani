@@ -1,0 +1,39 @@
+Lettere porte cpu til gpu
+FFTW
+Hva finnes der ute
+Julia – differential equations, se om spectral
+Github
+Automatisere unit test, integrated test
+
+Julia, fftw, hdf for data
+Tidsintegrasjon, fast tidsteg, stiffly stable 3 orden
+Zero-padding senere?
+Diagnotistikk
+Phi og n (2D felt)
+1D felt langs en x?
+Probe 10 punkt?
+Energi integral
+CFL
+
+Input fil
+
+Biperiodisk fordi 
+Harakawa-scheme poisson brackets i konfigurasjonsrommet
+Fourier-Galerkian for diffusjon?
+
+Implementere operatorer
+Tidsintegrasjon av diffusjonslikningen
+Adveksjonsledd – translasjon, også burgers ligning
+Naivt poisson bracket
+Teste ExB drift med gausisk blob
+Se på numerisk stabilitet
+
+Viktig med struktur
+Dokumentere koden som et appendiks, komme fram at det selv er utviklet
+Mulig å genere til flere felt
+
+Bygge pakke
+Opprette GIT
+Automatisere tester
+2D fftw
+Pseudo kode
