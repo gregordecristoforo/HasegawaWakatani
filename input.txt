@@ -1,0 +1,11 @@
+# Number of threads used in FFTW (-1 default)
+nr_threads = -1;
+
+# Box domain settings
+Nx = 64;
+Ny = 64;
+Lx = 1;
+Ly = 1;
+
+# Parameters
+density = 1;

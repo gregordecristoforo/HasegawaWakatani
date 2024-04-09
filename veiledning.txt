@@ -1,11 +1,11 @@
 Lettere porte cpu til gpu
-FFTW
+FFTW √
 Hva finnes der ute
 Julia – differential equations, se om spectral
-Github
+Github √
 Automatisere unit test, integrated test
 
-Julia, fftw, hdf for data
+Julia √, fftw √, hdf for data
 Tidsintegrasjon, fast tidsteg, stiffly stable 3 orden
 Zero-padding senere?
 Diagnotistikk
