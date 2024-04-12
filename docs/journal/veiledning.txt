@@ -41,3 +41,4 @@ Automatisere tester
 Pseudo kode
 
 BenchmarkTools 
+Consider using Printf instead of println
