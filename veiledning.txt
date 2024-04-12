@@ -5,10 +5,12 @@ Julia – differential equations, se om spectral
 Github √
 Automatisere unit test, integrated test
 
-Julia √, fftw √, hdf for data
+Julia √, fftw √, hdf5 for data√
+
 Tidsintegrasjon, fast tidsteg, stiffly stable 3 orden
 Zero-padding senere?
-Diagnotistikk
+
+Diagnotistikk:
 Phi og n (2D felt)
 1D felt langs en x?
 Probe 10 punkt?
@@ -33,7 +35,9 @@ Dokumentere koden som et appendiks, komme fram at det selv er utviklet
 Mulig å genere til flere felt
 
 Bygge pakke
-Opprette GIT
+Opprette GIT √
 Automatisere tester
 2D fftw
 Pseudo kode
+
+BenchmarkTools 

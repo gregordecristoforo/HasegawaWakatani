@@ -3,7 +3,10 @@
 module Timestepper
 export timeStep
 
-function timeStep(data, dt, jacobian)
-    data + dt * jacobian
+function timeStep(y, dt, jacobian)
+    return y + dt*jacobian(y,t)
 end
+
 end
+
+#f/m = dv/dt, v = dx/dt

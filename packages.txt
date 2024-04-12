@@ -1,3 +1,5 @@
 #Packages used
+Plots
 FFTW
 HDF5
+DifferentialEquations

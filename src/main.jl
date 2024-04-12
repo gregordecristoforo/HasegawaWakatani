@@ -2,34 +2,18 @@ using Calculus
 using .Operators
 using Plots
 using FFTW
+using DifferentialEquations
 
 # Read in input file
 for line in readlines("input.txt")
     if line != ""
-        if first(line) != "#" 
+        if first(line) != "#"
             println(line)
         end
     end
 end
 
-function test(a, b)
-    a + b
-end
-
-derivative(sin, π / 2)
-
-Operators.test2(2)
 #Hi
-N = 64
-n = zeros(N, N)
-x = LinRange(-4, 4, 40);
-y = x;
-
-function gaussianField(x, y, sx=1, sy=1)
-    1 / (2 * π * sqrt(sx * sy)) * exp(-(x .^ 2 / sx + y .^ 2 / sy) / 2)
-end
-
-n = gaussianField.(x, y', 1, 2)
 
 #plot!(x,y,n,st=:contourf)
 #contour!(x,y,n)
@@ -37,18 +21,60 @@ plot(x, y, n)
 
 
 #Sum a_jk*e^(im*j*x)*e^(im*k*y)
-
 #b_jk = -a_jk*(j^2 + k^2)
-f = fft(n)
 
-a = fftfreq(40)
-
+a = fftfreq(64)
+f = n0
 contour(x, y, real(f))
 
-f = [-f[j, k] * (a[j]^2 + a[k]^2) for j in eachindex(x), k in eachindex(y)]
+df = [-1000 * f[j, k] * (a[j]^2 + a[k]^2) for j in eachindex(x), k in eachindex(y)]
+#df = [1 for j in eachindex(x), k in eachindex(y)]
 
-t = real(ifft!(f))
+f = f + df * 3
+
+t = real(ifft(f))
 
 plot(x, y, t)
-
+plot(x, y, real(ifft(n0)))
+plot(x, y, real(ifft(f)))
 hdf5
+
+
+
+
+
+# Non-allocating function
+# dn - change in field
+# n - the current field @ time t  
+# p - parameters
+# t - time
+function Laplacian!(dn, n, p, t)
+    v = copy(n)
+    dn = [-D * v[j, k] * (a[j]^2 + a[k]^2) for j in eachindex(a), k in eachindex(a)]
+    nothing
+end
+
+function Laplacian(n, p, t)
+    [-D * n[j, k] * (a[j]^2 + a[k]^2) for j in eachindex(a), k in eachindex(a)]
+end
+
+function gaussianField(x, y, sx=1, sy=1)
+    1 / (2 * π * sqrt(sx * sy)) * exp(-(x .^ 2 / sx + y .^ 2 / sy) / 2)
+end
+
+D = 1000000
+N = 64
+#n = zeros(N, N)
+x = LinRange(-4, 4, N);
+y = x;
+a = fftfreq(N)
+
+n0 = fft(gaussianField.(x, y', 1, 1))
+tspan = (0.0, 200.0)
+problem = ODEProblem(Laplacian, n0, tspan)
+sol = solve(problem)
+
+println(size(sol))
+
+contourf(x, y, real(ifft(sol[:, :, 9])))
+contourf(x, y, real(ifft(n0)))
