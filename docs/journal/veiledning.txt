@@ -42,3 +42,7 @@ Pseudo kode
 
 BenchmarkTools 
 Consider using Printf instead of println
+
+Implement bi-harmonic operator
+
+Look into mixing of length scales (Advection term)
