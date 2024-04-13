@@ -1,10 +1,13 @@
 ##
 include("Operators.jl")
 using .Operators
+include("Timestepper.jl")
+using .Timestepper
+using FFTW
+
 ##
 using Calculus
 using Plots
-using FFTW
 using DifferentialEquations
 using HDF5
 
@@ -17,8 +20,6 @@ for line in readlines("input.txt")
         end
     end
 end
-
-#Hi
 
 #plot!(x,y,n,st=:contourf)
 #contour!(x,y,n)
@@ -43,12 +44,6 @@ plot(x, y, real(ifft(n0)))
 plot(x, y, real(ifft(f)))
 hdf5
 
-
-
-
-
-
-
 function gaussianField(x, y, sx=1, sy=1)
     1 / (2 * π * sqrt(sx * sy)) * exp(-(x .^ 2 / sx + y .^ 2 / sy) / 2)
 end
@@ -72,3 +67,6 @@ println(size(sol))
 
 contourf(x, y, real(ifft(sol[:, :, 9])))
 contourf(x, y, real(ifft(n0)))
+
+
+timeStep(0.0, n0, 0.1, Laplacian)
