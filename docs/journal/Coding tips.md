@@ -15,3 +15,4 @@ Shift+Enter - Run a cell denoted by ##
 * "*" concatenates strings
 * $(Variable) in a string will concatinate it with the rest of the string
 * arguments after ";" in function arguments are keywords
+* "..." splats/unpacks a tuple
