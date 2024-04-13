@@ -15,7 +15,7 @@ q = 3
 function timeStep(t, y, dt, f)
     k[1] = f(t, y)
     for i in 2:q
-        k[i] = f(t + B[i, 1] * dt, y + dt * sum([B[i, j+1] * k[j] for j in 1:i-1]))
+        k[i] = f(t + B[i, 1] * dt, y + dt * sum((B[i, j+1] * k[j] for j in 1:i-1)))
     end
 
     #return y + dt * jacobian(y, t)

@@ -14,7 +14,7 @@ end
 
 function Laplacian(t::Float64, n::Matrix{ComplexF64})
     a = FFTW.fftfreq(size(n)[1])
-    return [-D * n[j, k] * (a[j]^2 + a[k]^2) for j in eachindex(a), k in eachindex(a)]
+    return (-D * n[j, k] * (a[j]^2 + a[k]^2) for j in eachindex(a), k in eachindex(a))
 end
 
 function ∇(a, n, p, t)
