@@ -4,13 +4,11 @@ using .Operators
 include("Timestepper.jl")
 using .Timestepper
 using FFTW
+using Plots
 
 ##
-using Calculus
-using Plots
 using DifferentialEquations
 using HDF5
-
 
 # Read in input file
 for line in readlines("input.txt")
@@ -48,17 +46,19 @@ x = LinRange(-4, 4, N);
 y = x;
 a = fftfreq(N)
 
-a2 = meshgrid(a,a)
-
 n0 = fft(gaussianField.(x, y', 1, 1))
 tspan = (0.0, 200.0)
-problem = ODEProblem(Laplacian!, n0, tspan)
-sol = solve(problem)
+#problem = ODEProblem(Laplacian!, n0, tspan)
+#sol = solve(problem)
 
-println(size(sol))
+#println(size(sol))
 
-contourf(x, y, real(ifft(sol[:, :, 9])))
-contourf(x, y, real(ifft(n0)))
+#contourf(x, y, real(ifft(sol[:, :, 9])))
+#contourf(x, y, real(ifft(n0)))
 
-
-timeStep(0.0, n0, 0.1, Laplacian)
+for i in 1:10000
+    n0 = timeStep(n0, a, 0, 0.01, Laplacian)
+    if i%100 == 1
+        display(surface(x,y,real(ifft(n0)),zlims=(0,0.2)))
+    end
+end

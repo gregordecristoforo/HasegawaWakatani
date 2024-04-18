@@ -15,13 +15,26 @@ function Laplacian!(dn, n, p, t)
     nothing
 end
 
-function Laplacian(t::Float64, n::Matrix{ComplexF64})
-    a = FFTW.fftfreq(size(n)[1])
-    return (-D * n[j, k] * (a[j]^2 + a[k]^2) for j in eachindex(a), k in eachindex(a))
+"""
+Laplacian Operator
+
+n - current field
+a - frequencies (parameter)
+t - time (not used)
+"""
+function Laplacian(n, a, t)
+    return Matrix{ComplexF64}([-100 * n[j, k] * (a[j]^2 + a[k]^2) for j in eachindex(a), k in eachindex(a)])
 end
 
-function ∇(a, n, p, t)
-    Laplacian(a, n, p, t)
+"""
+Short hand notation for laplacian Operator
+
+n - current field
+a - frequencies (parameter)
+t - time (not used)
+"""
+function ∇(n, p, t)
+    Laplacian(n, p, t)
 end
 
 end
