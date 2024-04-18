@@ -12,13 +12,14 @@ B = [0 0 0 0;
 k = [0.0, 0.0, 0.0]
 q = 3
 
-function timeStep(t, y, dt, f)
-    k[1] = f(t, y)
+function timeStep(t, y, dt, rhs)
+    k[1] = rhs(t, y)
+    println("Hio")
     for i in 2:q
-        k[i] = f(t + B[i, 1] * dt, y + dt * sum((B[i, j+1] * k[j] for j in 1:i-1)))
+        k[i] = rhs(t + B[i, 1] * dt, y + dt * sum((B[i, j+1] * k[j] for j in 1:i-1)))
     end
 
-    #return y + dt * jacobian(y, t)
+    return y + dt * sum((B[end,i+1] for i in 1:q))
 end
 
 end

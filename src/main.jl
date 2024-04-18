@@ -21,13 +21,6 @@ for line in readlines("input.txt")
     end
 end
 
-#plot!(x,y,n,st=:contourf)
-#contour!(x,y,n)
-plot(x, y, n)
-
-#Sum a_jk*e^(im*j*x)*e^(im*k*y)
-#b_jk = -a_jk*(j^2 + k^2)
-
 a = fftfreq(64)
 f = n0
 contour(x, y, real(f))
@@ -42,7 +35,6 @@ t = real(ifft(f))
 plot(x, y, t)
 plot(x, y, real(ifft(n0)))
 plot(x, y, real(ifft(f)))
-hdf5
 
 function gaussianField(x, y, sx=1, sy=1)
     1 / (2 * π * sqrt(sx * sy)) * exp(-(x .^ 2 / sx + y .^ 2 / sy) / 2)
@@ -52,11 +44,11 @@ end
 D = 1000000.0
 N = 64
 
-
-#n = zeros(N, N)
 x = LinRange(-4, 4, N);
 y = x;
 a = fftfreq(N)
+
+a2 = meshgrid(a,a)
 
 n0 = fft(gaussianField.(x, y', 1, 1))
 tspan = (0.0, 200.0)
