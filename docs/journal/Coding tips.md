@@ -1,7 +1,8 @@
 # Vscode tips
 Alt + j followed by Alt + o opens the julia REPL
 Ctrl + Space - forces autocomplete (In vscode)
-Shift+Enter - Run a cell denoted by ##
+Shift + Enter - Run a cell denoted by ##
+Shift + Delete - Delete all plots
 
 # Julia REPL
 * "]" opens pkg "package manager"

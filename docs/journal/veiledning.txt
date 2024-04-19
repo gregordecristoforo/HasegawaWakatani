@@ -46,3 +46,5 @@ Consider using Printf instead of println
 Implement bi-harmonic operator
 
 Look into mixing of length scales (Advection term)
+
+Generell transform? Spesielt chebyshew? <-- Kan bruke Fourier transform her
