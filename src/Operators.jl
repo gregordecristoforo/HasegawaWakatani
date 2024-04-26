@@ -26,6 +26,11 @@ function Laplacian(n, a, t)
     return Matrix{ComplexF64}([-100 * n[j, k] * (a[j]^2 + a[k]^2) for j in eachindex(a), k in eachindex(a)])
 end
 
+
+function PoissonBrackets(n, p, t)
+    
+end
+
 """
 Short hand notation for laplacian Operator
 
