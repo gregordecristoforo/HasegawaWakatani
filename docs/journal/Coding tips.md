@@ -19,3 +19,6 @@ Shift + Delete - Delete all plots
 * "..." splats/unpacks a tuple
 * @view gives a subArray which is a lazy copy, hence changes made are reflected in the array subarrayed
 * display(plot)
+
+
+* Build documentation using julia --project=. docs/make.jl

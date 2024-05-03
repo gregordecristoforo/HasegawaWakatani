@@ -13,19 +13,21 @@ using Plots
 using BenchmarkTools
 
 function HeatEquationAnalyticalSolution(n0, D, K, t)
-    @. n0*exp(D*K*t)
+    @. n0 * exp(D * K * t)
 end
 
-D = 1000000.0
-Nx = 64#1024
-Ny = 64#1024
-dx = 8/(Nx-1)
-dy = 8/(Nx-1)
+D = 1.0
+Nx = 1024
+Ny = 1024
+Lx = 4
+Ly = 4
+dx = 2 * Lx / (Nx - 1)
+dy = 2 * Ly / (Nx - 1)
 
-x = LinRange(-4, 4, Nx);
-y = LinRange(-4, 4, Ny);
-k_x = 2*π*fftfreq(Nx,1/dx)
-k_y = 2*π*fftfreq(Ny,1/dy)
+x = LinRange(-Lx, Lx, Nx);
+y = LinRange(-Ly, Ly, Ny);
+k_x = 2 * π * fftfreq(Nx, 1 / dx)
+k_y = 2 * π * fftfreq(Ny, 1 / dy)
 
 # I might have the wrong frequencies here
 
@@ -36,12 +38,42 @@ end
 
 # Setting up tensors to do elementwise operations with
 # First step
-function firstStep!(u, u0, K, dt)
+function firstStep!(u, u0, K, dt, tend)
     A1 = ones(size(u0))#./(1 .+  K.*dt)
     @. A1 /= (1 - K * dt)
-    @views u1 = u[1, :, :]
-    timeStep!(u1, u0, A1)
+    @views u1 = u#[1, :, :]
+
+    u = deepcopy(u0)
+    du = similar(u)
+    for t in 0:dt:tend
+        timeStep!(du, u, A1)
+        u = deepcopy(du)
+    end
+    plot(x, y, real(ifft(u)), title="Time step $(dt)")
+    du
 end
+
+K = [-(k_x[i]^2 + k_y[j]^2) for i in eachindex(k_x), j in eachindex(k_y)]
+
+## Run this cell
+u0 = fft(gaussianField.(x, y', 1, 0.1))
+dt = 0.0001
+tend = 0.1
+du = similar(u0)
+
+du = firstStep!(du, u0, K, dt, tend)
+plot(x, y, real(ifft(HeatEquationAnalyticalSolution(u0, 1, K, tend))) - real(ifft(du)))
+ifftPlot(x,y,HeatEquationAnalyticalSolution(u0, 1, K, tend) - du)
+include("Helperfunctions.jl")
+using .Helperfunctions
+
+ifftPlot(x, du, title="Hello", ylim=(0,2))
+##
+
+methods(plot)
+
+
+sum(abs.(real(ifft(HeatEquationAnalyticalSolution(u0, 1, K, tend + 100000 * dt))) - real(ifft(du)))) / (Nx * Ny)
 
 function secondStep!(u, u1, K, dt)
     A2 = zero(u1)
@@ -82,19 +114,23 @@ function AdamsMoulton3(u0, k_x, k_y, tspan, dt)
     for t in tspan[1]+3*dt:dt:tspan[2]
         timeStep!(B, ns_new, A)
         ns[4, :, :] = sum(B, dims=1)
-    #    @. ns_new = ns_old
+        #    @. ns_new = ns_old
 
         #display(plot(x,y,real(ifft(ns[4,:,:])), st=:surface, zlim=(0,0.4)))
     end
-    plot(x,y,real(ifft(ns[4,:,:])))
+    plot(x, y, real(ifft(ns[4, :, :])) - real(ifft(HeatEquationAnalyticalSolution(n0, 1, K, 1))))
 end
 
-n0 = fft(gaussianField.(x, y', 1, 0.1))
 #@btime 
-AdamsMoulton3(n0, k_x, k_y, (0, 1), 0.0001)
+n0 = fft(gaussianField.(x, y', 1, 0.1))
+AdamsMoulton3(n0, k_x, k_y, (0, 1), 0.01)
 
 K = [-(k_x[i]^2 + k_y[j]^2) for i in eachindex(k_x), j in eachindex(k_y)]
-plot(x,y,real(ifft(HeatEquationAnalyticalSolution(n0, 1, K, 1))))
+plot(x, y, real(ifft(HeatEquationAnalyticalSolution(n0, 1, K, 1))))
+
+
+
+
 
 
 
@@ -117,13 +153,13 @@ x = range(-4, stop=4, length=Nx)
 y = range(-4, stop=4, length=Ny)
 
 # Initial condition (e.g., Gaussian)
-u0 = exp.(-((x .- Lx/2).^2 .+ (y' .- Ly/2).^2))
+u0 = exp.(-((x .- Lx / 2) .^ 2 .+ (y' .- Ly / 2) .^ 2))
 
 # Precompute wave numbers for spectral method
 kx = 2 * pi / Lx * [0:Nx/2; -Nx/2+1:-1]
 ky = 2 * pi / Ly * [0:Ny/2; -Ny/2+1:-1]
-kx2 = kx.^2
-ky2 = ky.^2
+kx2 = kx .^ 2
+ky2 = ky .^ 2
 
 # Fourier transform of the initial condition
 u_hat = deepcopy(n0)
@@ -136,28 +172,29 @@ end
 for n = 1:Nt
     # Compute the right-hand side (RHS) for the current state
     k1 = rhs(u_hat, K, D)
-    
+
     # First intermediate step
     u_hat1 = u_hat + 0.5 * dt * k1
     k2 = rhs(u_hat1, K, D)
-    
+
     # Second intermediate step
     u_hat2 = u_hat - dt * k1 + 2 * dt * k2
     k3 = rhs(u_hat2, K, D)
-    
+
     # Final update
-    u_hat = u_hat + (dt/6) * (k1 + 4*k2 + k3)
-    
+    u_hat = u_hat + (dt / 6) * (k1 + 4 * k2 + k3)
+
     # Inverse Fourier transform to get back to the spatial domain
     u = ifft(u_hat)
-    
+
     # Plotting or additional analysis can be done here
     # For example, to plot at specific time steps:
     if n % 100 == 0
-        p = plot(x,y,real(u), title="Time step $(n)", xlabel="x", ylabel="y")
+        p = plot(x, y, real(u), title="Time step $(n)", xlabel="x", ylabel="y")
         display(p)
     end
 end
 
-plot(x,y,real(ifft(HeatEquationAnalyticalSolution(n0, 1, K, 1))))
-plot(x,y,real(ifft(n0)),st=:surface)
+plot(x, y, real(ifft(HeatEquationAnalyticalSolution(n0, 1, K, 1))))
+plot(x, y, real(ifft(n0)), st=:surface)
+
