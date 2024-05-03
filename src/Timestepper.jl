@@ -4,7 +4,7 @@ module Timestepper
 export timeStep
 
 # Butcher tableau
-B = [0 0 0 0;
+const B = [0 0 0 0;
     1/2 1/2 0 0;
     1 -1 2 0;
     0 1/6 2/3 1/6]
@@ -23,3 +23,15 @@ end
 
 end
 #f/m = dv/dt, v = dx/dt
+
+
+
+
+
+
+
+#b_s! = 0 => implicit
+#Iterative?
+#Σaⱼyₙ₊ⱼ = hΣbⱼf(tₙ₊ⱼ,yₙ₊ⱼ) 
+
+rhs(dn, n, p, t)

@@ -7,7 +7,6 @@ using FFTW
 using Plots
 
 ##
-using DifferentialEquations
 using HDF5
 
 # Read in input file

@@ -17,3 +17,5 @@ Shift + Delete - Delete all plots
 * $(Variable) in a string will concatinate it with the rest of the string
 * arguments after ";" in function arguments are keywords
 * "..." splats/unpacks a tuple
+* @view gives a subArray which is a lazy copy, hence changes made are reflected in the array subarrayed
+* display(plot)
