@@ -1,15 +1,57 @@
 module Helperfunctions
-export getCFL, energyIntegral, probe, ifftPlot
+export Domain, getCFL, energyIntegral, probe, ifftPlot
 
 using LinearAlgebra
 using Plots
 using FFTW
 
 """
-Returns max courant number at certain index
-v - velocity field
-Δx - spatial derivative
-Δt - timestep
+Box domain, that calculates spatial resolution under construction.
+
+# Contains
+Lengths: ``Lx``, ``Ly`` (Float64)\\
+Number of grid point: ``Nx``, ``Ny`` (Int64)\\
+Spatial resolution: ``dx``, ``dy`` (Float64)\\
+Spatial points: ``x``, ``y`` (LinRange)
+
+``dxᵢ = 2Lₓ÷(Nₓ-1)``
+
+Square Domain can be constructed using:\\
+``Domain(L,N)``
+
+Rectangular Domain can be constructed using:\\
+``Domain(Lx,Ly,Nx,Ny)``
+"""
+struct Domain
+    Lx::Float64
+    Ly::Float64
+    Nx::Int64
+    Ny::Int64
+    dx::Float64
+    dy::Float64
+    x::LinRange
+    y::LinRange
+    Domain(L, N) = Domain(L, L, N, N)
+    function Domain(Lx, Ly, Nx, Ny)
+        dx = 2 * Lx / (Nx - 1)
+        dy = 2 * Ly / (Nx - 1)
+        x = LinRange(-Lx, Lx, Nx)
+        y = LinRange(-Ly, Ly, Ny)
+        new(Nx, Ny, Lx, Ly, dx, dy)
+    end
+end
+
+function getDomainFrequencies(domain::Domain)
+    k_x = 2 * π * fftfreq(domain.Nx, 1 / domain.dx)
+    k_y = 2 * π * fftfreq(domain.Ny, 1 / domain.dy)
+    return k_x, k_y
+end
+
+"""
+Returns max courant number at certain index\\
+``v`` - velocity field\\
+``Δx`` - spatial derivative\\
+``Δt`` - timestep
 """
 function getMaxCFL(v, Δx, Δt)
     CFL = v * Δt / Δx
@@ -74,4 +116,17 @@ function compare(x, y, A::Matrix, B::Matrix)
     plot(x, A)
     #plot(x,x,B)
 end
+
+function testTimestepConvergence(initialState, numericalScheme, analyticalSolution, timesteps)
+    D = 1.0
+    domain = Domain(4, 256)
+
+
+    for dt in timesteps
+    end
+end
+
+domain = Domain(4, 256)
+getDomainFrequencies(domain)
+
 end
