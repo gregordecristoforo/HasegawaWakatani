@@ -1,5 +1,5 @@
 module Helperfunctions
-export Domain, getCFL, energyIntegral, probe, ifftPlot
+export Domain, getDomainFrequencies, getCFL, energyIntegral, probe, ifftPlot, testTimestepConvergence, testResolutionConvergence
 
 using LinearAlgebra
 using Plots
@@ -17,27 +17,28 @@ Spatial points: ``x``, ``y`` (LinRange)
 ``dxᵢ = 2Lₓ÷(Nₓ-1)``
 
 Square Domain can be constructed using:\\
-``Domain(L,N)``
+``Domain(N,L)``
 
 Rectangular Domain can be constructed using:\\
-``Domain(Lx,Ly,Nx,Ny)``
+``Domain(Nx,Ny,Lx,Ly)``
 """
 struct Domain
-    Lx::Float64
-    Ly::Float64
     Nx::Int64
     Ny::Int64
+    Lx::Float64
+    Ly::Float64
     dx::Float64
     dy::Float64
     x::LinRange
     y::LinRange
-    Domain(L, N) = Domain(L, L, N, N)
-    function Domain(Lx, Ly, Nx, Ny)
+    Domain(N) = Domain(N, 1)
+    Domain(N, L) = Domain(N, N, L, L)
+    function Domain(Nx, Ny, Lx, Ly)
         dx = 2 * Lx / (Nx - 1)
         dy = 2 * Ly / (Nx - 1)
         x = LinRange(-Lx, Lx, Nx)
         y = LinRange(-Ly, Ly, Ny)
-        new(Nx, Ny, Lx, Ly, dx, dy)
+        new(Nx, Ny, Lx, Ly, dx, dy, x, y)
     end
 end
 
@@ -117,13 +118,56 @@ function compare(x, y, A::Matrix, B::Matrix)
     #plot(x,x,B)
 end
 
-function testTimestepConvergence(initialState, numericalScheme, analyticalSolution, timesteps)
+# Uses the Heat equation to test at the moment
+function testTimestepConvergence(method, initialField, timesteps)
     D = 1.0
-    domain = Domain(4, 256)
+    domain = Domain(256, 4)
+    k_x, k_y = getDomainFrequencies(domain)
+    K = [-(k_x[i]^2 + k_y[j]^2) for i in eachindex(k_x), j in eachindex(k_y)]
+    tend = 1
 
+    u0 = initialField.(domain.x, domain.y')
+    analyticalSolution = HeatEquationAnalyticalSolution(u0, D, K, tend)
 
-    for dt in timesteps
+    residuals = zeros(size(timesteps))
+    du = similar(u0)
+
+    for (i, dt) in enumerate(timesteps)
+        #method(Laplacian, initialField)
+        du = method(du, u0, K, dt, tend)
+        #method(fun, t_span, dt, n0, p)
+        residuals[i] = norm(du - analyticalSolution)
     end
+
+    plot(timesteps, residuals, xaxis=:log, yaxis=:log)
+end
+
+# Uses the Heat equation to test at the moment
+function testResolutionConvergence(method, initialField, resolutions)
+    D = 1.0
+    dt = 0.001
+    tend = 1
+
+    residuals = zeros(size(resolutions))
+
+    for (i, N) in enumerate(resolutions)
+        domain = Domain(N, 4)
+        k_x, k_y = getDomainFrequencies(domain)
+        K = [-(k_x[i]^2 + k_y[j]^2) for i in eachindex(k_x), j in eachindex(k_y)]
+
+        u0 = initialField.(domain.x, domain.y')
+        analyticalSolution = HeatEquationAnalyticalSolution(u0, D, K, tend)
+
+        du = similar(u0)
+
+        #method(Laplacian, initialField)
+        du = method(du, u0, K, dt, tend)
+        #method(fun, t_span, dt, n0, p)
+        # Scaled residual to compensate for increased resolution
+        residuals[i] = norm(ifft(du) - ifft(analyticalSolution)) / (domain.Nx * domain.Ny)
+    end
+
+    plot(resolutions, residuals, xaxis=:log2, yaxis=:log, st=:scatter)
 end
 
 domain = Domain(4, 256)

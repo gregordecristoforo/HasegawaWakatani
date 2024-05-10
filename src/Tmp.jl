@@ -8,6 +8,8 @@ include("Operators.jl")
 using .Operators
 include("Timestepper.jl")
 using .Timestepper
+include("Helperfunctions.jl")
+using .Helperfunctions
 using FFTW
 using Plots
 using BenchmarkTools
@@ -17,19 +19,8 @@ function HeatEquationAnalyticalSolution(n0, D, K, t)
 end
 
 D = 1.0
-Nx = 1024
-Ny = 1024
-Lx = 4
-Ly = 4
-dx = 2 * Lx / (Nx - 1)
-dy = 2 * Ly / (Nx - 1)
-
-x = LinRange(-Lx, Lx, Nx);
-y = LinRange(-Ly, Ly, Ny);
-k_x = 2 * π * fftfreq(Nx, 1 / dx)
-k_y = 2 * π * fftfreq(Ny, 1 / dy)
-
-# I might have the wrong frequencies here
+domain = Domain(1024, 4)
+k_x, k_y = getDomainFrequencies(domain)
 
 # Adams–Moulton method
 function timeStep!(du, u, A)
@@ -49,28 +40,32 @@ function firstStep!(u, u0, K, dt, tend)
         timeStep!(du, u, A1)
         u = deepcopy(du)
     end
-    plot(x, y, real(ifft(u)), title="Time step $(dt)")
     du
 end
 
 K = [-(k_x[i]^2 + k_y[j]^2) for i in eachindex(k_x), j in eachindex(k_y)]
 
 ## Run this cell
-u0 = fft(gaussianField.(x, y', 1, 0.1))
-dt = 0.0001
-tend = 0.1
+u0 = fft(gaussianField.(domain.x, domain.y', 1, 0.1))
+dt = 0.001
+tend = 1
 du = similar(u0)
 
 du = firstStep!(du, u0, K, dt, tend)
-plot(x, y, real(ifft(HeatEquationAnalyticalSolution(u0, 1, K, tend))) - real(ifft(du)))
-ifftPlot(x,y,HeatEquationAnalyticalSolution(u0, 1, K, tend) - du)
-include("Helperfunctions.jl")
-using .Helperfunctions
-
-ifftPlot(x, du, title="Hello", ylim=(0,2))
+#plot(domain.x, domain.y, real(ifft(HeatEquationAnalyticalSolution(u0, 1, K, tend))) - real(ifft(du)))
+ifftPlot(domain.x, domain.y, du, title="Time step $(dt)", st=:surface)
+ifftPlot(domain.x, domain.y, HeatEquationAnalyticalSolution(u0, 1, K, tend) - du)
 ##
 
-methods(plot)
+testTimestepConvergence(firstStep!, gaussianField, [0.1, 0.01, 0.001, 0.0001, 0.00001])
+testResolutionConvergence(firstStep!, gaussianField, [16, 32, 64, 128, 256, 512, 1024])
+
+##
+
+
+
+
+
 
 
 sum(abs.(real(ifft(HeatEquationAnalyticalSolution(u0, 1, K, tend + 100000 * dt))) - real(ifft(du)))) / (Nx * Ny)
