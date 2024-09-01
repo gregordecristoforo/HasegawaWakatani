@@ -1,8 +1,22 @@
+using FFTW
+export quadraticTerm, ArakawaBracket
+
+function quadraticTerm(u_hat,v_hat)
+    #Pad matricies
+    u = ifft(u_hat)
+    v = ifft(u_hat)
+    w = u*v
+    return fft(w)
+end
+
+function ArakawaBracket()
+end
+
 """
 Empty
 """
-module Helperfunctions
-export Domain, getDomainFrequencies, getCFL, energyIntegral, probe, ifftPlot, testTimestepConvergence, testResolutionConvergence
+#module Helperfunctions
+#export Domain, getDomainFrequencies, getCFL, energyIntegral, probe, ifftPlot, testTimestepConvergence, testResolutionConvergence
 
 using LinearAlgebra
 using Plots
@@ -120,32 +134,9 @@ function compare(x, y, A::Matrix, B::Matrix)
     #plot(x,x,B)
 end
 
-# Uses the Heat equation to test at the moment
-function testTimestepConvergence(method, initialField, timesteps)
-    D = 1.0
-    domain = Domain(256, 4)
-    k_x, k_y = getDomainFrequencies(domain)
-    K = [-(k_x[i]^2 + k_y[j]^2) for i in eachindex(k_x), j in eachindex(k_y)]
-    tend = 1
-
-    u0 = initialField.(domain.x, domain.y')
-    analyticalSolution = HeatEquationAnalyticalSolution(u0, D, K, tend)
-
-    residuals = zeros(size(timesteps))
-    du = similar(u0)
-
-    for (i, dt) in enumerate(timesteps)
-        #method(Laplacian, initialField)
-        du = method(du, u0, K, dt, tend)
-        #method(fun, t_span, dt, n0, p)
-        residuals[i] = norm(du - analyticalSolution)
-    end
-
-    plot(timesteps, residuals, xaxis=:log, yaxis=:log, xlabel="dt", ylabel="||u-u_a||")
-end
 
 # Uses the Heat equation to test at the moment
-function testResolutionConvergence(method, initialField, resolutions)
+function testResolutionConvergence(scheme, initialField, resolutions)
     D = 1.0
     dt = 0.001
     tend = 1
@@ -175,4 +166,4 @@ end
 domain = Domain(4, 256)
 getDomainFrequencies(domain)
 
-end
+#end
