@@ -4,7 +4,7 @@ end
 
 #Calculate max cfl in x direction Pseudocode #TODO implement properly
 function cflx(u)
-    max(abs(v(u)))*dt/dx
+    max(abs(v(u))) * dt / dx
 end
 
 function compare(x, y, A::Matrix, B::Matrix)
@@ -14,19 +14,19 @@ end
 
 # Uses the Heat equation to test at the moment
 function testTimestepConvergence(scheme, prob, analyticalSolution, timesteps)
-    
+
     #Calculate analyticalSolution
     u = analyticalSolution(prob)
 
     #Initialize storage
     residuals = zeros(size(timesteps))
-    
+
     for (i, dt) in enumerate(timesteps)
         #Change timestep of spectralODEProblem
         prob.dt = dt
         #Calculate approximate solution
         _, uN = scheme(prob, output=Nothing, singleStep=false)
-        residuals[i] = norm(uN - u)
+        residuals[i] = norm(ifft(uN) - ifft(u))
     end
 
     #Plot residuals vs. time
@@ -35,25 +35,26 @@ end
 
 #
 function testResolutionConvergence(scheme, prob, initialField, analyticalSolution, resolutions)
-    
+    cprob = deepcopy(prob)
     residuals = zeros(size(resolutions))
 
     for (i, N) in enumerate(resolutions)
-        prob.domain = Domain(N, 4)
-        k_x, k_y = getDomainFrequencies(domain)
-        K = [-(k_x[i]^2 + k_y[j]^2) for i in eachindex(k_x), j in eachindex(k_y)]
+        domain = Domain(N, 4)
+        updateDomain!(cprob, domain)
+        updateInitalField!(cprob, initialField)
+        #prob = SpectralODEProblem(prob.f, domain, prob.u0, prob.tspan, p=prob.p, dt=prob.dt)
+        #prob = SpectralODEProblem(prob.f, prob.domain, fft(initialField(prob.domain, prob.p)), prob.tspan, p = prob.p, dt=prob.dt)
+        println(size(cprob.u0))
+        u = analyticalSolution(cprob)
 
-        u0 = initialField.(domain.x, domain.y')
-        analyticalSolution = HeatEquationAnalyticalSolution(u0, D, K, tend)
-
-        du = similar(u0)
-
-        #method(Laplacian, initialField)
-        du = method(du, u0, K, dt, tend)
-        #method(fun, t_span, dt, n0, p)
+        _, uN = scheme(cprob, output=Nothing, singleStep=false)
         # Scaled residual to compensate for increased resolution
-        residuals[i] = norm(ifft(du) - ifft(analyticalSolution)) / (domain.Nx * domain.Ny)
+        residuals[i] = norm(ifft(u) - ifft(uN)) / (domain.Nx * domain.Ny)
+        println(maximum(real(ifft(u))) - maximum(real(ifft(uN))))
     end
 
-    plot(resolutions, residuals, xaxis=:log2, yaxis=:log, st=:scatter)
+    display(plot(resolutions, residuals, xaxis=:log2, yaxis=:log))#, st=:scatter))
+    display(plot(resolutions, resolutions .^ -2, xaxis=:log2, yaxis=:log))#, st=:scatter))
 end
+
+testResolutionConvergence(mSS1Solve, prob, gaussianBlob, HeatEquationAnalyticalSolution, [16, 32, 64, 128, 256])

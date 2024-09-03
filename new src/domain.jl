@@ -26,3 +26,9 @@ function getDomainFrequencies(domain::Domain)
     k_y = 2 * π * fftfreq(domain.Ny, 1 / domain.dy)
     return k_x, k_y
 end
+
+function getRealDomainFrequencies(domain::Domain)
+    k_x = 2 * π * rfftfreq(domain.Nx, 1 / domain.dx)
+    k_y = 2 * π * fftfreq(domain.Ny, 1 / domain.dy)
+    return k_x, k_y
+end

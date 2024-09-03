@@ -18,5 +18,21 @@ mutable struct SpectralODEProblem
 end
 
 function updateDomain!(prob::SpectralODEProblem, domain::Domain)
-    prob = SpectralODEProblem(prob.f, domain, prob.u0, prob.tspan, p=prob.p, dt=prob.dt)
+    prob.domain = domain
+    kx, ky = getDomainFrequencies(domain)
+    prob.p["kx"], prob.p["ky"] = kx, ky
+    prob.p["k2"] = Matrix([kx[i]^2 + ky[j].^2 for i in eachindex(kx), j in eachindex(ky)])
+end
+
+function updateInitalField!(prob::SpectralODEProblem, initialField::Function)
+    prob.u0 = initialField(prob.domain, prob.p)
+end
+
+function updateDomain!(prob::SpectralODEProblem, domain::Domain, initialField::Function)
+    prob = updateDomain!(prob, domain)
+    prob = SpectralODEProblem(prob.f, domain, initialField(domain, prob.p), prob.tspan, p=prob.p, dt=prob.dt)
+end
+
+function updateDomain!(prob::SpectralODEProblem, domain::Domain, u0::Array)
+    prob = SpectralODEProblem(prob.f, domain, u0, prob.tspan, p=prob.p, dt=prob.dt)
 end

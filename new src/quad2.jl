@@ -1,0 +1,87 @@
+using FFTW
+using Plots
+using PaddedViews
+
+#Create range and function
+x = -1:0.01:1-0.01
+u = exp.(-10 * x .^ 2)
+
+#Get modes and frequencies
+u_hat = fft(u)
+k = 2 * π * fftfreq(length(x), 1 / 0.01)
+
+#Calculate derivatives and inverse fourier transform
+du_hat = -im * k .* u_hat
+du = ifft(du_hat)
+
+#Multiply in real space and fourier transform back
+v_hat = fft(u .* du)
+
+function quadraticTerm(u, v)
+    if size(u) != size(v)
+        error("u and v must have the same size")
+    end
+    t = Tuple([-N÷4+1:N+N÷4 for N in size(u)])
+    U = ifftshift(PaddedView(0, fftshift(u_hat), t)[t...])
+    V = ifftshift(PaddedView(0, fftshift(du_hat), t)[t...])
+    i = Tuple([1+N÷4:N+N÷4 for N in size(u)])
+    ifftshift(fftshift(fft(ifft(U) .* ifft(V)))[i...])
+end
+
+v_hat = quadraticTerm(u_hat, du_hat)
+plot(x, 1.5 * real(ifft(v_hat)))
+
+plot(x, u)
+plot(x, real(du))
+plot(x, real(u .* du))
+fft(u * du / dt) = fft(ifft(u_hat) * ifft(-im * k * u_hat))
+
+
+
+
+
+t = Tuple([-N÷4+1:N+N÷4 for N in size(u)])
+U = ifftshift(PaddedView(0, fftshift(u_hat), t))
+i = Tuple([1+N÷4:N+N÷4 for N in size(u)])
+v = real(ifft(U))
+plot(v)
+
+b = PaddedView(0, fftshift(u_hat), t)
+plot(real(ifft(fftshift(b))))
+plot(real(ifft(u_hat)))
+using DSP
+v = real(DSP.conv(u_hat, du_hat))[1:200]
+plot(x, v)
+
+using BenchmarkTools
+
+@benchmark
+t = Tuple([-3/2*N:3/2*N for N in size(a)])
+
+function quadraticTerm(u, v)
+    if size(u) != size(v)
+        error("u and v must have the same size")
+    end
+    t = Tuple([-N÷4+1:N+N÷4 for N in size(u)])
+    U = ifftshift(PaddedView(0, fftshift(u), t)[t...])
+    V = ifftshift(PaddedView(0, fftshift(v), t)[t...])
+    i = Tuple([1+N÷4:N+N÷4 for N in size(u)])
+    display(plot(ifft(U) .* ifft(V)))
+    fft(ifft(U) .* ifft(V))[i...]
+end
+
+
+
+ns = Tuple([3 * N ÷ 2 for N in size(u_hat)])
+U = zeros(ns)
+
+t = Tuple([-N÷4+1:N+N÷4 for N in size(u)])
+U = PaddedView(0, u, t)[t...]
+
+t = Tuple([-N÷4+1:N+N÷4 for N in size(u)])
+U = ifftshift(PaddedView(0, fftshift(u_hat), t)[t...])
+V = ifftshift(PaddedView(0, fftshift(du_hat), t)[t...])
+i = Tuple([1+N÷4:N+N÷4 for N in size(u)])
+v_hat = ifftshift(fftshift(fft(ifft(U) .* ifft(V)))[i...])
+
+plot(real(ifft(v_hat)))
