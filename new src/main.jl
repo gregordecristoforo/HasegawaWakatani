@@ -26,7 +26,7 @@ dt = 0.00001
 parameters = Dict{String,Any}([("nu", 0.01)])
 prob = SpectralODEProblem(f, domain, w0, [0, 3], p=parameters, dt=dt)
 
-t, u = mSS1Solve(prob, output=Nothing, singleStep=false)
+t, u = mSS3Solve(prob, output=Nothing, singleStep=false)
 
 using Plots
 
