@@ -3,6 +3,23 @@ export Domain
 include("spectralOperators.jl")
 
 # Assumed 1st direction uses rfft, while all others use fft
+"""
+Box domain, that calculates spatial resolution under construction.
+
+# Contains
+Lengths: ``Lx``, ``Ly`` (Float64)\\
+Number of grid point: ``Nx``, ``Ny`` (Int64)\\
+Spatial resolution: ``dx``, ``dy`` (Float64)\\
+Spatial points: ``x``, ``y`` (LinRange)
+
+``dxᵢ = 2Lₓ÷(Nₓ-1)``
+
+Square Domain can be constructed using:\\
+``Domain(N,L)``
+
+Rectangular Domain can be constructed using:\\
+``Domain(Nx,Ny,Lx,Ly)``
+"""
 struct Domain
     Nx::Int64
     Ny::Int64

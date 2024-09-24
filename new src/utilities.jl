@@ -22,43 +22,6 @@ using LinearAlgebra
 using Plots
 using FFTW
 
-"""
-Box domain, that calculates spatial resolution under construction.
-
-# Contains
-Lengths: ``Lx``, ``Ly`` (Float64)\\
-Number of grid point: ``Nx``, ``Ny`` (Int64)\\
-Spatial resolution: ``dx``, ``dy`` (Float64)\\
-Spatial points: ``x``, ``y`` (LinRange)
-
-``dxᵢ = 2Lₓ÷(Nₓ-1)``
-
-Square Domain can be constructed using:\\
-``Domain(N,L)``
-
-Rectangular Domain can be constructed using:\\
-``Domain(Nx,Ny,Lx,Ly)``
-"""
-struct Domain
-    Nx::Int64
-    Ny::Int64
-    Lx::Float64
-    Ly::Float64
-    dx::Float64
-    dy::Float64
-    x::LinRange
-    y::LinRange
-    Domain(N) = Domain(N, 1)
-    Domain(N, L) = Domain(N, N, L, L)
-    function Domain(Nx, Ny, Lx, Ly)
-        dx = 2 * Lx / (Nx - 1)
-        dy = 2 * Ly / (Nx - 1)
-        x = LinRange(-Lx, Lx, Nx)
-        y = LinRange(-Ly, Ly, Ny)
-        new(Nx, Ny, Lx, Ly, dx, dy, x, y)
-    end
-end
-
 function getDomainFrequencies(domain::Domain)
     k_x = 2 * π * fftfreq(domain.Nx, 1 / domain.dx)
     k_y = 2 * π * fftfreq(domain.Ny, 1 / domain.dy)
