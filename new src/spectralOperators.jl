@@ -35,4 +35,23 @@ function DiffYY(field, SC::SpectralOperatorCoefficents)
     SC.DiffYY .* field
 end
 
-#function 
+using PaddedViews
+
+function quadraticTerm(u, v, padded=true)
+    if size(u) != size(v)
+        error("u and v must have the same size")
+    end
+    if padded
+        t = Tuple([-N÷4+1:N+N÷4 for N in size(u)])
+        U = ifftshift(PaddedView(0, fftshift(u), t)[t...])
+        V = ifftshift(PaddedView(0, fftshift(v), t)[t...])
+        i = Tuple([1+N÷4:N+N÷4 for N in size(u)])
+        1.5 * ifftshift(fftshift(fft(ifft(U) .* ifft(V)))[i...])
+    else
+        fft(ifft(u) .* ifft(v))
+    end
+end
+
+function PoissonBracket(A, B, SC::SpectralOperatorCoefficents, padded=true)
+    quadraticTerm(DiffX(A, SC), DiffY(B, SC)) - quadraticTerm(DiffY(A, SC), DiffX(B, SC))
+end
