@@ -130,3 +130,38 @@ spectralSolve(prob, alg, output)
 prob = SpectralODEProblem(f, domain, [0, 2], [2, 2])
 
 spectralSolve(prob, mSS3)
+
+A = [im, 1]
+A'
+
+##########################################
+
+M = [(x,y) for y in 1:4, x in 1:6]
+N = [(x,y) for x in 1:6, y in 1:4]
+
+
+x = [1,2,3,4,5,6]
+y = [1,2,3,4]
+plot(x, y, M, st=:surface)
+xlabel!("x")
+
+mhat = rfft(M)
+
+domain = Domain(6,4,1,1)
+
+@. domain.ky*mhat
+
+M*domain.ky
+
+M = @. x'*x' + y
+
+rfft(M)
+
+h(x,y) = @. x + 0*y
+
+j = h(x',y)
+surface(x,y,j)
+xlabel!("x")
+
+rfft(j)
+

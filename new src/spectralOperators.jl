@@ -6,10 +6,10 @@ struct SpectralOperatorCoefficents
     Laplacian::Array{ComplexF64}
 
     function SpectralOperatorCoefficents(kx, ky)
-        DiffX = im * kx'
-        DiffY = im * ky
-        DiffXX = -kx' .^ 2
-        DiffYY = -ky .^ 2
+        DiffX = im * kx
+        DiffY = im * ky'
+        DiffXX = -kx .^ 2
+        DiffYY = -ky' .^ 2
         Laplacian = DiffXX .+ DiffYY
         new(DiffX, DiffY, DiffXX, DiffYY, Laplacian)
     end
