@@ -12,7 +12,7 @@ mutable struct SpectralODEProblem
     p::Dict
     dt::Number
     function SpectralODEProblem(f, domain, u0, tspan; p=Dict(), dt=0.01)
-        u0_hat = rfft(u0')
+        u0_hat = rfft(u0)
         #p["kx"], p["ky"] = domain.kx, domain.ky
         #p["k2"] = Matrix([domain.kx[i]^2 + domain.ky[j] .^ 2 for i in eachindex(domain.kx), j in eachindex(domain.ky)])
         new(f, domain, u0, u0_hat, tspan, p, dt)

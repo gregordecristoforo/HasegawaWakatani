@@ -39,8 +39,11 @@ struct Domain
         dy = Ly / Ny
         x = LinRange(-Lx / 2, Lx / 2 - dx, Nx)
         y = LinRange(-Ly / 2, Ly / 2 - dy, Ny)
-        kx = real ? 2 * π * rfftfreq(Nx, 1 / dx) : 2 * π * fftfreq(Nx, 1 / dx)
-        ky = 2 * π * fftfreq(Ny, 1 / dy)
+        # ------------------ If x-direction favored in rfft -------------------
+        #kx = real ? 2 * π * rfftfreq(Nx, 1 / dx) : 2 * π * fftfreq(Nx, 1 / dx)
+        #ky = 2 * π * fftfreq(Ny, 1 / dy)
+        kx = 2 * π * fftfreq(Nx, 1 / dx)
+        ky = real ? 2 * π * rfftfreq(Ny, 1 / dy) : 2 * π * fftfreq(Ny, 1 / dy)
         SC = SpectralOperatorCoefficents(kx, ky)
         new(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC)
     end

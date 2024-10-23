@@ -21,7 +21,7 @@ function f(u, d, p, t)
 end
 
 
-domain = Domain(128, 14)
+domain = Domain(64, 14)
 
 u0 = gaussianWallX.(domain.x', domain.y, 5, 1)
 plot(domain.x, domain.y, u0, st=:surface)
@@ -57,4 +57,7 @@ plot(u0[1, 1:end])
 
 plot(domain.x, u0[1, 1:end])
 
-mapslices(rfft, u0, dims=2)
+u_hat = rfft(u0)
+du_hat = f(u_hat, domain, 0, 0)
+
+plot(domain.x, domain.y, irfft(du_hat, domain.Ny), st=:surface)
