@@ -2,11 +2,20 @@ using LinearAlgebra
 using Plots
 using FFTW
 using Printf
+import PlotlyJS
 
 # Extend plotting to allow domain as input
 import Plots.plot
 function plot(domain::Domain, args...; kwargs...)
     plot(domain.x, domain.y, args...; kwargs...)
+end
+
+# Extending PlotlyJS to easily plot surfaces when using Plots for academic figures
+function plotlyjsSurface(args...; kwargs...)
+    i = findfirst(k -> k === :z, keys(kwargs))
+    kwargs = collect(pairs(kwargs))
+    kwargs[i] = :z => transpose(kwargs[i][2])
+    PlotlyJS.plot(PlotlyJS.surface(args...; kwargs...))
 end
 
 # ------------------------------------------- Boundary diagnostics ---------------------------------------------------------
@@ -39,15 +48,53 @@ function maximumBoundaryValue(u::Array)
     maximum([lowerXBoundary(u) upperXBoundary(u) lowerYBoundary(u) upperYBoundary(u)])
 end
 
-## ----------------------------------------- Intersection ------------------------------------------------------------------
+## ---------------------------------------- Intersection/Projection --------------------------------------------------------------
 # TODO clean up here
 using Interpolations
 
-function surfaceProjection(point,domain)
+function surfaceProjection(point, domain)
+end
+
+function project(x, y, u::Array; alongX=nothing, alongY=nothing, interpolation=nothing)
+    if isnothing(alongX) && isnothing(alongY)
+        error("A projection method (alongX=x,alongY=y) needs to be specified.")
+    end
+    ax, ay = nothing, nothing
+    if !isnothing(interpolation)
+        U = interpolation((x, y), u)
+
+        if !isnothing(alongX)
+            ax = U(alongX, y)
+        end
+        if !isnothing(alongY)
+            ay = U(x, alongY)
+        end
+    else
+        #TODO throw bound error
+        #Get nearest argument
+        if !isnothing(alongX)
+            ax = u[:, argmin(abs.(x .- alongX))]
+        end
+        if !isnothing(alongY)
+            ay = u[argmin(abs.(y .- alongY)), :]
+        end
+    end
+    return ax, ay
+end
+
+ax, ay = project(x, y, z, alongX=2.1, interpolation=cubic_spline_interpolation)
 
 x = range(-2, 3, length=20)
 y = range(3, 4, length=10)
-z = @. cos(x) + sin(y')
+z = @. x' + 0.1 * sin(y)
+
+plotlyjsSurface(x=x, y=y, z=z)
+
+surface(x, y, z)
+xlabel!("x")
+
+surface(x, y, [[3.5, 4] [4, 4]])
+
 # Interpolation object (caches coefficients and such)
 itp = cubic_spline_interpolation((x, y), z)
 #interpolate(z)
@@ -55,9 +102,11 @@ itp = cubic_spline_interpolation((x, y), z)
 x2 = range(extrema(x)..., length=300)
 y2 = range(extrema(y)..., length=200)
 # Interpolate
-z2 = [itp(x,y) for y in y2, x in x2]
+z2 = [itp(x, y) for y in y2, x in x2]
 # Plot
-p = surface(x2, y2, z2, clim=(-2,2), title="Interpolated heatmap")
+
+plot(y, x, z)
+p = surface(x2, y2, z2, clim=(-2, 2), title="Interpolated heatmap")
 #surface(x, y,p)# zcolor=z[:]; lab="original data", clim=(-2,2))
 
 ## ----------------------------------------- Parameter study ----------------------------------------------------------------

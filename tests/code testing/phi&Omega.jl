@@ -40,6 +40,7 @@ ls[argmax(values)]
 
 plot(ls, values, xlabel=L"l", ylabel=L"||\Omega-\nabla^2_\perp\phi_{num}||/N^2" , title=L"l"*"-variational study",label="")
 savefig("tests/code testing/figures/l-variational study.pdf")
+
 ## Test 1.1
 B = 0
 l = 0.39
@@ -82,6 +83,7 @@ display(plot(domain, analytical, st=:surface, xlabel="x", ylabel="y", title="Ana
 
 display(plot(domain, analytical .- omega, st=:surface))
 
+plotlyjsSurface(z=analytical)
 ## Test 1.3
 B = 10
 l = 0.08
