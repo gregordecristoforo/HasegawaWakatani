@@ -36,7 +36,7 @@ studyLVariation(0.10)
 
 ls = 0.01:0.01:1
 values = parameterStudy(studyLVariation, ls)
-plot(ls, values, xlabel=L"l", ylabel="||Ω-Δϕₙᵤₘ||" , title="")
+plot(ls, values, xlabel=L"l", ylabel=L"||\Omega-\nabla^2_\perp\phi_{num}||" , title="")
 
 ## Test 1.1
 B = 0
