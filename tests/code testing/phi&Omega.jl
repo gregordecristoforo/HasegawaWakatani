@@ -34,7 +34,7 @@ end
 
 studyLVariation(0.10)
 
-ls = 0.01:0.01:5
+ls = 0.005:0.01:1
 values = parameterStudy(studyLVariation, ls)
 ls[argmax(values)]
 

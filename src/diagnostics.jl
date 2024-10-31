@@ -82,7 +82,7 @@ function project(x, y, u::Array; alongX=nothing, alongY=nothing, interpolation=n
     return ax, ay
 end
 
-ax, ay = project(x, y, z, alongX=2.1, interpolation=cubic_spline_interpolation)
+#ax, ay = project(x, y, z, alongX=2.1, interpolation=cubic_spline_interpolation)
 
 x = range(-2, 3, length=20)
 y = range(3, 4, length=10)
@@ -95,19 +95,12 @@ xlabel!("x")
 
 surface(x, y, [[3.5, 4] [4, 4]])
 
-# Interpolation object (caches coefficients and such)
-itp = cubic_spline_interpolation((x, y), z)
-#interpolate(z)
 # Fine grid
 x2 = range(extrema(x)..., length=300)
 y2 = range(extrema(y)..., length=200)
 # Interpolate
-z2 = [itp(x, y) for y in y2, x in x2]
+#z2 = [itp(x, y) for y in y2, x in x2]
 # Plot
-
-plot(y, x, z)
-p = surface(x2, y2, z2, clim=(-2, 2), title="Interpolated heatmap")
-#surface(x, y,p)# zcolor=z[:]; lab="original data", clim=(-2,2))
 
 ## ----------------------------------------- Parameter study ----------------------------------------------------------------
 
