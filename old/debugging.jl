@@ -165,3 +165,48 @@ xlabel!("x")
 
 rfft(j)
 
+using FFTW
+
+# Function to compute the derivative in the x-direction using FFT
+function compute_x_derivative(field)
+    # Get the dimensions of the input field
+    nx, ny = size(field)
+
+    # Compute the rfft of the 2D field
+    field_fft = rfft(field)
+
+    # Create a kx vector for derivative computation
+    kx = 2π * [0:nx/2;] / nx
+
+    # Multiply by i*kx in Fourier space to get the derivative
+    for j = 1:size(field_fft, 2)
+        field_fft[:, j] .= field_fft[:, j] .* (1im * kx)
+    end
+
+    # Perform the inverse rfft to get the derivative back in real space
+    x_derivative = irfft(field_fft, nx)
+
+    return x_derivative
+end
+
+# Example usage
+# Create a sample 2D field (e.g., a simple wave pattern)
+nx, ny = 128, 64
+x = range(0, 2π, nx)
+y = range(0, π, ny)
+field = [sin(x[i]) * cos(y[j]) for i in 1:nx, j in 1:ny]
+
+function f(x,y)
+    sin(x) * cos(y)
+end
+
+field = f.(x',y)
+
+# Compute the x-directional derivative
+x_derivative = compute_x_derivative(field)
+
+# Display the result
+println("The x-directional derivative of the field is:")
+println(x_derivative)
+
+plot(x,y,x_derivative, st=:surface)

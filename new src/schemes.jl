@@ -42,20 +42,21 @@ function mSS1Solve(prob::SpectralODEProblem; output=Nothing, singleStep=false)
     #Coefficents are all 1
 
     #Cache
-    u1 = prob.u0
+    u1 = prob.u0_hat
     u2 = zero(prob.u0)
 
     #dt
     dt = prob.dt
 
     #Get k2
-    k2 = prob.p["k2"]
+    k2 = prob.domain.SC.Laplacian
+    #k2 = prob.p["k2"]
 
     #Read parameter
     nu = prob.p["nu"]
 
     #Calculate "scaling" factor
-    c = @. (1 + nu * k2 * dt)^-1
+    c = @. (1 - nu * k2 * dt)^-1
 
     t = prob.tspan[1]
 
@@ -63,7 +64,7 @@ function mSS1Solve(prob::SpectralODEProblem; output=Nothing, singleStep=false)
     while t <= prob.tspan[2]
         #Step
         t += dt
-        u2 = c .* (u1 + dt * f(u1, prob.p, t - dt))
+        u2 = c .* (u1 + dt * f(u1, prob.domain, prob.p, t - dt))
         u1 = u2
         if singleStep
             break
@@ -82,7 +83,7 @@ function mSS2Solve(prob::SpectralODEProblem; output=Nothing, singleStep=false)
     b1 = -1
 
     #Cache
-    u1 = prob.u0
+    u1 = prob.u0_hat
     t, u2 = mSS1Solve(prob, output=output, singleStep=true)
     u3 = zero(prob.u0)
 
@@ -126,7 +127,7 @@ function mSS3Solve(prob::SpectralODEProblem; output=Nothing, singleStep=false)
     b1 = 1
 
     #Cache
-    u1 = prob.u0
+    u1 = prob.u0_hat
     t, u2 = mSS1Solve(prob, output=output, singleStep=true)
     t, u3 = mSS2Solve(prob, output=output, singleStep=true)
     u4 = zero(prob.u0)

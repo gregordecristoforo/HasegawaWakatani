@@ -1,7 +1,7 @@
+module Domains
 using FFTW
-export Domain
 include("spectralOperators.jl")
-
+using .SpectralOperators
 # Assumed 1st direction uses rfft, while all others use fft
 """
 Box domain, that calculates spatial resolution under construction.
@@ -47,4 +47,43 @@ struct Domain
         SC = SpectralOperatorCoefficents(kx, ky)
         new(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC)
     end
+end
+
+# Allow spectralOperators to be called using the domains
+
+function diffX(field, domain::Domain)
+    domain.SC.DiffX .* field
+end
+
+function diffY(field, domain::Domain)
+    domain.SC.DiffY .* field
+end
+
+function diffXX(field, domain::Domain)
+    domain.SC.DiffXX .* field
+end
+
+function diffYY(field, domain::Domain)
+    domain.SC.DiffYY .* field
+end
+
+function laplacian(field, domain::Domain)
+    domain.SC.Laplacian .* field
+end
+
+const Δ = laplacian
+const diffusion = laplacian
+
+function poissonBracket(A, B, domain::Domain, padded=true)
+    quadraticTerm(DiffX(A, domain), DiffY(B, domain)) - quadraticTerm(DiffY(A, domain), DiffX(B, domain))
+end
+
+function solvePhi(field, domain::Domain)
+    phi_hat = field ./ domain.SC.Laplacian
+    phi_hat[1] = 0 # First entry will always be NaN
+    return phi_hat
+end
+
+export Domain, diffX, diffXX, diffY, diffYY, poissonBracket, solvePhi, quadraticTerm, diffusion, laplacian, Δ
+
 end
