@@ -39,7 +39,28 @@ function maximumBoundaryValue(u::Array)
     maximum([lowerXBoundary(u) upperXBoundary(u) lowerYBoundary(u) upperYBoundary(u)])
 end
 
-# ----------------------------------------- Parameter study ----------------------------------------------------------------
+## ----------------------------------------- Intersection ------------------------------------------------------------------
+# TODO clean up here
+using Interpolations
+
+function surfaceProjection(point,domain)
+
+x = range(-2, 3, length=20)
+y = range(3, 4, length=10)
+z = @. cos(x) + sin(y')
+# Interpolation object (caches coefficients and such)
+itp = cubic_spline_interpolation((x, y), z)
+#interpolate(z)
+# Fine grid
+x2 = range(extrema(x)..., length=300)
+y2 = range(extrema(y)..., length=200)
+# Interpolate
+z2 = [itp(x,y) for y in y2, x in x2]
+# Plot
+p = surface(x2, y2, z2, clim=(-2,2), title="Interpolated heatmap")
+#surface(x, y,p)# zcolor=z[:]; lab="original data", clim=(-2,2))
+
+## ----------------------------------------- Parameter study ----------------------------------------------------------------
 
 function parameterStudy(study, values)
     output = similar(values)

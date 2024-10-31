@@ -34,13 +34,15 @@ end
 
 studyLVariation(0.10)
 
-ls = 0.01:0.01:1
+ls = 0.01:0.01:5
 values = parameterStudy(studyLVariation, ls)
-plot(ls, values, xlabel=L"l", ylabel=L"||\Omega-\nabla^2_\perp\phi_{num}||" , title="")
+ls[argmax(values)]
 
+plot(ls, values, xlabel=L"l", ylabel=L"||\Omega-\nabla^2_\perp\phi_{num}||/N^2" , title=L"l"*"-variational study",label="")
+savefig("tests/code testing/figures/l-variational study.pdf")
 ## Test 1.1
 B = 0
-l = 0.08
+l = 0.39
 phi = Gaussian.(domain.x', domain.y, A, B, l)
 surface(domain, phi)
 
