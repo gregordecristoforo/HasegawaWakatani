@@ -1,10 +1,11 @@
 ## Run all (alt+enter)
 using Plots
-include("../../new src/domain.jl")
+include("../../src/domain.jl")
 using .Domains
-include("../../new src/diagnostics.jl")
-include("../../new src/utilities.jl")
+include("../../src/diagnostics.jl")
+include("../../src/utilities.jl")
 using LinearAlgebra
+using LaTeXStrings
 
 # Omega calculated from Ω = ∇²⟂ϕ, assuming Gaussian ϕ    
 function Omega(x, y; A=1, l=1)
@@ -33,9 +34,9 @@ end
 
 studyLVariation(0.10)
 
-ls = 0.01:0.01:0.1
+ls = 0.01:0.01:1
 values = parameterStudy(studyLVariation, ls)
-plot(ls, values)
+plot(ls, values, xlabel=L"l", ylabel="||Ω-Δϕₙᵤₘ||" , title="")
 
 ## Test 1.1
 B = 0
