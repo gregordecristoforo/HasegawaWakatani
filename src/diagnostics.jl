@@ -49,10 +49,11 @@ function maximumBoundaryValue(u::Array)
 end
 
 ## ---------------------------------------- Intersection/Projection --------------------------------------------------------------
-# TODO clean up here
 using Interpolations
 
-function surfaceProjection(point, domain)
+# TODO interpolate/surface projection to a plane/along a line
+function interpolateAlong(x, y, u, direction, point)
+    println("Not implemented yet")
 end
 
 function project(x, y, u::Array; alongX=nothing, alongY=nothing, interpolation=nothing)
@@ -61,13 +62,13 @@ function project(x, y, u::Array; alongX=nothing, alongY=nothing, interpolation=n
     end
     ax, ay = nothing, nothing
     if !isnothing(interpolation)
-        U = interpolation((x, y), u)
+        U = interpolation((y, x), u)
 
         if !isnothing(alongX)
-            ax = U(alongX, y)
+            ax = U(y, alongX)
         end
         if !isnothing(alongY)
-            ay = U(x, alongY)
+            ay = U(alongY, x)
         end
     else
         #TODO throw bound error
@@ -82,18 +83,18 @@ function project(x, y, u::Array; alongX=nothing, alongY=nothing, interpolation=n
     return ax, ay
 end
 
-#ax, ay = project(x, y, z, alongX=2.1, interpolation=cubic_spline_interpolation)
+# Extend functionality to domains
+function project(domain::Domain, u::Array; kwargs...)
+    project(domain.x, domain.y, u; kwargs...)
+end
 
-x = range(-2, 3, length=20)
-y = range(3, 4, length=10)
-z = @. x' + 0.1 * sin(y)
+#ax, ayc = project(x, y, r, alongX=2.1, alongY=y[argmin(abs.(y .- 3.5))], interpolation=cubic_spline_interpolation)
 
-plotlyjsSurface(x=x, y=y, z=z)
+x = range(-2, 3, length=5)
+y = range(3, 4, length=5)
+z = @. cos(x') + sin(y)
 
-surface(x, y, z)
-xlabel!("x")
-
-surface(x, y, [[3.5, 4] [4, 4]])
+r = rand(size(z)...)
 
 # Fine grid
 x2 = range(extrema(x)..., length=300)
@@ -110,6 +111,13 @@ function parameterStudy(study, values)
         output[i] = study(values[i])
     end
     output
+end
+
+# ---------------------------------------- Plotting ------------------------------------------------------------------------
+
+function compareGraphs(x, numerical, analytical; kwargs...)
+    plot(x, numerical; label="Numerical", kwargs...)
+    plot!(x, analytical; label="Analytical", kwargs...)
 end
 
 # ----------------------------------------- Other --------------------------------------------------------------------------
