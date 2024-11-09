@@ -49,7 +49,7 @@ xlabel!("x")
 
 plotlyjsSurface(z=sinusoidalX.(domain.x', domain.y, 1, 1))
 plotlyjsSurface(z=uend2[:, :, 1])
-contourf(domain, uend2[:,:,1], xlabel="x", ylabel="y")
+contourf(domain, uend2[:, :, 1], xlabel="x", ylabel="y")
 
 ## Check caching
 cache2 = get_cache(prob, MSS2())
@@ -67,16 +67,3 @@ maximum(irfft(u1, domain.Ny) - irfft(u2, domain.Ny))
 
 surface(irfft(u1, domain.Ny))
 surface(irfft(u2, domain.Ny))
-
-## Test two fields at once
-f0 = [u0;;; zeros(size(u0))]
-f_hat = rfft(f0)
-df = f1(f_hat, domain, parameters, 0)
-
-F = f_hat .+ df
-
-surface(domain, irfft(F[:, :, 2], domain.Ny))
-
-
-data = mapslices(f -> irfft(f, domain.Ny), F, dims=(1, 2))
-surface(domain, data[:, :, 2])

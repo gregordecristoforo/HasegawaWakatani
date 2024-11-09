@@ -113,14 +113,38 @@ function parameterStudy(study, values)
     output
 end
 
-# ---------------------------------------- Plotting ------------------------------------------------------------------------
+# ---------------------------------------- Plotting ----------------------------------------
 
 function compareGraphs(x, numerical, analytical; kwargs...)
     plot(x, numerical; label="Numerical", kwargs...)
     plot!(x, analytical; label="Analytical", kwargs...)
 end
 
-# ----------------------------------------- Other --------------------------------------------------------------------------
+# ----------------------------------- Diagnostics ------------------------------------------
+
+function probe(u::AbstractArray, domain::Domain, x::Number, y::Number, interpolation=nothing)
+    if isnothing(interpolation)
+        i = argmin(abs.(domain.x .- x))
+        j = argmin(abs.(domain.y .- y))
+        return u0[j, i]
+    else
+        U = interpolation((domain.y, domain.x), u)
+        return U(y, x)
+    end
+end
+
+function probe(u::AbstractArray, domain::Domain, xs::AbstractArray, ys::AbstractArray, interpolation=nothing)
+    if size(xs) != size(ys)
+        throw("Size of xs and ys needs to match")
+    end
+    data = similar(xs)
+    for i in eachindex(xs)
+        data[i] = probe(u, domain, xs[i], ys[i], interpolation)
+    end
+    return data
+end
+
+# --------------------------------------- Other --------------------------------------------
 
 #TODO implement way to get velocity of field iku?
 function v(u)
@@ -203,10 +227,6 @@ function getMaxCFL(v, Δx, Δt)
 end
 
 function energyIntegral()
-    nothing
-end
-
-function probe(x, y, t, type="Interpolate")
     nothing
 end
 
