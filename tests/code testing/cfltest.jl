@@ -37,4 +37,3 @@ phi = multi_irfft(phi_hat, domain.Ny)
 surface(phi)
 
 map(ifft, )
-

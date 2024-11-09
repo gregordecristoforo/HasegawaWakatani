@@ -15,10 +15,10 @@ function spectral_solve(prob::SpectralODEProblem, scheme=MSS3(), output=Nothing(
         t += dt
         # TODO implement output
     end
-    
+
     if prob.domain.real
-        return t - dt, multiple_irfft(cache.u, domain.Ny)
+        return t - dt, multi_irfft(cache.u, domain.Ny)
     else
-        return t - dt, multiple_rfft(cache.u)
+        return t - dt, multi_rfft(cache.u)
     end
 end

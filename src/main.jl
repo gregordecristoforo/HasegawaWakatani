@@ -74,9 +74,9 @@ updateDomain!(prob, domain)
 
 
 ##
-include("Operators.jl")
+#include("Operators.jl")
 using .Operators
-include("Timestepper.jl")
+#include("Timestepper.jl")
 using .Timestepper
 using FFTW
 using Plots

@@ -40,6 +40,8 @@ end
 
 # ----------------------------------- fft related ------------------------------------------
 
+export multi_ifft, multi_irfft
+
 function multi_irfft(U::AbstractArray, Ny::Integer)
     mapslices(u -> irfft(u, Ny), U, dims=(1, 2))
 end
@@ -48,10 +50,10 @@ function multi_irfft(U::Tuple, Ny::Integer)
     irfft.(U, Ny)
 end
 
-function multi_rfft(U::AbstractArray)
-    mapslices(rfft, U, dims=(1, 2))
+function multi_ifft(U::AbstractArray)
+    mapslices(ifft, U, dims=(1, 2))
 end
 
-function multi_rfft(U::Tuple)
-    rfft.(U)
+function multi_ifft(U::Tuple)
+    ifft.(U)
 end

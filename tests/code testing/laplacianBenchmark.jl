@@ -1,4 +1,4 @@
-include("../src/Operators.jl")
+#include("../src/Operators.jl")
 using .Operators
 using BenchmarkTools
 using FFTW

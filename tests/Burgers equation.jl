@@ -1,9 +1,9 @@
-include("../new src/domain.jl")
-include("../new src/spectralODEProblem.jl")
-include("../new src/schemes.jl")
-include("../new src/utilities.jl")
-include("../new src/quad.jl")
-include("../new src/spectralOperators.jl")
+#include("../new src/domain.jl")
+#include("../new src/spectralODEProblem.jl")
+#include("../new src/schemes.jl")
+#include("../new src/utilities.jl")
+#include("../new src/quad.jl")
+#include("../new src/spectralOperators.jl")
 using Plots
 
 function gaussianWallY(x, y, sx=1, sy=1)
@@ -66,10 +66,10 @@ domain.kx
 domain.x
 prob.u0_hat
 
-include("domain.jl")
-include("spectralODEProblem.jl")
-include("schemes.jl")
-include("utilities.jl")
+#include("domain.jl")
+#include("spectralODEProblem.jl")
+#include("schemes.jl")
+#include("utilities.jl")
 
 domain = Domain(64)
 
@@ -103,7 +103,7 @@ ifftPlot(domain.x, domain.y, HeatEquationAnalyticalSolution(n0, 2, -prob.p["k2"]
 ifftPlot(domain.x, domain.y, HeatEquationAnalyticalSolution(n0, 2, -prob.p["k2"], 0.1) - u)
 ##
 
-include("diagnostics.jl")
+#include("diagnostics.jl")
 function HeatEquationAnalyticalSolution(prob)
     @. prob.u0 * exp(-prob.p["nu"] * prob.p["k2"] * prob.tspan[2])
 end
