@@ -32,7 +32,9 @@ surface(irfft(v_y, domain.Ny))
 
 cflPhi(phi_hat, domain, 0.0006217)
 
+phi = multi_irfft(phi_hat, domain.Ny)
 
-function multi_irfft()
-    irfft()
-end
+surface(phi)
+
+map(ifft, )
+

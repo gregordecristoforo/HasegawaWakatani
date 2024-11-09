@@ -38,4 +38,20 @@ function initial_condition(fun::Function, domain::Domain; kwargs...)
     fun.(domain.x', domain.y; kwargs...)
 end
 
-# ---------------------------------------- other -------------------------------------------
+# ----------------------------------- fft related ------------------------------------------
+
+function multi_irfft(U::AbstractArray, Ny::Integer)
+    mapslices(u -> irfft(u, Ny), U, dims=(1, 2))
+end
+
+function multi_irfft(U::Tuple, Ny::Integer)
+    irfft.(U, Ny)
+end
+
+function multi_rfft(U::AbstractArray)
+    mapslices(rfft, U, dims=(1, 2))
+end
+
+function multi_rfft(U::Tuple)
+    rfft.(U)
+end
