@@ -3,7 +3,7 @@ include("schemes.jl")
 
 export spectralSolve
 
-function spectral_solve(prob::SpectralODEProblem, scheme=mSS3(), output=Nothing())
+function spectral_solve(prob::SpectralODEProblem, scheme=MSS3(), output=Nothing())
     cache = get_cache(prob, scheme)
 
     t = first(prob.tspan)

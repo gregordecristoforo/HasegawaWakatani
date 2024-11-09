@@ -51,6 +51,7 @@ end
 
 # Allow spectralOperators to be called using the domains
 
+# TODO add snake_case
 function diffX(field, domain::Domain)
     domain.SC.DiffX .* field
 end
@@ -75,7 +76,7 @@ const Δ = laplacian
 const diffusion = laplacian
 
 function poissonBracket(A, B, domain::Domain, padded=true)
-    quadraticTerm(DiffX(A, domain), DiffY(B, domain)) - quadraticTerm(DiffY(A, domain), DiffX(B, domain))
+    quadraticTerm(diffX(A, domain), diffY(B, domain)) - quadraticTerm(diffY(A, domain), diffX(B, domain))
 end
 
 function solvePhi(field, domain::Domain)

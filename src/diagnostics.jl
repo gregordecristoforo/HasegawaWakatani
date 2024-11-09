@@ -287,3 +287,6 @@ function testResolutionConvergence(scheme, initialField, resolutions)
 
     plot(resolutions, residuals, xaxis=:log2, yaxis=:log, st=:scatter)
 end
+
+
+mapslices(f->irfft(,domain.Ny), F, dims = (1,2))

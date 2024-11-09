@@ -20,6 +20,7 @@ struct SpectralOperatorCoefficents
 end
 
 using PaddedViews
+using FFTW
 
 # Calculate quadratic terms 
 function quadraticTerm(u, v, padded=true)
@@ -58,7 +59,7 @@ function diffYY(field, SC::SpectralOperatorCoefficents)
 end
 
 function poissonBracket(A, B, SC::SpectralOperatorCoefficents, padded=true)
-    quadraticTerm(DiffX(A, SC), DiffY(B, SC)) - quadraticTerm(DiffY(A, SC), DiffX(B, SC))
+    quadraticTerm(diffX(A, SC), diffY(B, SC)) - quadraticTerm(diffY(A, SC), diffX(B, SC))
 end
 
 function solvePhi(field, SC::SpectralOperatorCoefficents)

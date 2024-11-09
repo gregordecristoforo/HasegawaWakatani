@@ -187,7 +187,6 @@ function perform_step!(cache::MSS3Cache, prob::SpectralODEProblem, t::Number)
         perform_step!(cache1, prob, t)
         cache.k0 = f(u0, d, p, t)
         cache.u1 = cache1.u
-        println("Step 1")
     elseif cache.step == 2
         cache.step += 1
         # Set up cache for stepping with MSS2
@@ -199,7 +198,6 @@ function perform_step!(cache::MSS3Cache, prob::SpectralODEProblem, t::Number)
         perform_step!(cache2, prob, t)
         cache.k1 = cache2.k0
         cache.u2 = cache2.u
-        println("Step 2")
     else
         k2 = f(u2, d, p, t)
         # Step
