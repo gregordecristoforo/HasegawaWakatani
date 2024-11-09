@@ -20,4 +20,5 @@ function spectral_solve(prob::SpectralODEProblem, scheme=MSS3(), output=Nothing(
         return t - dt, multiple_irfft(cache.u, domain.Ny)
     else
         return t - dt, multiple_rfft(cache.u)
+    end
 end
