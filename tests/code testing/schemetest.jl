@@ -39,10 +39,11 @@ t_span = [0, 0.01]
 prob = SpectralODEProblem(f1, domain, [u0;;; u0], t_span, p=parameters, dt=0.0001)
 
 using BenchmarkTools
+using Profile
 
 ## Solve and plot
 
-@time tend, uend2 = spectral_solve(prob, MSS3())
+@profview_allocs tend, uend2 = spectral_solve(prob, MSS3())
 
 surface(domain, uend2[:, :, 1])
 xlabel!("x")

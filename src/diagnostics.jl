@@ -146,6 +146,10 @@ end
 
 # --------------------------------------- Other --------------------------------------------
 
+function plotFrequencies(u)
+    heatmap(log10.(norm.(u)), title="Frequencies")
+end
+
 #TODO implement way to get velocity of field iku?
 function v(u)
 end

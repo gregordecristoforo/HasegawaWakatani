@@ -2,6 +2,19 @@ module Domains
 using FFTW
 include("spectralOperators.jl")
 using .SpectralOperators
+
+# TODO Implement FFTCache
+struct FFTCache
+    fft_plan::FFTW.Plan
+    ifft_plan::FFTW.Plan
+end
+
+
+struct RFFTCache
+    rfft_plan::FFTW.Plan
+    irfft_plan::FFTW.Plan
+end
+
 # Assumed 1st direction uses rfft, while all others use fft
 """
 Box domain, that calculates spatial resolution under construction.
@@ -86,6 +99,7 @@ function solvePhi(field, domain::Domain)
     return phi_hat
 end
 
-export Domain, diffX, diffXX, diffY, diffYY, poissonBracket, solvePhi, quadraticTerm, diffusion, laplacian, Δ
+export Domain, diffX, diffXX, diffY, diffYY, poissonBracket, solvePhi, quadraticTerm,
+    diffusion, laplacian, Δ
 
 end
