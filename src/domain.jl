@@ -32,6 +32,7 @@ struct Domain
     kx::Frequencies
     ky::Frequencies
     SC::SpectralOperatorCoefficents
+    real::Bool
     Domain(N) = Domain(N, 1)
     Domain(N, L) = Domain(N, N, L, L)
     function Domain(Nx, Ny, Lx, Ly; real=true)
@@ -45,7 +46,7 @@ struct Domain
         kx = 2 * π * fftfreq(Nx, 1 / dx)
         ky = real ? 2 * π * rfftfreq(Ny, 1 / dy) : 2 * π * fftfreq(Ny, 1 / dy)
         SC = SpectralOperatorCoefficents(kx, ky)
-        new(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC)
+        new(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC, real)
     end
 end
 
