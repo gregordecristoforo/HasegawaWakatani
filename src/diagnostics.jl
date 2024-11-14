@@ -144,11 +144,11 @@ function probe(u::AbstractArray, domain::Domain, xs::AbstractArray, ys::Abstract
     return data
 end
 
-# --------------------------------------- Other --------------------------------------------
-
 function plotFrequencies(u)
     heatmap(log10.(norm.(u)), title="Frequencies")
 end
+
+# --------------------------------------- Other --------------------------------------------
 
 #TODO implement way to get velocity of field iku?
 function v(u)
@@ -215,9 +215,6 @@ end
 """
 Empty
 """
-#module Helperfunctions
-#export Domain, getDomainFrequencies, getCFL, energyIntegral, probe, ifftPlot, testTimestepConvergence, testResolutionConvergence
-
 
 """
 Returns max courant number at certain index\\

@@ -1,167 +1,119 @@
-#include("../new src/domain.jl")
-#include("../new src/spectralODEProblem.jl")
-#include("../new src/schemes.jl")
-#include("../new src/utilities.jl")
-#include("../new src/quad.jl")
-#include("../new src/spectralOperators.jl")
+## Run all (alt+enter)
 using Plots
+include("../src/domain.jl")
+using .Domains
+include("../src/diagnostics.jl")
+include("../src/utilities.jl")
+using LinearAlgebra
+using LaTeXStrings
+include("../src/spectralODEProblem.jl")
+include("../src/schemes.jl")
+include("../src/spectralSolve.jl")
 
-function gaussianWallY(x, y, sx=1, sy=1)
-    exp(-y .^ 2 / sx)
-end
+## Run scheme test for Burgers equation
+domain = Domain(1, 1024, 1, 20, realTransform=false, anti_aliased=false) #domain = Domain(64, 14)
+u0 = initial_condition(gaussianWallY, domain)#, l=0.5)
 
-function gaussianWallX(x, y, sx=1, sy=1)
-    exp(-x^2 / sx)
-end
+plot(u0)
 
+# Burgers equation 
 function f(u, d, p, t)
-    #du = im*Matrix([(p["kx"][j])*u[i,j] for i in eachindex(p["kx"]), j in eachindex(p["ky"])])
-    #-du#-1.5*quadraticTerm(u, du)
-    DiffX(u, d.SC)
+    return -quadraticTerm(u, diffY(u, d), d)
 end
 
+# Other definition
+function f2(u, d, p, t)
+    return -diffY(quadraticTerm(u, u, d) / 2, d)
+end
 
-domain = Domain(64, 14)
+# Advection
+function f3(u, d, p, t)
+    return -100 * diffY(u, d)
+end
 
-u0 = gaussianWallX.(domain.x', domain.y, 5, 1)
-plot(domain.x, domain.y, u0, st=:surface)
-xlabel!("x")
-ylabel!("y")
+# Parameters
+parameters = Dict(
+    "nu" => 0#0.01
+)
 
-dt = 0.0001
-parameters = Dict{String,Any}([("nu", 0)])
-prob = SpectralODEProblem(f, domain, u0, [0, 1], p=parameters, dt=dt)
+# Break down time 
+dudy = diffY(domain.transform.FT * u0, domain)
+t_b = -1 / (minimum(real(domain.transform.iFT * dudy)))
 
-du_hat = f(prob.u0_hat, domain, prob.p, 0)
-#ifftPlot(domain.x, domain.y, u, st=:surface)
-plot(domain.x, domain.y, irfft(du_hat, domain.Nx)', st=:surface)
+t_span = [0, 1.1 * t_b]
 
-t, u = mSS1Solve(prob, output=Nothing, singleStep=false)
+prob = SpectralODEProblem(f2, domain, u0, t_span, p=parameters, dt=0.00001)
 
-ifftPlot(domain.x, domain.y, u, st=:surface)
-xlabel!("x")
-ylabel!("y")
-title!("t = 3, without aliasing")
-plot(domain.x, real(ifft(u))[1, :])
+tend, uend = spectral_solve(prob, MSS3())
+
+methods(quadraticTerm)
+
+#plot(uend-u0)
+
+## Solve and plot
+
+plot!(real(domain.transform.iFT * dudy))
+
+plot(initial_condition(gaussian_diff_y, domain))
+
+plot(real(ifft(dudy)))
+
+ifft_plan = plan_ifft(zero(u0))
+plot(real(ifft_plan * dudy))
+
+
+plot(domain.y, uend, xlabel="x", ylabel="y")
 
 #Add analytical solution here
-t = 1
-u_anl = gaussianWallX.(domain.x' - gaussianWallX.(domain.x', domain.y)[1, :]' * t, domain.y)
 
 #u_anl = gaussianWall.(domain.x' - gaussianWall.(domain.x', domain.y)[1,:]'*t, domain.y)
-plot(u_anl[1, :])
 
-plot!(conj(rfft(u0')'[1, 1:end]), st=:scatter, ylims=(0,))
-plot!(rfft(u0)[1, 1:end], st=:scatter)
-plot(u0[1, 1:end])
-
-plot(domain.x, u0[1, 1:end])
-
-u_hat = rfft(u0)
-du_hat = f(u_hat, domain, 0, 0)
-
-plot(domain.x, domain.y, irfft(du_hat, domain.Ny), st=:surface)
-
-domain.kx
-domain.x
-prob.u0_hat
-
-#include("domain.jl")
-#include("spectralODEProblem.jl")
-#include("schemes.jl")
-#include("utilities.jl")
-
-domain = Domain(64)
-
-function gaussianBlob(x, y, sx=1, sy=1)
-    1 / (2 * π * sqrt(sx * sy)) * exp(-(x .^ 2 / sx + y .^ 2 / sy) / 2)
-end
-
-function gaussianWall(x, y, sx=1, sy=1)
-    1 / (2 * π * sqrt(sx * sy)) * exp(-(x .^ 2 / sx + 0 * y .^ 2 / sy) / 2)
-end
-
-n0 = rfft(gaussianBlob.(domain.x, domain.y', 0.01, 0.01))
-
-#Diffusion problem
-function f(u, p, t)
-    zero(u)#im*2*Matrix([(p["kx"][i] + p["ky"][j])*u[i,j] for i in eachindex(p["kx"]), j in eachindex(p["ky"])])
-end
-
-dt = 0.00001
-parameters = Dict{String,Any}([("nu", 1)])
-prob = SpectralODEProblem(f, domain, n0, [0, 0.1], p=parameters, dt=dt)
-
-t, u_hat = mSS3Solve(prob, output=Nothing, singleStep=false)
-
-using Plots
-
-plot(domain.x, domain.y, real(irfft(u, 64)), st=:surface)
-
-ifftPlot(domain.x, domain.y, u, title="Time step $(dt)", st=:surface)
-ifftPlot(domain.x, domain.y, HeatEquationAnalyticalSolution(n0, 2, -prob.p["k2"], 0.1), title="Time step $(dt)", st=:surface)
-ifftPlot(domain.x, domain.y, HeatEquationAnalyticalSolution(n0, 2, -prob.p["k2"], 0.1) - u)
-##
-
-#include("diagnostics.jl")
-function HeatEquationAnalyticalSolution(prob)
-    @. prob.u0 * exp(-prob.p["nu"] * prob.p["k2"] * prob.tspan[2])
-end
-
-function gaussianBlob(domain, p)
-    @. 1 / (2 * π * sqrt(p["sx"] * p["sy"])) * exp(-(domain.x^2 / p["sx"] + domain.y'^2 / p["sy"]) / 2)
-end
-
-parameters["sx"] = 0.1
-parameters["sy"] = 0.1
-domain = Domain(64)
-n0 = fft(gaussianBlob(domain, parameters))
-
-prob = SpectralODEProblem(f, domain, n0, [0, 0.1], p=parameters, dt=dt)
 testTimestepConvergence(mSS3Solve, prob, HeatEquationAnalyticalSolution, [0.1, 0.01, 0.001, 0.0001, 0.00001])
 
 prob.dt = 0.001
 testResolutionConvergence(mSS3Solve, prob, gaussianBlob, HeatEquationAnalyticalSolution, [16, 32, 64, 128, 256, 512, 1024])
 
-plot(domain.x, domain.y, real(ifft(HeatEquationAnalyticalSolution(prob))), st=:surface)
-
-updateDomain!(prob, domain)
-
-
-
-#t = LinRange(0, 1.23, 10^6)
-#u = @. cos(20 * domain.x)
-#u_hat = fft(u)
-#u_hat[Int(domain.Nx / 2)+1] = 0
-#un = forwardEuler(f, u_hat, t)
-#plot(domain.x, real(ifft(un)))
 
 
 
 
 
-#Pseudocode
-using SpectralSolve
-
-#Define domain
-SquareDomain(64)
-
-#Define coefficent ODE
-function f()
-    "something"
-end
-
-#Define parameters
-
-#Define initial condition
-
-#Solve ODE from t0 to tend starting from initial condtion with these boundary condtions
-#using the mSS3 algorithm. Save data every nth time, probe here
-spectralSolve(f, "Something about time", u0, bc="periodic", alg="mSS3")
-
-spectralSolve(prob, alg, output)
 
 
-prob = SpectralODEProblem(f, domain, [0, 2], [2, 2])
 
-spectralSolve(prob, mSS3)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ------------------------------------- Junk code ------------------------------------------
+
+#updateDomain!(prob, domain)

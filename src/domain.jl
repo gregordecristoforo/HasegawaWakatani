@@ -1,19 +1,8 @@
 module Domains
+
 using FFTW
 include("spectralOperators.jl")
 using .SpectralOperators
-
-# TODO Implement FFTCache
-struct FFTCache
-    fft_plan::FFTW.Plan
-    ifft_plan::FFTW.Plan
-end
-
-
-struct RFFTCache
-    rfft_plan::FFTW.Plan
-    irfft_plan::FFTW.Plan
-end
 
 # Assumed 1st direction uses rfft, while all others use fft
 """
@@ -44,22 +33,36 @@ struct Domain
     y::LinRange
     kx::Frequencies
     ky::Frequencies
-    SC::SpectralOperatorCoefficents
-    real::Bool
+    SC::SpectralOperatorCache
+    transform::TransformPlans
+    realTransform::Bool
     Domain(N) = Domain(N, 1)
     Domain(N, L) = Domain(N, N, L, L)
-    function Domain(Nx, Ny, Lx, Ly; real=true)
+    function Domain(Nx, Ny, Lx, Ly; realTransform=true, anti_aliased=false, offsetX=0, offsetY=0)
         dx = Lx / Nx
         dy = Ly / Ny
-        x = LinRange(-Lx / 2, Lx / 2 - dx, Nx)
-        y = LinRange(-Ly / 2, Ly / 2 - dy, Ny)
+        x = LinRange(-Lx / 2 + offsetX, Lx / 2 - dx + offsetX, Nx)
+        y = LinRange(-Ly / 2 + offsetY, Ly / 2 - dy + offsetY, Ny)
         # ------------------ If x-direction favored in rfft -------------------
         #kx = real ? 2 * π * rfftfreq(Nx, 1 / dx) : 2 * π * fftfreq(Nx, 1 / dx)
         #ky = 2 * π * fftfreq(Ny, 1 / dy)
         kx = 2 * π * fftfreq(Nx, 1 / dx)
-        ky = real ? 2 * π * rfftfreq(Ny, 1 / dy) : 2 * π * fftfreq(Ny, 1 / dy)
-        SC = SpectralOperatorCoefficents(kx, ky)
-        new(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC, real)
+        ky = realTransform ? 2 * π * rfftfreq(Ny, 1 / dy) : 2 * π * fftfreq(Ny, 1 / dy)
+
+        utmp = zeros(Ny, Nx)
+
+        if realTransform
+            FT = plan_rfft(utmp)
+            iFT = plan_irfft(FT * utmp, Ny)
+            transform_plans = rFFTPlans(FT, iFT)
+        else
+            transform_plans = FFTPlans(plan_fft(utmp), plan_ifft(utmp))
+        end
+
+        SC = SpectralOperatorCache(kx, ky, Nx, Ny, realTransform=realTransform,
+            anti_aliased=anti_aliased)
+
+        new(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC, transform_plans, realTransform)
     end
 end
 
@@ -67,39 +70,59 @@ end
 
 # TODO add snake_case
 function diffX(field, domain::Domain)
-    domain.SC.DiffX .* field
+    SpectralOperators.diffX(field, domain.SC)
 end
 
 function diffY(field, domain::Domain)
-    domain.SC.DiffY .* field
+    SpectralOperators.diffY(field, domain.SC)
 end
 
 function diffXX(field, domain::Domain)
-    domain.SC.DiffXX .* field
+    SpectralOperators.diffXX(field, domain.SC)
 end
 
 function diffYY(field, domain::Domain)
-    domain.SC.DiffYY .* field
+    SpectralOperators.diffYY(field, domain.SC)
 end
 
 function laplacian(field, domain::Domain)
-    domain.SC.Laplacian .* field
+    SpectralOperators.laplacian(field, domain.SC)
 end
 
 const Δ = laplacian
 const diffusion = laplacian
 
-function poissonBracket(A, B, domain::Domain, padded=true)
-    quadraticTerm(diffX(A, domain), diffY(B, domain)) - quadraticTerm(diffY(A, domain), diffX(B, domain))
+function quadraticTerm(u, v, domain::Domain)
+    if size(u) != size(v)
+        error("u and v must have the same size")
+    end
+    SpectralOperators.quadraticTerm(u, v, domain.SC)
+end
+
+function poissonBracket(A, B, domain::Domain)
+    SpectralOperators.poissonBracket(A, B, domain.SC)
 end
 
 function solvePhi(field, domain::Domain)
-    phi_hat = field ./ domain.SC.Laplacian
-    phi_hat[1] = 0 # First entry will always be NaN
-    return phi_hat
+    SpectralOperators.solvePhi(field, domain.SC)
+end
+
+function reciprocal(field, domain::Domain)
+    F = domain.transform.iFT * field
+    domain.transform.FT * (F .^ (-1))
+end
+
+function spectral_exp(field, domain::Domain)
+    F = domain.transform.iFT * field
+    domain.transform.FT * (exp.(F))
+end
+
+function spectral_log(field, domain::Domain)
+    F = domain.transform.iFT * field
+    domain.transform.FT * (log.(F))
 end
 
 export Domain, diffX, diffXX, diffY, diffYY, poissonBracket, solvePhi, quadraticTerm,
-    diffusion, laplacian, Δ
+    diffusion, laplacian, Δ, SpectralOperatorCache, reciprocal, spectral_exp, spectral_log
 
 end

@@ -2,10 +2,6 @@ export initial_condition, gaussian, sinusoidal, sinusoidalX, sinusoidalY, gaussi
 
 # ------------------------------- Initial fields -------------------------------------------
 
-function gaussian(x, y, A, B, l)
-    B + A * exp(-(x^2 + y^2) / (2 * l^2))
-end
-
 function gaussian(x, y; A=1, B=0, l=1)
     B + A * exp(-(x^2 + y^2) / (2 * l^2))
 end
@@ -38,22 +34,13 @@ function initial_condition(fun::Function, domain::Domain; kwargs...)
     fun.(domain.x', domain.y; kwargs...)
 end
 
-# ----------------------------------- fft related ------------------------------------------
+# --------------------------- Analytical solutions -----------------------------------------
 
-export multi_ifft, multi_irfft
-
-function multi_irfft(U::AbstractArray, Ny::Integer)
-    mapslices(u -> irfft(u, Ny), U, dims=(1, 2))
+function HeatEquationAnalyticalSolution(prob)
+    @. prob.u0 * exp(-prob.p["nu"] * prob.p["k2"] * prob.tspan[2])
 end
 
-function multi_irfft(U::Tuple, Ny::Integer)
-    irfft.(U, Ny)
-end
-
-function multi_ifft(U::AbstractArray)
-    mapslices(ifft, U, dims=(1, 2))
-end
-
-function multi_ifft(U::Tuple)
-    ifft.(U)
+# Part of "analytical" solution to Burgers equation with Gaussian waveform
+function gaussian_diff_y(x, y; A=1, B=0, l=1)
+    -A * y * exp(-(y^2) / (2 * l^2)) / (l^2)
 end

@@ -9,20 +9,6 @@ axes(kappa, 2)
 eachindex(kappa)
 strides(kappa)
 
-# Old main code: 
-
-#Diffusion problem
-function f(u, p, t)
-    du = im * Matrix([(p["kx"][j]) * u[i, j] for i in eachindex(p["kx"]), j in eachindex(p["ky"])])
-    -1.5 * quadraticTerm(u, du)#zero(u)#im*2*Matrix([(p["kx"][i] + p["ky"][j])*u[i,j] for i in eachindex(p["kx"]), j in eachindex(p["ky"])])
-end
-
-dt = 0.00001
-parameters = Dict{String,Any}([("nu", 0.01)])
-prob = SpectralODEProblem(f, domain, w0, [0, 3], p=parameters, dt=dt)
-
-t, u = mSS3Solve(prob, output=Nothing, singleStep=false)
-
 using Plots
 
 plot(domain.x, domain.y, real(ifft(w0)), st=:surface)
@@ -36,11 +22,6 @@ ifftPlot(domain.x, domain.y, HeatEquationAnalyticalSolution(n0, 2, -prob.p["k2"]
 ifftPlot(domain.x, domain.y, HeatEquationAnalyticalSolution(n0, 2, -prob.p["k2"], 0.1) - u)
 ##
 
-function HeatEquationAnalyticalSolution(prob)
-    @. prob.u0 * exp(-prob.p["nu"] * prob.p["k2"] * prob.tspan[2])
-end
-
-
 prob = SpectralODEProblem(f, domain, n0, [0, 0.1], p=parameters, dt=dt)
 testTimestepConvergence(mSS3Solve, prob, HeatEquationAnalyticalSolution, [0.1, 0.01, 0.001, 0.0001, 0.00001])
 
@@ -51,28 +32,19 @@ plot(domain.x, domain.y, real(ifft(HeatEquationAnalyticalSolution(prob))), st=:s
 
 updateDomain!(prob, domain)
 
-#Pseudocode
-using SpectralSolve
+using PaddedViews
 
-#Define domain
-SquareDomain(64)
-
-#Define coefficent ODE
-function f()
-    "something"
+function quadraticTerm(u, v, padded=true)
+    if size(u) != size(v)
+        error("u and v must have the same size")
+    end
+    if padded
+        t = Tuple([-N÷4+1:N+N÷4 for N in size(u)])
+        U = ifftshift(PaddedView(0, fftshift(u), t)[t...])
+        V = ifftshift(PaddedView(0, fftshift(v), t)[t...])
+        i = Tuple([1+N÷4:N+N÷4 for N in size(u)])
+        1.5*ifftshift(fftshift(fft(ifft(U) .* ifft(V)))[i...])
+    else
+        fft(ifft(u) .* ifft(v))
+    end
 end
-
-#Define parameters
-
-#Define initial condition
-
-#Solve ODE from t0 to tend starting from initial condtion with these boundary condtions
-#using the mSS3 algorithm. Save data every nth time, probe here
-spectralSolve(f, "Something about time", u0, bc="periodic", alg="mSS3")
-
-spectralSolve(prob, alg, output)
-
-
-prob = SpectralODEProblem(f, domain, [0, 2], [2, 2])
-
-spectralSolve(prob, mSS3)

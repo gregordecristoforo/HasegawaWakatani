@@ -11,7 +11,7 @@ mutable struct SpectralODEProblem
     p::Dict
     dt::Number
     function SpectralODEProblem(f, domain, u0, tspan; p=Dict(), dt=0.01)
-        u0_hat = rfft(u0)
+        u0_hat = transform(u0, domain.transform.FT)
         if !("nu" in keys(p))
             p["nu"] = 0
         end

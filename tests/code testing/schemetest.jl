@@ -10,9 +10,11 @@ include("../../src/spectralODEProblem.jl")
 include("../../src/schemes.jl")
 include("../../src/spectralSolve.jl")
 
+#FFTW.set_num_threads(8)
+
 ## Run scheme test for Burgers equation
-domain = Domain(128, 1)
-u0 = gaussian.(domain.x', domain.y, 1, 0, 0.08)
+domain = Domain(128, 128, 1, 1, anti_aliased=true)
+u0 = gaussian.(domain.x', domain.y, A=1, B=0, l=0.08)
 
 function f1(u, d, p, t)
     n = u[:, :, 1]
@@ -20,35 +22,41 @@ function f1(u, d, p, t)
 end
 
 function f2(u, d, p, t)
-    return -0.01 * quadraticTerm(u, diffX(u, d))
+    return -0.01 * quadraticTerm(u, diffX(u, d), d)
 end
 
 function f3(u, d, p, t)
     poissonBracket(u, solvePhi(u, d), d)
 end
 
+function f4(u, d, p, t)
+    -poissonBracket(p["phi"], u, d) - p["g"] * diffY(u, d) - p["nu"] * quadraticTerm(u, diffY(p["phi"], d), d)
+end
+
 # Parameters
 parameters = Dict(
-    "nu" => 0.01,
+    "nu" => 0.1,
     "g" => 1,
-    "phi" => rfft(sinusoidal.(domain.x', domain.y))
+    "phi" => rfft(sinusoidal.(domain.x', domain.y))# .+ 0.25))
 )
 
-t_span = [0, 0.01]
+t_span = [0, 0.1]
 
-prob = SpectralODEProblem(f1, domain, [u0;;; u0], t_span, p=parameters, dt=0.0001)
+prob = SpectralODEProblem(f1, domain, [u0;;; u0], t_span, p=parameters, dt=0.001)
+prob = SpectralODEProblem(f4, domain, u0, t_span, p=parameters, dt=0.00001)
 
 using BenchmarkTools
 using Profile
 
 ## Solve and plot
 
-@profview_allocs tend, uend2 = spectral_solve(prob, MSS3())
+tend, uend2 = spectral_solve(prob, MSS3())
 
-surface(domain, uend2[:, :, 1])
+surface(domain, uend2)
+contourf(domain, uend2[:, :, 1])
 xlabel!("x")
 
-plotlyjsSurface(z=sinusoidalX.(domain.x', domain.y, 1, 1))
+plotlyjsSurface(z=uend2)
 plotlyjsSurface(z=uend2[:, :, 1])
 contourf(domain, uend2[:, :, 1], xlabel="x", ylabel="y")
 
