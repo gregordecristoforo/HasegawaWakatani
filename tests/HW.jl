@@ -12,39 +12,53 @@ include("../src/spectralSolve.jl")
 
 ## Run scheme test for Burgers equation
 #domain = Domain(512, 512, 200, 100, anti_aliased=false)
-domain = Domain(128, 128, 1, 1, anti_aliased=false)
-u0 = 1 .+ gaussian.(domain.x', domain.y, A=1, B=0, l=0.08)
+domain = Domain(512, 512, 200, 100, anti_aliased=false, offsetX = 75)
+u0 = 1 .+ gaussian.(domain.x', domain.y, A=20, B=0, l=3)
+
+surface(domain, u0)
 
 function f(u, d, p, t)
     n = u[:, :, 1]
     W = u[:, :, 2]
     phi = solvePhi(W, d)
     dn = -poissonBracket(phi, n, d)
-    dn += p["g"] * quadraticTerm(n, diffY(n, d), d)
-    dn += -p["g"] * diffY(n, d)
-    dn += -p["sigma"] * n
+    #dn += p["g"] * quadraticTerm(n, diffY(phi, d), d)
+    #dn += -p["g"] * diffY(n, d)
+    dn += -p["sigma"] * quadraticTerm(n, spectral_exp(3.6.-phi, d), d)
     dW = -poissonBracket(phi, W, d)
-    dW += -p["g"] * diffY(spectral_log(n, d), d)
-    #dW += -p["g"] * quadraticTerm(reciprocal(n, d), diffY(n, d), d)
-    dW += n
-    dW += -quadraticTerm(n, spectral_exp(phi, d), d)
+    #dW += -p["g"] * diffY(spectral_log(n, d), d)
+    dW += -p["g"] * quadraticTerm(reciprocal(n, d), diffY(n, d), d)
+    dW += p["sigma"] .- p["sigma"] * spectral_exp(3.6.-phi, d)
     [dn;;; dW]
 end
 
 # Parameters
 parameters = Dict(
-    "nu" => 0.005,
-    "g" => 1,
-    "sigma" => 0.1,
+    "nu" => 1e-4,
+    "g" => 0.01,
+    "sigma" => 1e-4,
 )
 
 t_span = [0, 100]
 
-prob = SpectralODEProblem(f, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=1e-5)
+prob = SpectralODEProblem(f, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=1e-2)
 
-## Solve and plot
-tend, uend = spectral_solve(prob, MSS3())
+# Solve and plot
+#tend, uend = spectral_solve(prob, MSS3())
+U = spectral_solve(prob, MSS3())
 
+## Make gif
+default(legend = false)
+@gif for i in axes(U,4)
+    contourf(U[:,:,2,i])
+end
+
+surface(U[:,:,1,end])
+
+for i in axes(U,4)
+    println(size(U[:,:,1,i]))
+end
+##
 surface(domain, uend)
 contourf(domain, uend[:, :, 1])
 xlabel!("x")

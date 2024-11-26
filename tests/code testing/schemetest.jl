@@ -12,7 +12,7 @@ include("../../src/spectralSolve.jl")
 
 #FFTW.set_num_threads(8)
 
-## Run scheme test for Burgers equation
+# Run scheme test for Burgers equation
 domain = Domain(128, 128, 1, 1, anti_aliased=true)
 u0 = gaussian.(domain.x', domain.y, A=1, B=0, l=0.08)
 
@@ -40,7 +40,7 @@ parameters = Dict(
     "phi" => rfft(sinusoidal.(domain.x', domain.y))# .+ 0.25))
 )
 
-t_span = [0, 0.1]
+t_span = [0, 0.5]
 
 prob = SpectralODEProblem(f1, domain, [u0;;; u0], t_span, p=parameters, dt=0.001)
 prob = SpectralODEProblem(f4, domain, u0, t_span, p=parameters, dt=0.00001)

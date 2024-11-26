@@ -39,8 +39,9 @@ struct Domain
     Domain(N) = Domain(N, 1)
     Domain(N, L) = Domain(N, N, L, L)
     function Domain(Nx, Ny, Lx, Ly; realTransform=true, anti_aliased=false, offsetX=0, offsetY=0)
-        dx = Lx / Nx
-        dy = Ly / Ny
+        dx = Lx / (Nx-1)
+        dy = Ly / (Ny-1)
+        # TODO make the ranges robust, as to not allow for silly mistakes
         x = LinRange(-Lx / 2 + offsetX, Lx / 2 - dx + offsetX, Nx)
         y = LinRange(-Ly / 2 + offsetY, Ly / 2 - dy + offsetY, Ny)
         # ------------------ If x-direction favored in rfft -------------------

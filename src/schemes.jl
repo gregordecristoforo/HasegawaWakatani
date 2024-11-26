@@ -2,6 +2,8 @@
 #using Caching, InteractiveUtils
 #@cache 
 
+using MuladdMacro
+
 # TODO inherit type from SciML 
 abstract type AbstractODEAlgorithm end
 
@@ -34,7 +36,7 @@ function unpack_cache(cache::MSS1Cache)
     cache.u, cache.c, cache.dt
 end
 
-function perform_step!(cache::MSS1Cache, prob::SpectralODEProblem, t::Number) # TODO implement or remove; output=Nothing, singleStep=false)
+@muladd function perform_step!(cache::MSS1Cache, prob::SpectralODEProblem, t::Number) # TODO implement or remove; output=Nothing, singleStep=false)
     u, c, dt = unpack_cache(cache)
     d, f, p = prob.domain, prob.f, prob.p
 
@@ -93,7 +95,7 @@ function unpack_cache(cache::MSS2Cache)
     cache.u, cache.c, cache.u0, cache.u1, cache.k0, cache.tab, cache.step
 end
 
-function perform_step!(cache::MSS2Cache, prob::SpectralODEProblem, t::Number)
+@muladd function perform_step!(cache::MSS2Cache, prob::SpectralODEProblem, t::Number)
     u, c, u0, u1, k0, tab, step = unpack_cache(cache)
     a0, a1, b0, b1 = tab.a0, tab.a1, tab.b0, tab.b1
     d, f, p, dt = prob.domain, prob.f, prob.p, prob.dt
@@ -175,7 +177,7 @@ function unpack_cache(cache::MSS3Cache)
     cache.u, cache.c, cache.u0, cache.u1, cache.u2, cache.k0, cache.k1, cache.tab, cache.step
 end
 
-function perform_step!(cache::MSS3Cache, prob::SpectralODEProblem, t::Number)
+@muladd function perform_step!(cache::MSS3Cache, prob::SpectralODEProblem, t::Number)
     u, c, u0, u1, u2, k0, k1, tab, step = unpack_cache(cache)
     a0, a1, a2, b0, b1, b2 = tab.a0, tab.a1, tab.a2, tab.b0, tab.b1, tab.b2
     d, f, p, dt = prob.domain, prob.f, prob.p, prob.dt
