@@ -38,12 +38,12 @@ struct Domain
     realTransform::Bool
     Domain(N) = Domain(N, 1)
     Domain(N, L) = Domain(N, N, L, L)
-    function Domain(Nx, Ny, Lx, Ly; realTransform=true, anti_aliased=false, offsetX=0, offsetY=0)
-        dx = Lx / (Nx-1)
-        dy = Ly / (Ny-1)
-        # TODO make the ranges robust, as to not allow for silly mistakes
-        x = LinRange(-Lx / 2 + offsetX, Lx / 2 - dx + offsetX, Nx)
-        y = LinRange(-Ly / 2 + offsetY, Ly / 2 - dy + offsetY, Ny)
+    function Domain(Nx, Ny, Lx, Ly; realTransform=true, anti_aliased=false, x0=-Lx / 2, y0=-Ly / 2)
+        dx = Lx / Nx
+        dy = Ly / Ny
+        # dx and dy is subtracted at the end, because periodic boundary conditions
+        x = LinRange(x0, x0 + Lx - dx, Nx)
+        y = LinRange(y0, y0 + Ly - dy, Ny)
         # ------------------ If x-direction favored in rfft -------------------
         #kx = real ? 2 * π * rfftfreq(Nx, 1 / dx) : 2 * π * fftfreq(Nx, 1 / dx)
         #ky = 2 * π * fftfreq(Ny, 1 / dy)
