@@ -12,7 +12,7 @@ include("../src/spectralSolve.jl")
 
 ## Run scheme test for Burgers equation
 #domain = Domain(512, 512, 200, 100, anti_aliased=false)
-domain = Domain(512, 512, 200, 100, anti_aliased=false, offsetX = 75)
+domain = Domain(512, 512, 200, 100, anti_aliased=false, offsetX=75)
 u0 = 1 .+ gaussian.(domain.x', domain.y, A=20, B=0, l=3)
 
 surface(domain, u0)
@@ -24,11 +24,11 @@ function f(u, d, p, t)
     dn = -poissonBracket(phi, n, d)
     #dn += p["g"] * quadraticTerm(n, diffY(phi, d), d)
     #dn += -p["g"] * diffY(n, d)
-    dn += -p["sigma"] * quadraticTerm(n, spectral_exp(3.6.-phi, d), d)
+    dn += -p["sigma"] * quadraticTerm(n, spectral_exp(3.6 .- phi, d), d)
     dW = -poissonBracket(phi, W, d)
     #dW += -p["g"] * diffY(spectral_log(n, d), d)
     dW += -p["g"] * quadraticTerm(reciprocal(n, d), diffY(n, d), d)
-    dW += p["sigma"] .- p["sigma"] * spectral_exp(3.6.-phi, d)
+    dW += p["sigma"] .- p["sigma"] * spectral_exp(3.6 .- phi, d)
     [dn;;; dW]
 end
 
@@ -48,15 +48,15 @@ prob = SpectralODEProblem(f, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=
 U = spectral_solve(prob, MSS3())
 
 ## Make gif
-default(legend = false)
-@gif for i in axes(U,4)
-    contourf(U[:,:,2,i])
+default(legend=false)
+@gif for i in axes(U, 4)
+    contourf(U[:, :, 2, i])
 end
 
-surface(U[:,:,1,end])
+surface(U[:, :, 1, end])
 
-for i in axes(U,4)
-    println(size(U[:,:,1,i]))
+for i in axes(U, 4)
+    println(size(U[:, :, 1, i]))
 end
 ##
 surface(domain, uend)

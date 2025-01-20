@@ -15,7 +15,7 @@ struct rFFTPlans <: TransformPlans
     iFT::FFTW.Plan
 end
 
-# Fourier transform
+# Fourier transform applied to "stacked" fields
 function multi_fft(U::AbstractArray, plans::TransformPlans)
     mapslices(u -> plans.FT * u, U, dims=(1, 2))
 end

@@ -148,16 +148,33 @@ function plotFrequencies(u)
     heatmap(log10.(norm.(u)), title="Frequencies")
 end
 
+#---------------------------------- CFL ----------------------------------------------------
+
+# Calculate velocity assuming U_ExB = ̂z×∇Φ   
+function vExB(u::AbstractArray, domain::Domain)
+    W_hat = u[:, :, 2]
+    phi_hat = solvePhi(W_hat, domain)
+    irfft(-diffY(phi_hat, domain), domain.Ny), irfft(diffX(phi_hat, domain), domain.Ny)
+end
+
+#Returns max CFL
+function CFL(u::AbstractArray, domain::Domain, dt::Number, v::Function=vExB)
+    v_x, v_y = v(u, domain)
+    #(CFLx, CFLy, x, y)
+    maximum(v_x) * dt / domain.dx, maximum(v_y) * dt / domain.dy
+end
+
+function maxCFLx(u::AbstractArray, domain::Domain, dt::Number, v::Function=vExB)
+    v_x, v_y = v(u, domain)
+    maximum(v_x) * dt / domain.dx, argmax(v_x)
+end
+
+function maxCFLy(u::AbstractArray, domain::Domain, dt::Number, v::Function=vExB)
+    v_x, v_y = v(u, domain)
+    maximum(v_y) * dt / domain.dy, argmax(v_y)
+end
+
 # --------------------------------------- Other --------------------------------------------
-
-#TODO implement way to get velocity of field iku?
-function v(u)
-end
-
-#Calculate max cfl in x direction Pseudocode #TODO implement properly
-function cflx(u)
-    max(abs(v(u))) * dt / dx
-end
 
 function compare(x, y, A::Matrix, B::Matrix)
     println(norm(A - B))
@@ -227,6 +244,8 @@ function getMaxCFL(v, Δx, Δt)
     findmax(CFL)
 end
 
+# P(t) = ∫dx 1/2n^2
+# K(t) = ∫1/2(∇_⟂Φ)^2 = ∫dx1/2 U_E^2
 function energyIntegral()
     nothing
 end

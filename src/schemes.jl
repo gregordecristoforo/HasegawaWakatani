@@ -36,7 +36,7 @@ function unpack_cache(cache::MSS1Cache)
     cache.u, cache.c, cache.dt
 end
 
-@muladd function perform_step!(cache::MSS1Cache, prob::SpectralODEProblem, t::Number) # TODO implement or remove; output=Nothing, singleStep=false)
+@muladd function perform_step!(cache::MSS1Cache, prob::SpectralODEProblem, t::Number)
     u, c, dt = unpack_cache(cache)
     d, f, p = prob.domain, prob.f, prob.p
 

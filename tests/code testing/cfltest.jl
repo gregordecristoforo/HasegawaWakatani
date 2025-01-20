@@ -1,39 +1,29 @@
-using Plots
-include("../../src/domain.jl")
-using .Domains
-include("../../src/diagnostics.jl")
-include("../../src/utilities.jl")
-using FFTW
+## Include all modules
+include("../../src/HasagawaWakatini.jl")
 
-using LinearAlgebra
-using LaTeXStrings
-
-## Test implementation of vPhi
-
-function vPhi(phi::AbstractArray, domain::Domain)
-    -diffY(phi, domain), diffX(phi, domain)
-end
-
-function cflPhi(phi::AbstractArray, domain::Domain, dt)
-    v_x, v_y = vPhi(phi, domain)
-    maximum(irfft(v_x, domain.Ny))*dt/domain.dx, maximum(irfft(v_y, domain.Ny))*dt/domain.dx
-end
-
+## Test implementation of vExB
 domain = Domain(128, 1)
 phi = initial_condition(sinusoidal, domain)
 plot(domain, phi)
-n0 = initial_condition(gaussian,domain,l=0.08)
+n0 = initial_condition(gaussian, domain, l=0.08)
 plot(domain, n0)
 
+# Transform
+n0_hat = rfft(n0)
 phi_hat = rfft(phi)
-v_x, v_y = vPhi(phi_hat, domain)
 
-surface(irfft(v_y, domain.Ny))
+u = [phi_hat;;; phi_hat]
+v_x, v_y = vExB(u, domain)
 
-cflPhi(phi_hat, domain, 0.0006217)
+# Plot velocity fields
+surface(domain, v_x)
+surface(domain, v_y)
 
-phi = multi_irfft(phi_hat, domain.Ny)
+# Check maxCFL in x and y direction
+maxCFLx(u, domain, 0.01)
+maxCFLy(u, domain, 0.01)
 
-surface(phi)
-
-map(ifft, )
+# Testing speed field
+v = sqrt.(v_x .^ 2 + v_y .^ 2)
+argmax(v)
+plot(domain, v)

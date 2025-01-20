@@ -64,8 +64,6 @@ end
 
 
 
-
-
 #domain = Domain(1, 128, 1, 1)
 #plot(burgers_equation_analytical_solution(domain, 0.155))
 

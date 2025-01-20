@@ -3,7 +3,7 @@ include("fftutilities.jl")
 
 export SpectralOperatorCache, FFTPlans, diffX, diffY, diffXX, diffYY, diffusion, solvePhi,
     poissonBracket, quadraticTerm
-
+ 
 struct SpectralOperatorCache
     # Spectral coefficents
     DiffX::AbstractArray
