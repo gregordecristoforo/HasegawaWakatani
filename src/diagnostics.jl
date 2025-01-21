@@ -18,6 +18,133 @@ function plotlyjsSurface(args...; kwargs...)
     PlotlyJS.plot(PlotlyJS.surface(args...; kwargs...))
 end
 
+# ----------------------------------- Diagnostics ------------------------------------------
+
+mutable struct Diagnostics
+    method::Function
+    sampleStep::Integer
+    label::Any
+    data::AbstractArray
+
+    function Diagnostics(method::Function, sampleStep::Integer, label)
+        # TODO add initialization of diagnostic somehow
+        new(method, sampleStep, label, Vector[])
+    end
+end
+
+function initializeDiagnostic!(diagnostic::Diagnostics, prob) #::SpectralODEProblem
+    # Extract values
+    tend = last(prob.tspan)
+    dt = prob.dt
+
+    # Allocate data for fields
+    N = floor(Int, tend / dt / diagnostic.sampleStep)
+
+    # Take diagnostic of initial field
+    id = diagnostic.method(prob.u0, prob, first(prob.tspan))
+
+    diagnostic.data = Vector{typeof(id)}(undef, N)
+    diagnostic.data[1] = id
+end
+
+# fields, radial velocity
+
+# --------------------------------- Probe --------------------------------------------------
+
+# probe/high time resolution (fields, velocity etc...)
+
+function probe(u::AbstractArray, domain::Domain, x::Number, y::Number, interpolation=nothing)
+    if isnothing(interpolation)
+        i = argmin(abs.(domain.x .- x))
+        j = argmin(abs.(domain.y .- y))
+        return u0[j, i]
+    else
+        U = interpolation((domain.y, domain.x), u)
+        return U(y, x)
+    end
+end
+
+function probe(u::AbstractArray, domain::Domain, xs::AbstractArray, ys::AbstractArray, interpolation=nothing)
+    if size(xs) != size(ys)
+        throw("Size of xs and ys needs to match")
+    end
+    data = similar(xs)
+    for i in eachindex(xs)
+        data[i] = probe(u, domain, xs[i], ys[i], interpolation)
+    end
+    return data
+end
+
+function probe(u::AbstractArray, prob, t::Number)
+    u[500,1]
+end
+
+probeDiagnostic = Diagnostics(probe, 10, "probe")
+
+# --------------------------------------- Other --------------------------------------------
+
+#1D profile: n_0(x,t) = 1/L_y∫_0^L_y n(x,y,t)dy
+#          : Γ_0(x,t) = 1/L_y∫_0^L_y nv_x dy
+
+
+"""
+Empty
+"""
+
+# energy integrals 
+
+# P(t) = ∫dx 1/2n^2
+# K(t) = ∫1/2(∇_⟂Φ)^2 = ∫dx1/2 U_E^2
+function energyIntegral()
+    nothing
+end
+
+# outputCenterOfMass::Bool
+
+function plotFrequencies(u)
+    heatmap(log10.(norm.(u)), title="Frequencies")
+end
+#---------------------------- Display diagnostic -------------------------------------------
+
+function displayField(u::AbstractArray, prob, t::Number)
+    display(plot(u))
+end
+
+displayFieldDiagnostic = Diagnostics(displayField, 1000, "Display")
+
+#---------------------------------- CFL ----------------------------------------------------
+
+# Calculate velocity assuming U_ExB = ̂z×∇Φ   
+function vExB(u::AbstractArray, domain::Domain)
+    W_hat = u[:, :, 2] #Assumption
+    phi_hat = solvePhi(W_hat, domain)
+    irfft(-diffY(phi_hat, domain), domain.Ny), irfft(diffX(phi_hat, domain), domain.Ny)
+end
+
+#Returns max CFL
+function CFLExB(u::AbstractArray, prob, t::Number)
+    v_x, v_y = vExB(u, prob.domain)
+    #(CFLx, CFLy, x, y)
+    maximum(v_x) * prob.dt / prob.domain.dx, maximum(v_y) * prob.dt / prob.domain.dy
+end
+
+function maxCFLx(u::AbstractArray, domain::Domain, dt::Number, v::Function=vExB)
+    v_x, v_y = v(u, domain)
+    maximum(v_x) * dt / domain.dx, argmax(v_x)
+end
+
+function maxCFLy(u::AbstractArray, domain::Domain, dt::Number, v::Function=vExB)
+    v_x, v_y = v(u, domain)
+    maximum(v_y) * dt / domain.dy, argmax(v_y)
+end
+
+# CFL where field is velocity
+function burgerCFL(u::AbstractArray, prob, t::Number)
+    maximum(u) * prob.dt / prob.domain.dy
+end
+
+burgerDiagnostic = Diagnostics(burgerCFL, 100, "CFL")
+
 # ------------------------------------------- Boundary diagnostics ---------------------------------------------------------
 function lowerXBoundary(u::Array)
     u[1, :]
@@ -120,210 +247,14 @@ function compareGraphs(x, numerical, analytical; kwargs...)
     plot!(x, analytical; label="Analytical", kwargs...)
 end
 
-# ----------------------------------- Diagnostics ------------------------------------------
+#n = u[:, :, 1]
+#W = u[:, :, 2]
+#println(size(n), size(W))
+#display(surface(domain.x, domain.y, n, xlabel="x", ylabel="y"))
+#display(contourf(W))
+#display(plot(domain.y, real(multi_ifft(cache.u, domain.transform)), title="t=$t, cfl=$cfl"))
+#display(contourf(domain, real(multi_ifft(cache.u, domain.transform)), title="t=$t, cfl=$cfl"))
 
-function probe(u::AbstractArray, domain::Domain, x::Number, y::Number, interpolation=nothing)
-    if isnothing(interpolation)
-        i = argmin(abs.(domain.x .- x))
-        j = argmin(abs.(domain.y .- y))
-        return u0[j, i]
-    else
-        U = interpolation((domain.y, domain.x), u)
-        return U(y, x)
-    end
-end
-
-function probe(u::AbstractArray, domain::Domain, xs::AbstractArray, ys::AbstractArray, interpolation=nothing)
-    if size(xs) != size(ys)
-        throw("Size of xs and ys needs to match")
-    end
-    data = similar(xs)
-    for i in eachindex(xs)
-        data[i] = probe(u, domain, xs[i], ys[i], interpolation)
-    end
-    return data
-end
-
-function plotFrequencies(u)
-    heatmap(log10.(norm.(u)), title="Frequencies")
-end
-
-#---------------------------------- CFL ----------------------------------------------------
-
-# Calculate velocity assuming U_ExB = ̂z×∇Φ   
-function vExB(u::AbstractArray, domain::Domain)
-    W_hat = u[:, :, 2]
-    phi_hat = solvePhi(W_hat, domain)
-    irfft(-diffY(phi_hat, domain), domain.Ny), irfft(diffX(phi_hat, domain), domain.Ny)
-end
-
-#Returns max CFL
-function CFL(u::AbstractArray, domain::Domain, dt::Number, v::Function=vExB)
-    v_x, v_y = v(u, domain)
-    #(CFLx, CFLy, x, y)
-    maximum(v_x) * dt / domain.dx, maximum(v_y) * dt / domain.dy
-end
-
-function maxCFLx(u::AbstractArray, domain::Domain, dt::Number, v::Function=vExB)
-    v_x, v_y = v(u, domain)
-    maximum(v_x) * dt / domain.dx, argmax(v_x)
-end
-
-function maxCFLy(u::AbstractArray, domain::Domain, dt::Number, v::Function=vExB)
-    v_x, v_y = v(u, domain)
-    maximum(v_y) * dt / domain.dy, argmax(v_y)
-end
-
-# --------------------------------------- Other --------------------------------------------
-
-function compare(x, y, A::Matrix, B::Matrix)
-    println(norm(A - B))
-    #plot(x, A)
-end
-
-# Uses the Heat equation to test at the moment
-function testTimestepConvergence(scheme, prob, analyticalSolution, timesteps)
-
-    #Calculate analyticalSolution
-    u = analyticalSolution(prob)
-
-    #Initialize storage
-    residuals = zeros(size(timesteps))
-
-    for (i, dt) in enumerate(timesteps)
-        #Change timestep of spectralODEProblem
-        prob.dt = dt
-        #Calculate approximate solution
-        _, uN = scheme(prob, output=Nothing, singleStep=false)
-        residuals[i] = norm(ifft(uN) - ifft(u))
-    end
-
-    #Plot residuals vs. time
-    plot(timesteps, residuals, xaxis=:log, yaxis=:log, xlabel="dt", ylabel="||u-u_a||")
-end
-
-#
-function testResolutionConvergence(scheme, prob, initialField, analyticalSolution, resolutions)
-    cprob = deepcopy(prob)
-    residuals = zeros(size(resolutions))
-
-    for (i, N) in enumerate(resolutions)
-        domain = Domain(N, 4)
-        updateDomain!(cprob, domain)
-        updateInitalField!(cprob, initialField)
-        #prob = SpectralODEProblem(prob.f, domain, prob.u0, prob.tspan, p=prob.p, dt=prob.dt)
-        #prob = SpectralODEProblem(prob.f, prob.domain, fft(initialField(prob.domain, prob.p)), prob.tspan, p = prob.p, dt=prob.dt)
-        println(size(cprob.u0))
-        u = analyticalSolution(cprob)
-
-        _, uN = scheme(cprob, output=Nothing, singleStep=false)
-        # Scaled residual to compensate for increased resolution
-        residuals[i] = norm(ifft(u) - ifft(uN)) / (domain.Nx * domain.Ny)
-        println(maximum(real(ifft(u))) - maximum(real(ifft(uN))))
-    end
-
-    display(plot(resolutions, residuals, xaxis=:log2, yaxis=:log))#, st=:scatter))
-    display(plot(resolutions, resolutions .^ -2, xaxis=:log2, yaxis=:log))#, st=:scatter))
-end
-
-#testResolutionConvergence(mSS1Solve, prob, gaussianBlob, HeatEquationAnalyticalSolution, [16, 32, 64, 128, 256])
-
-
-"""
-Empty
-"""
-
-"""
-Returns max courant number at certain index\\
-``v`` - velocity field\\
-``Δx`` - spatial derivative\\
-``Δt`` - timestep
-"""
-function getMaxCFL(v, Δx, Δt)
-    CFL = v * Δt / Δx
-    findmax(CFL)
-end
-
-# P(t) = ∫dx 1/2n^2
-# K(t) = ∫1/2(∇_⟂Φ)^2 = ∫dx1/2 U_E^2
-function energyIntegral()
-    nothing
-end
-
-#"""
-#Checks if any of the many arguments that Plots.plot is complex 
-#and if so takes the real part of the inverse Fourier transform.
-#"""
-"""
-ifftPlot(args...; kwargs...)
-Plot the real part of the inverse Fourier transform (IFFT) of each argument that is a complex array. 
-This function is designed to handle multiple input arrays and plot them using the `plot` function 
-from a plotting library such as Plots.jl. Non-complex arrays are plotted as-is.
-
-# Arguments
-- `args...`: A variable number of arguments. Each argument can be an array. If the array is of a complex type, 
-  its IFFT is computed, and only the real part is plotted. If the array is not complex, it is plotted directly.
-- `kwargs...`: Keyword arguments that are passed directly to the `plot` function to customize the plot.
-
-# Usage
-using FFTW, Plots
-
-# Create some sample data
-x = rand(ComplexF64, 100)\\
-y = rand(100)
-
-# Plot the real part of the IFFT of `x` and `y` directly
-ifftPlot(x, y, title="IFFT Plot Example", legend=:topright)
-
-"""
-function ifftPlot(args...; kwargs...)
-    processed_args = []
-    for arg in args
-        if eltype(arg) <: Complex
-            arg = real(ifft(arg))
-        end
-        push!(processed_args, arg)
-    end
-
-    plot(processed_args...; kwargs...)
-end
-
-"""
-"""
-function HeatEquationAnalyticalSolution(n0, D, K, t)
-    @. n0 * exp(D * K * t)
-end
-
-function compare(x, y, A::Matrix, B::Matrix)
-    println(norm(A - B))
-    plot(x, A)
-    #plot(x,x,B)
-end
-
-# Uses the Heat equation to test at the moment
-function testResolutionConvergence(scheme, initialField, resolutions)
-    D = 1.0
-    dt = 0.001
-    tend = 1
-
-    residuals = zeros(size(resolutions))
-
-    for (i, N) in enumerate(resolutions)
-        domain = Domain(N, 4)
-        k_x, k_y = getDomainFrequencies(domain)
-        K = [-(k_x[i]^2 + k_y[j]^2) for i in eachindex(k_x), j in eachindex(k_y)]
-
-        u0 = initialField.(domain.x, domain.y')
-        analyticalSolution = HeatEquationAnalyticalSolution(u0, D, K, tend)
-
-        du = similar(u0)
-
-        #method(Laplacian, initialField)
-        du = method(du, u0, K, dt, tend)
-        #method(fun, t_span, dt, n0, p)
-        # Scaled residual to compensate for increased resolution
-        residuals[i] = norm(ifft(du) - ifft(analyticalSolution)) / (domain.Nx * domain.Ny)
-    end
-
-    plot(resolutions, residuals, xaxis=:log2, yaxis=:log, st=:scatter)
-end
+# Default diagnostic
+cflDiagnostic = Diagnostics(CFLExB, 100, "cfl")
+default_diagnostics = [cflDiagnostic]

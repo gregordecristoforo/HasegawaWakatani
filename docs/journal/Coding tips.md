@@ -19,6 +19,6 @@ Shift + Delete - Delete all plots
 * "..." splats/unpacks a tuple
 * @view gives a subArray which is a lazy copy, hence changes made are reflected in the array subarrayed
 * display(plot)
-
+* @edit function(var) to read the source code for a given type! Very nice for debugging
 
 * Build documentation using julia --project=. docs/make.jl

@@ -1,8 +1,8 @@
 ## Run all (alt+enter)
 include("../src/HasagawaWakatini.jl")
 
-# Run scheme test for Burgers equation
-domain = Domain(1, 1024, 1, 20, realTransform=false, anti_aliased=false) #domain = Domain(64, 14)
+## Run scheme test for Burgers equation
+domain = Domain(1, 1024, 1, 20, realTransform=true, anti_aliased=false) #domain = Domain(64, 14)
 u0 = initial_condition(gaussianWallY, domain)#, l=0.5)
 
 plot(u0)
@@ -27,10 +27,16 @@ t_span = [0, 1.1 * t_b]
 # Initialize problem
 prob = SpectralODEProblem(f, domain, u0, t_span, p=parameters, dt=0.0001)
 
-# Solve problem
-using BenchmarkTools
-@benchmark spectral_solve(prob, MSS3())
+# Initialize output
+output = Output(prob, 10, [burgerDiagnostic, displayFieldDiagnostic, probeDiagnostic])
 
+## Solve problem
+out = spectral_solve(prob, MSS3(), output)
+
+extractOutput(out)
+plot(out.u[end])
+
+plot(out.diagnostics[3].data)
 ## ----------------------------------- Plot ------------------------------------------------
 
 #Add analytical solution here
