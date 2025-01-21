@@ -14,16 +14,15 @@ function spectral_solve(prob::SpectralODEProblem, scheme=MSS3(), output=Output(p
     tend = last(prob.tspan)
     dt = prob.dt
     domain = prob.domain
-    step = 0
+    step = 1
 
     while t <= tend
         perform_step!(cache, prob, t)
+        handleOutput!(output, step, cache.u, prob, t)
 
         # Increment step and time 
         step += 1
         t += dt
-
-        handleOutput!(output, step, cache.u, prob, t)
     end
 
     # Returns output struct

@@ -79,7 +79,7 @@ function probe(u::AbstractArray, prob, t::Number)
     u[500,1]
 end
 
-probeDiagnostic = Diagnostics(probe, 10, "probe")
+probeDiagnostic = Diagnostics(probe, 1, "probe")
 
 # --------------------------------------- Other --------------------------------------------
 
