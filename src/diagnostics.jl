@@ -76,7 +76,7 @@ function probe(u::AbstractArray, domain::Domain, xs::AbstractArray, ys::Abstract
 end
 
 function probe(u::AbstractArray, prob, t::Number)
-    u[500,1]
+    u[500, 1]
 end
 
 probeDiagnostic = Diagnostics(probe, 1, "probe")
@@ -112,6 +112,11 @@ end
 
 displayFieldDiagnostic = Diagnostics(displayField, 1000, "Display")
 
+function plot_n(u::AbstractArray, prob, t::Number)
+    display(contourf(prob.domain, u[:, :, 1]))
+end
+
+plot_nDiagnostic = Diagnostics(plot_n, 1000, "Display n")
 #---------------------------------- CFL ----------------------------------------------------
 
 # Calculate velocity assuming U_ExB = ̂z×∇Φ   
@@ -254,6 +259,14 @@ end
 #display(contourf(W))
 #display(plot(domain.y, real(multi_ifft(cache.u, domain.transform)), title="t=$t, cfl=$cfl"))
 #display(contourf(domain, real(multi_ifft(cache.u, domain.transform)), title="t=$t, cfl=$cfl"))
+
+# --------------------------- Progress diagnostic ------------------------------------------
+
+function progress(u, prob, t)
+    println((t - first(prob.tspan)) / (last(prob.tspan) - first(prob.tspan)) * 100)
+end
+
+progressDiagnostic = Diagnostics(progress, 100, "progress")
 
 # Default diagnostic
 cflDiagnostic = Diagnostics(CFLExB, 100, "cfl")
