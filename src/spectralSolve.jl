@@ -10,11 +10,14 @@ function spectral_solve(prob::SpectralODEProblem, scheme=MSS3(), output=Output(p
     cache = get_cache(prob, scheme)
 
     # Auxilary variables
-    t = first(prob.tspan)
-    tend = last(prob.tspan)
     dt = prob.dt
+    t = first(prob.tspan) + dt
+    tend = last(prob.tspan)
+    #step = 1 # TODO test 
+    step = 2
     domain = prob.domain
-    step = 1
+
+    # TODO store time
 
     while t <= tend
         perform_step!(cache, prob, t)

@@ -4,7 +4,6 @@ mutable struct Output
     u::AbstractArray
     filename::Any
 
-    # TODO make it more clear?
     # Atm u[:,:,1] = n, u[:,:,2] = Ω
     function Output(prob, fieldStep, diagnostics=default_diagnostics, filename=nothing) #TODO auto filename
         # Extract values
@@ -16,7 +15,7 @@ mutable struct Output
         u = Vector{typeof(prob.u0)}(undef, N)
         u[1] = prob.u0
 
-        # Allocate data for diagnostics... TODO implement
+        # Allocate data for diagnostics
         for diagnostic in diagnostics
             initializeDiagnostic!(diagnostic, prob)
         end
@@ -25,22 +24,23 @@ mutable struct Output
     end
 end
 
-#TODO Implement struct Diagnostic, so that one can more easily choose diagnostics to use
-# and Diagnostic also includes stuff relating to HDF5
-
 function handleOutput!(output::Output, step::Integer, u::AbstractArray, prob::SpectralODEProblem, t::Number)
     if step % output.fieldStep == 0
-        # TODO implement
-        #u[prob.domain.Ny÷2+1, :, :] .= 0
-        #u[:, prob.domain.Nx÷2+1, :] .= 0
+        # TODO move logic to spectralSolve
+        #if prob.domain.Nx % 2 == 0
+        #    u[:, prob.domain.Nx÷2+1, :] .= 0
+        #end
+        #if prob.domain.Ny % 2 == 0
+        #    u[prob.domain.Ny÷2+1, :, :] .= 0
+        #end
 
-        output.u[step÷output.fieldStep] = real(multi_ifft(u, prob.domain.transform))
+        output.u[step÷output.fieldStep] = real(transform(u, prob.domain.transform.iFT))
     end
 
     # Handle diagnostics
     for diagnostic in output.diagnostics
         if step % diagnostic.sampleStep == 0
-            U = irfft(u, prob.domain.Ny) # transform to realspace
+            U = real(transform(u, prob.domain.transform.iFT)) # transform to realspace
             diagnostic.data[step÷diagnostic.sampleStep] = diagnostic.method(U, prob, t)
         end
     end

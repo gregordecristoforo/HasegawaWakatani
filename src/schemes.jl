@@ -1,7 +1,3 @@
-# TODO remove, used for testing
-#using Caching, InteractiveUtils
-#@cache 
-
 using MuladdMacro
 
 # TODO inherit type from SciML 
@@ -24,11 +20,11 @@ end
 struct MSS1 <: AbstractODEAlgorithm end
 
 function get_cache(prob::SpectralODEProblem, alg::MSS1)
-    kappa = prob.domain.SC.Laplacian
-    nu = prob.p["nu"]
     dt = prob.dt
     u = prob.u0_hat
-    c = @. (1 - nu * kappa * dt)^-1
+    # Calculate linear differential operator coefficent once to cache it
+    D = prob.L(1, prob.domain, prob.p, 0)
+    c = @. (1 - D * dt)^-1
     MSS1Cache(u, c, dt)
 end
 
@@ -79,11 +75,10 @@ end
 
 function get_cache(prob::SpectralODEProblem, alg::MSS2)
     tab = MSS2Tableau()
-    kappa = prob.domain.SC.Laplacian
-    nu = prob.p["nu"]
     dt = prob.dt
     u = prob.u0_hat
-    c = @. (tab.g0 - nu * kappa * dt)^-1
+    D = prob.L(1, prob.domain, prob.p, 0)
+    c = @. (tab.g0 - D * dt)^-1
     u0 = prob.u0_hat
     u1 = zeros(size(u))
     k0 = zeros(size(u))
@@ -159,11 +154,10 @@ end
 
 function get_cache(prob::SpectralODEProblem, alg::MSS3)
     tab = MSS3Tableau()
-    kappa = prob.domain.SC.Laplacian
-    nu = prob.p["nu"]
     dt = prob.dt
     u = prob.u0_hat
-    c = @. (tab.g0 - nu * kappa * dt)^-1
+    D = prob.L(1, prob.domain, prob.p, 0)
+    c = @. (tab.g0 - D * dt)^-1
     u0 = prob.u0_hat
     u1 = zeros(size(u))
     u2 = zeros(size(u))
@@ -189,6 +183,7 @@ end
         perform_step!(cache1, prob, t)
         cache.k0 = f(u0, d, p, t)
         cache.u1 = cache1.u
+        cache.u = cache.u1 # For output handling
     elseif cache.step == 2
         cache.step += 1
         # Set up cache for stepping with MSS2
@@ -200,6 +195,7 @@ end
         perform_step!(cache2, prob, t)
         cache.k1 = cache2.k0
         cache.u2 = cache2.u
+        cache.u = cache.u2 # For output handling
     else
         k2 = f(u2, d, p, t)
         # Step

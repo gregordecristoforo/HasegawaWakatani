@@ -225,18 +225,11 @@ end
 
 #ax, ayc = project(x, y, r, alongX=2.1, alongY=y[argmin(abs.(y .- 3.5))], interpolation=cubic_spline_interpolation)
 
-x = range(-2, 3, length=5)
-y = range(3, 4, length=5)
-z = @. cos(x') + sin(y)
-
-r = rand(size(z)...)
-
 # Fine grid
-x2 = range(extrema(x)..., length=300)
-y2 = range(extrema(y)..., length=200)
+#x2 = range(extrema(x)..., length=300)
+#y2 = range(extrema(y)..., length=200)
 # Interpolate
 #z2 = [itp(x, y) for y in y2, x in x2]
-# Plot
 
 ## ----------------------------------------- Parameter study ----------------------------------------------------------------
 
@@ -269,7 +262,7 @@ function progress(u, prob, t)
     println((t - first(prob.tspan)) / (last(prob.tspan) - first(prob.tspan)) * 100)
 end
 
-progressDiagnostic = Diagnostics(progress, 100, "progress")
+progressDiagnostic = Diagnostics(progress, 1000, "progress")
 
 # Default diagnostic
 cflDiagnostic = Diagnostics(CFLExB, 100, "cfl")
