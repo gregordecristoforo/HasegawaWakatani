@@ -55,14 +55,15 @@ struct SpectralOperatorCache
     end
 end
 
-# TODO test quadratic term implementation
-# Quadratic terms interface 
+#------------------------- Quadratic terms interface ---------------------------------------
 function quadraticTerm(u, v, SC::SpectralOperatorCache)
     # TODO fix anti-aliasing, atm it has the wrong scaling leading to "faster dynamics"
+    # Can use ndims(A) to get number of dimensions 
     if length(u) != length(SC.up)
         pad!(SC.up, u, SC.QTPlans)
         pad!(SC.vp, v, SC.QTPlans)
         unpad!(SC.QT, spectral_conv(SC.up, SC.vp, SC.QTPlans), SC.QTPlans)
+        # TODO fix this factor, which is probably wrong
         3 * SC.QT
     else
         spectral_conv(u, v, SC.QTPlans)
@@ -127,6 +128,8 @@ function unpad!(u, up, plan::rFFTPlans)
     u[1:Ny, end-Nxu+1:end] = up[1:Ny, end-Nxu+1:end] # Lower right
     return
 end
+
+#-------------------------------- Differentiation ------------------------------------------
 
 function diffX(field, SC::SpectralOperatorCache)
     SC.DiffX .* field

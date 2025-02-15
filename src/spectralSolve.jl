@@ -4,7 +4,9 @@ include("fftutilities.jl")
 
 export spectralSolve
 
+# Assuming for now that dt is fixed
 # If custom outputter is not provided, then resort to default
+# First step is stored during initilization of output
 function spectral_solve(prob::SpectralODEProblem, scheme=MSS3(), output=Output(prob, 100))
     # Initialize cache
     cache = get_cache(prob, scheme)
@@ -12,21 +14,22 @@ function spectral_solve(prob::SpectralODEProblem, scheme=MSS3(), output=Output(p
     # Auxilary variables
     dt = prob.dt
     t = first(prob.tspan) + dt
-    tend = last(prob.tspan)
-    #step = 1 # TODO test 
-    step = 2
-    domain = prob.domain
+    step = 1
 
-    # TODO store time
+    # Calculate number of steps
+    total_steps = (last(prob.tspan) - first(prob.tspan)) / dt + 1
 
-    while t <= tend
+    # This method assumes step number does not overflow!
+    while step < total_steps
         perform_step!(cache, prob, t)
-        handleOutput!(output, step, cache.u, prob, t)
+        handle_output!(output, step, cache.u, prob, t)
 
         # Increment step and time 
         step += 1
         t += dt
     end
+
+    # TODO catch edge case
 
     # Returns output struct
     return output

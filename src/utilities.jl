@@ -2,8 +2,8 @@ export initial_condition, gaussian, sinusoidal, sinusoidalX, sinusoidalY, gaussi
 
 # ------------------------------- Initial fields -------------------------------------------
 
-function gaussian(x, y; A=1, B=0, l=1)
-    B + A * exp(-(x^2 + y^2) / (2 * l^2))
+function gaussian(x, y; A=1, B=0, l=1, x0=0, y0=0)
+    B + A * exp(-((x - x0)^2 + (y - y0)^2) / (2 * l^2))
 end
 
 function sinusoidal(x, y; Lx=1, Ly=1, n=1, m=1)
@@ -26,6 +26,10 @@ function gaussianWallY(x, y; A=1, l=1)
     A * exp(-y^2 / (2 * l^2))
 end
 
+function exponential_background(x, y; kappa=1)
+    exp(-kappa * x)
+end
+
 function randomIC(x, y)
     rand()
 end
@@ -34,10 +38,37 @@ function initial_condition(fun::Function, domain::Domain; kwargs...)
     fun.(domain.x', domain.y; kwargs...)
 end
 
+function all_modes(domain::Domain, value=10^-6)
+    n_hat = 1e-6 * ones(domain.Ny, domain.Nx)
+    real(ifft(n_hat))
+end
+
+function all_modes_with_random_phase(domain::Domain, value=10^-6)
+    θ = 2 * π * rand(domain.Ny, domain.Nx)
+    n_hat = 1e-6 * ones(domain.Ny, domain.Nx) .* exp.(im * θ)
+    n_hat[:, 1] .= 0
+    n_hat[1, :] .= 0
+    real(ifft(n_hat))
+end
+
+function initial_condition_linear_stability(domain::Domain, value=10^-6)
+    θ = 2 * π * rand(domain.Ny, domain.Nx)
+    phi_hat = 1e-6 * ones(domain.Ny, domain.Nx) .* exp.(im * θ)
+    phi_hat[:, 1] .= 0
+    phi_hat[1, :] .= 0
+    n_hat = phi_hat .* exp(im * pi / 2)
+    [real(ifft(n_hat));;; real(ifft(phi_hat))]
+end
+
 # --------------------------- Analytical solutions -----------------------------------------
 
-function HeatEquationAnalyticalSolution(prob)
-    @. prob.u0 * exp(-prob.p["nu"] * prob.p["k2"] * prob.tspan[2])
+function HeatEquationAnalyticalSolution(u0, domain, p, t)
+    u0_hat = (domain.transform.FT * u0) .* exp.(p["nu"] * domain.SC.Laplacian * t)
+    domain.transform.iFT * u0_hat
+end
+
+function HeatEquationAnalyticalSolution2(u0, domain, p, t)
+    exp.(-(domain.x'.^2 .+ domain.y.^2)/(2*(1 + 2*p["nu"]*t)))/(1 + 2*p["nu"]*t)
 end
 
 # Burgers equation
@@ -61,27 +92,77 @@ function burgers_equation_analytical_solution(domain::Domain, t, f=y -> gaussian
      for yi in eachindex(domain.y), xi in eachindex(domain.x)]
 end
 
-#domain = Domain(1, 128, 1, 1)
+# ----------------------------- Inverse functions / transforms -----------------------------
+
+function expTransform(u::AbstractArray)
+    return [exp.(u[:, :, 1]);;; u[:, :, 2]]
+end
+
+# ------------------------------- Convergence testing --------------------------------------
+function test_timestep_convergence(prob, analyticalSolution, timesteps, scheme=MSS3(), displayResults=true; kwargs...)
+
+    #Calculate analyticalSolution
+    u = analyticalSolution(prob.u0, prob.domain, prob.p, last(prob.tspan); kwargs...)
+
+    #Initialize storage
+    residuals = zeros(size(timesteps))
+
+    for (i, dt) in enumerate(timesteps)
+        # Create new spectralODEProblem with new dt
+        newProb = SpectralODEProblem(prob.L, prob.f, prob.domain, prob.u0, prob.tspan, p=prob.p, dt=dt)
+
+        output = Output(newProb, 2, [])
+
+        #Calculate approximate solution
+        sol = spectral_solve(newProb, scheme, output)
+        residuals[i] = norm(sol.u[end] - u)
+    end
+
+    if displayResults
+        # Plot residuals vs. time
+        display(plot(timesteps, residuals, xaxis=:log, yaxis=:log, xlabel="dt", ylabel=L"||u-u_a||"))
+    end
+
+    return timesteps, residuals
+end
+
+#
+function test_resolution_convergence(prob, initialField, analyticalSolution, resolutions,
+    scheme=MMS3(), displayResults=true; kwargs...)
+
+    od = prob.domain
+    residuals = zeros(size(resolutions))
+
+    for (i, N) in enumerate(resolutions)
+
+        # Create higher resolution domain
+        domain = Domain(N, N, od.Lx, od.Ly, realTransform=od.realTransform)#, anti_aliased = od.anti_aliased)
+        u0 = initial_condition(initialField, domain) #TODO rethink initial condition 
+
+        # Create new spectralODEProblem but with updated resolution
+        newProb = SpectralODEProblem(prob.L, prob.f, domain, u0, prob.tspan, p=prob.p, dt=prob.dt)
+        output = Output(newProb, 2, [])
+
+        # Calculate solutions
+        sol = spectral_solve(newProb, scheme, output)
+        u = analyticalSolution(u0, domain, prob.p, last(prob.tspan); kwargs...)
+
+        # Scaled residual to compensate for increased resolution
+        residuals[i] = norm(sol.u[end] - u) / (domain.Nx * domain.Ny)
+        println("N=$N, maximum error: $(argmax(sol.u[end] - u))")
+    end
+
+    if displayResults
+        display(plot(resolutions, residuals, xaxis=:log2, yaxis=:log, xlabel=L"N_x \wedge N_y",
+        marker = :circle, ylabel=L"||u-u_a||/N_xN_y"))
+        display(plot!(resolutions, 1e-5*resolutions.^-2, linestyle=:dash))
+        display(plot!(resolutions, 1e-5*resolutions.^-1, linestyle=:dash))
+    end
+
+    return resolutions, residuals
+end
+
 #plot(burgers_equation_analytical_solution(domain, 0.155))
-
-#nextprod((2,3), 90)
-
-#P = plan_rfft(A,(2,1))
-
-#maximum(real(P*A - rfft(A,2)))
-
-#fftdims(P)
-
-#using LinearAlgebra
-#using LinearAlgebra: BlasReal
-
-#A = rand(10)
-#fft(A)
-#k = fftfreq(10)
-
-#[ for k in ks]
-
-#sum([A[i]*exp(-im*2*π*(i-1)*0/length(A)) for i in eachindex(A)]) 
 
 # ------------------------------- Old "diagnostics" ----------------------------------------
 #"""
@@ -122,89 +203,8 @@ function ifftPlot(args...; kwargs...)
     plot(processed_args...; kwargs...)
 end
 
-# Uses the Heat equation to test at the moment
-function testTimestepConvergence(scheme, prob, analyticalSolution, timesteps)
-
-    #Calculate analyticalSolution
-    u = analyticalSolution(prob)
-
-    #Initialize storage
-    residuals = zeros(size(timesteps))
-
-    for (i, dt) in enumerate(timesteps)
-        #Change timestep of spectralODEProblem
-        prob.dt = dt
-        #Calculate approximate solution
-        _, uN = scheme(prob, output=Nothing, singleStep=false)
-        residuals[i] = norm(ifft(uN) - ifft(u))
-    end
-
-    #Plot residuals vs. time
-    plot(timesteps, residuals, xaxis=:log, yaxis=:log, xlabel="dt", ylabel="||u-u_a||")
-end
-
-#
-function testResolutionConvergence(scheme, prob, initialField, analyticalSolution, resolutions)
-    cprob = deepcopy(prob)
-    residuals = zeros(size(resolutions))
-
-    for (i, N) in enumerate(resolutions)
-        domain = Domain(N, 4)
-        updateDomain!(cprob, domain)
-        updateInitalField!(cprob, initialField)
-        #prob = SpectralODEProblem(prob.f, domain, prob.u0, prob.tspan, p=prob.p, dt=prob.dt)
-        #prob = SpectralODEProblem(prob.f, prob.domain, fft(initialField(prob.domain, prob.p)), prob.tspan, p = prob.p, dt=prob.dt)
-        println(size(cprob.u0))
-        u = analyticalSolution(cprob)
-
-        _, uN = scheme(cprob, output=Nothing, singleStep=false)
-        # Scaled residual to compensate for increased resolution
-        residuals[i] = norm(ifft(u) - ifft(uN)) / (domain.Nx * domain.Ny)
-        println(maximum(real(ifft(u))) - maximum(real(ifft(uN))))
-    end
-
-    display(plot(resolutions, residuals, xaxis=:log2, yaxis=:log))#, st=:scatter))
-    display(plot(resolutions, resolutions .^ -2, xaxis=:log2, yaxis=:log))#, st=:scatter))
-end
-
-#testResolutionConvergence(mSS1Solve, prob, gaussianBlob, HeatEquationAnalyticalSolution, [16, 32, 64, 128, 256])
-
-"""
-"""
-function HeatEquationAnalyticalSolution(n0, D, K, t)
-    @. n0 * exp(D * K * t)
-end
-
 function compare(x, y, A::Matrix, B::Matrix)
     println(norm(A - B))
     #plot(x, y, A)
     #plot(x,x,B)
-end
-
-# Uses the Heat equation to test at the moment
-function testResolutionConvergence(scheme, initialField, resolutions)
-    D = 1.0
-    dt = 0.001
-    tend = 1
-
-    residuals = zeros(size(resolutions))
-
-    for (i, N) in enumerate(resolutions)
-        domain = Domain(N, 4)
-        k_x, k_y = getDomainFrequencies(domain)
-        K = [-(k_x[i]^2 + k_y[j]^2) for i in eachindex(k_x), j in eachindex(k_y)]
-
-        u0 = initialField.(domain.x, domain.y')
-        analyticalSolution = HeatEquationAnalyticalSolution(u0, D, K, tend)
-
-        du = similar(u0)
-
-        #method(Laplacian, initialField)
-        du = method(du, u0, K, dt, tend)
-        #method(fun, t_span, dt, n0, p)
-        # Scaled residual to compensate for increased resolution
-        residuals[i] = norm(ifft(du) - ifft(analyticalSolution)) / (domain.Nx * domain.Ny)
-    end
-
-    plot(resolutions, residuals, xaxis=:log2, yaxis=:log, st=:scatter)
 end

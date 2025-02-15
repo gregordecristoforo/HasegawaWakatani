@@ -13,7 +13,7 @@ export MMS1, MSS2, MSS3, perform_step!, get_cache
 mutable struct MSS1Cache
     #Coefficents are all 1
     u::AbstractArray
-    c::AbstractArray
+    c::Union{AbstractArray,Number}
     dt::Number
 end
 
@@ -47,7 +47,7 @@ struct MSS2 <: AbstractODEAlgorithm end
 mutable struct MSS2Cache
     #Coefficents
     u::AbstractArray
-    c::AbstractArray
+    c::Union{AbstractArray,Number}
     u0::AbstractArray
     u1::AbstractArray
     k0::AbstractArray
@@ -102,6 +102,7 @@ end
         perform_step!(cache1, prob, t)
         cache.k0 = f(u0, d, p, t)
         cache.u1 = cache1.u
+        cache.u = cache.u1
     else
         k1 = f(u1, d, p, t)
         # Step
@@ -120,7 +121,7 @@ struct MSS3 <: AbstractODEAlgorithm end
 mutable struct MSS3Cache
     #Coefficents
     u::AbstractArray
-    c::AbstractArray
+    c::Union{AbstractArray,Number}
     u0::AbstractArray
     u1::AbstractArray
     u2::AbstractArray
@@ -132,17 +133,17 @@ end
 
 # Coefficents/tableu
 struct MSS3Tableau <: AbstractTableau
-    g0::Number # = 3 / 2
-    a0::Number # = -1 / 2
-    a1::Number # = 2
-    a2::Number # = 2
-    b0::Number # = -1
-    b1::Number # = 2
-    b2::Number # = 2
+    g0::Number # = 11 / 6
+    a0::Number # = 1 / 3
+    a1::Number # = -3/2
+    a2::Number # = 3
+    b0::Number # = 1
+    b1::Number # = -3
+    b2::Number # = 3
 end
 
 function MSS3Tableau()
-    g0 = 11 / 6
+    g0 = 11 / 6 #1.833333352
     a0 = 1 / 3
     a1 = -3 / 2
     a2 = 3

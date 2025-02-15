@@ -2,6 +2,7 @@
 using FFTW
 export SpectralODEProblem
 
+# TODO add transform method, which is applied in handle_output! to recover function
 mutable struct SpectralODEProblem
     f::Function
     L::Function
@@ -34,24 +35,3 @@ mutable struct SpectralODEProblem
         new(N, L, domain, u0, u0_hat, tspan, p, dt)
     end
 end
-
-
-# function updateDomain!(prob::SpectralODEProblem, domain::Domain)
-#     prob.domain = domain
-#     kx, ky = getDomainFrequencies(domain)
-#     prob.p["kx"], prob.p["ky"] = kx, ky
-#     prob.p["k2"] = Matrix([kx[i]^2 + ky[j] .^ 2 for i in eachindex(kx), j in eachindex(ky)])
-# end
-
-# function updateInitalField!(prob::SpectralODEProblem, initialField::Function)
-#     prob.u0 = initialField(prob.domain, prob.p)
-# end
-
-# function updateDomain!(prob::SpectralODEProblem, domain::Domain, initialField::Function)
-#     prob = updateDomain!(prob, domain)
-#     prob = SpectralODEProblem(prob.f, domain, initialField(domain, prob.p), prob.tspan, p=prob.p, dt=prob.dt)
-# end
-
-# function updateDomain!(prob::SpectralODEProblem, domain::Domain, u0::AbstractArray)
-#     prob = SpectralODEProblem(prob.f, domain, u0, prob.tspan, p=prob.p, dt=prob.dt)
-# end

@@ -34,6 +34,7 @@ function multi_ifft(U::Union{Tuple,Vector}, plans::TransformPlans)
     map(u -> plans.iFT * u, U)
 end
 
+# TODO possibly rename to spectral_transform
 # General transform plan
 function transform(U::AbstractArray, p::FFTW.Plan)
     mapslices(u -> p * u, U, dims=(1, 2))
