@@ -17,7 +17,7 @@ function spectral_solve(prob::SpectralODEProblem, scheme=MSS3(), output=Output(p
     step = 1
 
     # Calculate number of steps
-    total_steps = (last(prob.tspan) - first(prob.tspan)) / dt + 1
+    total_steps = floor(Int, (last(prob.tspan) - first(prob.tspan)) / dt) + 1
 
     # This method assumes step number does not overflow!
     while step < total_steps

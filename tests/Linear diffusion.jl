@@ -2,8 +2,10 @@
 include("../src/HasagawaWakatini.jl")
 
 ## Run scheme test
-domain = Domain(1024, 1024, 50, 50, anti_aliased=false)
+domain = Domain(256, 256, 10, 10, anti_aliased=false)
 u0 = initial_condition(gaussian, domain)
+
+#0.5*0.0001*minimum(domain.SC.Laplacian)
 
 # Diffusion 
 function L(u, d, p, t)
@@ -21,16 +23,18 @@ parameters = Dict(
 
 t_span = [0, 2]
 
-prob = SpectralODEProblem(L, N, domain, u0, t_span, p=parameters, dt=1e-4)
+prob = SpectralODEProblem(N, L, domain, u0, t_span, p=parameters, dt=1e-5)
+#prob.u0_hat[:,domain.Nx÷2+1] .= 0
+#prob.u0_hat[domain.Nx÷2+1,:] .= 0
 
 output = Output(prob, 21, [ProgressDiagnostic()])
 
 ## Solve and plot
-sol = spectral_solve(prob, MSS3(), output)
-surface(domain, sol.u[end])
+sol = spectral_solve(prob, MSS1(), output)
+surface(sol.u[end])
 
 ## Time convergence test
-timesteps = [1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
+timesteps = [1e-1, 1e-2, 1e-3, 1e-4]
 _, convergence1 = test_timestep_convergence(prob, HeatEquationAnalyticalSolution2, timesteps, MSS1())
 _, convergence2 = test_timestep_convergence(prob, HeatEquationAnalyticalSolution2, timesteps, MSS2())
 _, convergence3 = test_timestep_convergence(prob, HeatEquationAnalyticalSolution2, timesteps, MSS3())
@@ -42,7 +46,7 @@ plot!(timesteps, 0.5 * timesteps .^ 2, linestyle=:dash, label=L"\frac{1}{2}dt^2"
 savefig("Timestep convergence, Lin-Diffusion (N =$(domain.Nx)).pdf")
 
 ## Resolution convergence test
-resolutions = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024] #[2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]
+resolutions = [2, 4, 8, 16, 32, 64, 128]#, 256]#, 512, 1024] #[2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]
 _, convergence1 = test_resolution_convergence(prob, gaussian, HeatEquationAnalyticalSolution2, resolutions, MSS1())
 _, convergence2 = test_resolution_convergence(prob, gaussian, HeatEquationAnalyticalSolution2, resolutions, MSS2())
 _, convergence3 = test_resolution_convergence(prob, gaussian, HeatEquationAnalyticalSolution2, resolutions, MSS3())

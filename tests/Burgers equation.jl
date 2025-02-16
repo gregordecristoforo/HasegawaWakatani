@@ -2,13 +2,16 @@
 include("../src/HasagawaWakatini.jl")
 
 ## Run scheme test for Burgers equation
-domain = Domain(1, 1024, 1, 20, realTransform=true, anti_aliased=false) #domain = Domain(64, 14)
-u0 = initial_condition(gaussianWallY, domain)#, l=0.5)
+domain = Domain(1, 1024, 1, 20, anti_aliased=false) 
+u0 = initial_condition(gaussianWallY, domain)
 
-plot(u0)
+# Diffusion 
+function L(u, d, p, t)
+    p["nu"] * diffusion(u, d)
+end
 
 # Burgers equation 
-function f(u, d, p, t)
+function N(u, d, p, t)
     return -quadraticTerm(u, diffY(u, d), d)
 end
 
@@ -22,16 +25,57 @@ dudy = diffY(domain.transform.FT * u0, domain)
 t_b = -1 / (minimum(real(domain.transform.iFT * dudy)))
 
 # Time span
-t_span = [0, 1.1 * t_b]
+t_span = [0, 0.9 * t_b]
 
 # Initialize problem
-prob = SpectralODEProblem(f, domain, u0, t_span, p=parameters, dt=0.0001)
+prob = SpectralODEProblem(L, N, domain, u0, t_span, p=parameters, dt=0.001)
 
 # Initialize output
-output = Output(prob, 10, [burgerDiagnostic, displayFieldDiagnostic, probeDiagnostic])
+output = Output(prob, 1000, [BurgerCFLDiagnostic(10), ProgressDiagnostic(10)])
 
 ## Solve problem
-out = spectral_solve(prob, MSS3(), output)
+sol = spectral_solve(prob, MSS3(), output)
+plot(sol.u[end])
+#plot(sol.u[end] - burgers_equation_analytical_solution(u0, domain, parameters, last(t_span)))
+#plot(burgers_equation_analytical_solution(u0, domain, parameters, last(t_span)))
+
+## Time convergence test
+timesteps = [1e-3, 1e-4, 1e-5, 1e-6, 1e-7]
+_, convergence1 = test_timestep_convergence(prob, burgers_equation_analytical_solution, timesteps, MSS1())
+_, convergence2 = test_timestep_convergence(prob, burgers_equation_analytical_solution, timesteps, MSS2())
+_, convergence3 = test_timestep_convergence(prob, burgers_equation_analytical_solution, timesteps, MSS3())
+plot(timesteps, convergence1, xaxis=:log, yaxis=:log, label="MSS1")
+plot!(timesteps, convergence2, xaxis=:log, yaxis=:log, label="MSS2", color="dark green")
+plot!(timesteps, convergence3, xaxis=:log, yaxis=:log, label="MSS3", color="orange")
+plot!(timesteps, 0.5 * timesteps .^ 2, linestyle=:dash, label=L"\frac{1}{2}dt^2", xlabel="dt",
+    ylabel=L"||U-u_a||", title="Timestep convergence, Burgers equation (N =$(domain.Ny))", xticks=timesteps)
+savefig("Timestep convergence, Burgers equation (N =$(domain.Ny)).pdf")
+
+## Resolution convergence test
+resolutions = [2, 4, 8, 16, 32, 64, 128]#, 256]#, 512, 1024] #[2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]
+_, convergence1 = test_resolution_convergence(prob, gaussian, HeatEquationAnalyticalSolution2, resolutions, MSS1())
+_, convergence2 = test_resolution_convergence(prob, gaussian, HeatEquationAnalyticalSolution2, resolutions, MSS2())
+_, convergence3 = test_resolution_convergence(prob, gaussian, HeatEquationAnalyticalSolution2, resolutions, MSS3())
+
+plot(resolutions, convergence1, xaxis=:log2, yaxis=:log, label="MSS1")
+plot!(resolutions, convergence2, xaxis=:log2, yaxis=:log, label="MSS2", color="dark green")
+plot!(resolutions, convergence3, xaxis=:log2, yaxis=:log, label="MSS3", color="orange")
+plot!(resolutions[1:end-4], 0.5 * exp.(-0.5 * resolutions)[1:end-4], label=L"\frac{1}{2}\exp\left(-\frac{N}{2}\right)", linestyle=:dash,
+    xaxis=:log2, yaxis=:log, xticks=resolutions, xlabel=L"N_x \wedge N_y",
+    ylabel=L"||U-u_a||/N_xN_y", title="Resolution convergence, Lin-Diffusion (dt=$(prob.dt))")
+savefig("Resolution convergence, Lin-Diffusion (dt=$(prob.dt)).pdf")
+
+
+
+
+
+
+
+
+
+
+
+
 
 extractOutput(out)
 plot(out.u[end])

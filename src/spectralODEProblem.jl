@@ -14,6 +14,9 @@ mutable struct SpectralODEProblem
     dt::Number
     function SpectralODEProblem(f::Function, domain::Domain, u0, tspan; p=Dict(), dt=0.01)
         u0_hat = transform(u0, domain.transform.FT)
+        # Remove the uneven modes
+        #u0_hat[:, domain.Nx÷2+1] .= 0
+        #u0_hat[domain.Ny÷2+1, :] .= 0
 
         # If no linear operator given, assume there is non
         function L(u, d, p, t)
@@ -29,6 +32,9 @@ mutable struct SpectralODEProblem
 
     function SpectralODEProblem(L::Function, N::Function, domain::Domain, u0, tspan; p=Dict(), dt=0.01)
         u0_hat = transform(u0, domain.transform.FT)
+        #u0_hat[:, domain.Nx÷2+1] .= 0
+        #u0_hat[domain.Ny÷2+1, :] .= 0
+        
         if length(tspan) != 2
             throw("tspan should have exactly two elements tsart and tend")
         end

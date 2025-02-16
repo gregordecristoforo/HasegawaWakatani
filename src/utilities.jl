@@ -86,8 +86,7 @@ end
 
 using Roots
 
-function burgers_equation_analytical_solution(domain::Domain, t, f=y -> gaussian(0, y, l=0.08))
-    u0 = initial_condition(gaussian, domain)
+function burgers_equation_analytical_solution(u0, domain::Domain, p, t, f=y -> gaussian(0, y, l=1))
     [find_zero.(u -> implicitBurgerSolution(u, domain.y[yi], t, f), u0[yi, xi])
      for yi in eachindex(domain.y), xi in eachindex(domain.x)]
 end
