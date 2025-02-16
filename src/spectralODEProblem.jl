@@ -2,42 +2,42 @@
 using FFTW
 export SpectralODEProblem
 
+# TODO add transform method, which is applied in handle_output! to recover function
 mutable struct SpectralODEProblem
     f::Function
+    L::Function
     domain::Domain
     u0::AbstractArray
     u0_hat::AbstractArray
     tspan::AbstractArray
     p::Dict
     dt::Number
-    function SpectralODEProblem(f, domain, u0, tspan; p=Dict(), dt=0.01)
+    function SpectralODEProblem(f::Function, domain::Domain, u0, tspan; p=Dict(), dt=0.01)
         u0_hat = transform(u0, domain.transform.FT)
-        if !("nu" in keys(p))
-            p["nu"] = 0
+        # Remove the uneven modes
+        #u0_hat[:, domain.Nx÷2+1] .= 0
+        #u0_hat[domain.Ny÷2+1, :] .= 0
+
+        # If no linear operator given, assume there is non
+        function L(u, d, p, t)
+            zero(u)
         end
+
         if length(tspan) != 2
             throw("tspan should have exactly two elements tsart and tend")
         end
-        new(f, domain, u0, u0_hat, tspan, p, dt)
+
+        new(f, L, domain, u0, u0_hat, tspan, p, dt)
+    end
+
+    function SpectralODEProblem(L::Function, N::Function, domain::Domain, u0, tspan; p=Dict(), dt=0.01)
+        u0_hat = transform(u0, domain.transform.FT)
+        #u0_hat[:, domain.Nx÷2+1] .= 0
+        #u0_hat[domain.Ny÷2+1, :] .= 0
+        
+        if length(tspan) != 2
+            throw("tspan should have exactly two elements tsart and tend")
+        end
+        new(N, L, domain, u0, u0_hat, tspan, p, dt)
     end
 end
-
-# function updateDomain!(prob::SpectralODEProblem, domain::Domain)
-#     prob.domain = domain
-#     kx, ky = getDomainFrequencies(domain)
-#     prob.p["kx"], prob.p["ky"] = kx, ky
-#     prob.p["k2"] = Matrix([kx[i]^2 + ky[j] .^ 2 for i in eachindex(kx), j in eachindex(ky)])
-# end
-
-# function updateInitalField!(prob::SpectralODEProblem, initialField::Function)
-#     prob.u0 = initialField(prob.domain, prob.p)
-# end
-
-# function updateDomain!(prob::SpectralODEProblem, domain::Domain, initialField::Function)
-#     prob = updateDomain!(prob, domain)
-#     prob = SpectralODEProblem(prob.f, domain, initialField(domain, prob.p), prob.tspan, p=prob.p, dt=prob.dt)
-# end
-
-# function updateDomain!(prob::SpectralODEProblem, domain::Domain, u0::AbstractArray)
-#     prob = SpectralODEProblem(prob.f, domain, u0, prob.tspan, p=prob.p, dt=prob.dt)
-# end

@@ -20,7 +20,7 @@ function multi_fft(U::AbstractArray, plans::TransformPlans)
     mapslices(u -> plans.FT * u, U, dims=(1, 2))
 end
 
-function multi_fft(U::Tuple, plans::TransformPlans)
+function multi_fft(U::Union{Tuple,Vector}, plans::TransformPlans)
     map(u -> plans.FT * u, U)
 end
 
@@ -30,15 +30,16 @@ function multi_ifft(U::AbstractArray, plans)
     mapslices(u -> plans.iFT * u, U, dims=(1, 2))
 end
 
-function multi_ifft(U::Tuple, plans::TransformPlans)
+function multi_ifft(U::Union{Tuple,Vector}, plans::TransformPlans)
     map(u -> plans.iFT * u, U)
 end
 
+# TODO possibly rename to spectral_transform
 # General transform plan
 function transform(U::AbstractArray, p::FFTW.Plan)
     mapslices(u -> p * u, U, dims=(1, 2))
 end
 
-function transform(U::Tuple, p::FFTW.Plan)
+function transform(U::Union{Tuple,Vector}, p::FFTW.Plan)
     map(u -> p * u, U)
 end

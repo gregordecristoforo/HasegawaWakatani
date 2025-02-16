@@ -3,7 +3,7 @@ include("fftutilities.jl")
 
 export SpectralOperatorCache, FFTPlans, diffX, diffY, diffXX, diffYY, diffusion, solvePhi,
     poissonBracket, quadraticTerm
- 
+
 struct SpectralOperatorCache
     # Spectral coefficents
     DiffX::AbstractArray
@@ -35,7 +35,7 @@ struct SpectralOperatorCache
             N, M = Nx, Ny
         end
 
-        if realTransform
+        if realTransform # TODO check if error is here
             m = M % 2 == 0 ? M ÷ 2 + 1 : (M - 1) ÷ 2 + 1
             QTp = im * zeros(m, N)
             iFT = plan_irfft(im * QTp, M)
@@ -55,12 +55,15 @@ struct SpectralOperatorCache
     end
 end
 
-# Quadratic terms interface 
+#------------------------- Quadratic terms interface ---------------------------------------
 function quadraticTerm(u, v, SC::SpectralOperatorCache)
+    # TODO fix anti-aliasing, atm it has the wrong scaling leading to "faster dynamics"
+    # Can use ndims(A) to get number of dimensions 
     if length(u) != length(SC.up)
         pad!(SC.up, u, SC.QTPlans)
         pad!(SC.vp, v, SC.QTPlans)
         unpad!(SC.QT, spectral_conv(SC.up, SC.vp, SC.QTPlans), SC.QTPlans)
+        # TODO fix this factor, which is probably wrong
         3 * SC.QT
     else
         spectral_conv(u, v, SC.QTPlans)
@@ -68,9 +71,9 @@ function quadraticTerm(u, v, SC::SpectralOperatorCache)
 end
 
 function spectral_conv(u_hat, v_hat, plans)
-    u = plans.iFT * u_hat
-    v = plans.iFT * v_hat
-    plans.FT * (u .* v)
+    u = transform(u_hat, plans.iFT)
+    v = transform(v_hat, plans.iFT)
+    transform(u .* v, plans.FT)
 end
 
 # Specialized for 2D arrays
@@ -126,6 +129,8 @@ function unpad!(u, up, plan::rFFTPlans)
     return
 end
 
+#-------------------------------- Differentiation ------------------------------------------
+
 function diffX(field, SC::SpectralOperatorCache)
     SC.DiffX .* field
 end
@@ -134,7 +139,7 @@ function diffY(field, SC::SpectralOperatorCache)
     SC.DiffY .* field
 end
 
-function diffusion(field, SC::SpectralOperatorCache)
+function laplacian(field, SC::SpectralOperatorCache)
     SC.Laplacian .* field
 end
 
@@ -150,6 +155,7 @@ function poissonBracket(A, B, SC::SpectralOperatorCache)
     quadraticTerm(diffX(A, SC), diffY(B, SC), SC) - quadraticTerm(diffY(A, SC), diffX(B, SC), SC)
 end
 
+# TODO test solvePhi
 function solvePhi(field, SC::SpectralOperatorCache)
     phi_hat = field ./ SC.Laplacian
     phi_hat[1] = 0 # First entry will always be NaN
