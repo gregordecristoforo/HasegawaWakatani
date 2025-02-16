@@ -46,8 +46,7 @@ _, convergence2 = test_timestep_convergence(prob, burgers_equation_analytical_so
 _, convergence3 = test_timestep_convergence(prob, burgers_equation_analytical_solution, timesteps, MSS3())
 plot(timesteps, convergence1, xaxis=:log, yaxis=:log, label="MSS1")
 plot!(timesteps, convergence2, xaxis=:log, yaxis=:log, label="MSS2", color="dark green")
-plot!(timesteps, convergence3, xaxis=:log, yaxis=:log, label="MSS3", color="orange")
-plot!(timesteps, 0.5 * timesteps .^ 2, linestyle=:dash, label=L"\frac{1}{2}dt^2", xlabel="dt",
+plot!(timesteps, convergence3, xaxis=:log, yaxis=:log, label="MSS3", color="orange", xlabel="dt",
     ylabel=L"||U-u_a||", title="Timestep convergence, Burgers equation (N =$(domain.Ny))", xticks=timesteps)
 savefig("Timestep convergence, Burgers equation (N =$(domain.Ny)).pdf")
 
