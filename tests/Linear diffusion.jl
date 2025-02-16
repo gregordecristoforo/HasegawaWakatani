@@ -5,8 +5,6 @@ include("../src/HasagawaWakatini.jl")
 domain = Domain(256, 256, 10, 10, anti_aliased=false)
 u0 = initial_condition(gaussian, domain)
 
-#0.5*0.0001*minimum(domain.SC.Laplacian)
-
 # Diffusion 
 function L(u, d, p, t)
     p["nu"] * diffusion(u, d)
@@ -24,9 +22,6 @@ parameters = Dict(
 t_span = [0, 2]
 
 prob = SpectralODEProblem(N, L, domain, u0, t_span, p=parameters, dt=1e-5)
-#prob.u0_hat[:,domain.Nx÷2+1] .= 0
-#prob.u0_hat[domain.Nx÷2+1,:] .= 0
-
 output = Output(prob, 21, [ProgressDiagnostic()])
 
 ## Solve and plot
