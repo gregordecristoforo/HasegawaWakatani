@@ -39,9 +39,9 @@ timesteps = [2^-3, 2^-4, 2^-5, 2^-6, 2^-7, 2^-8, 2^-9, 2^-10, 2^-11, 2^-12, 2^-1
 _, convergence1 = test_timestep_convergence(prob, analytical_solution, timesteps, MSS1())
 _, convergence2 = test_timestep_convergence(prob, analytical_solution, timesteps, MSS2())
 _, convergence3 = test_timestep_convergence(prob, analytical_solution, timesteps, MSS3())
-plot(timesteps[1:4], convergence1[1:4], yaxis=:log, label="MSS1")
-plot!(timesteps[1:4], convergence2[1:4], yaxis=:log, label="MSS2", color="dark green")
-plot!(timesteps[1:4], convergence3[1:4], yaxis=:log, label="MSS3", color="orange")
+plot(timesteps[1:4], convergence1[1:4], xaxis=:log, yaxis=:log, label="MSS1")
+plot!(timesteps[1:4], convergence2[1:4], xaxis=:log, yaxis=:log, label="MSS2", color="dark green")
+plot!(timesteps[1:4], convergence3[1:4], xaxis=:log, yaxis=:log, label="MSS3", color="orange")
 plot!(timesteps[1:4], 10000000000 / 2 * timesteps[1:4] .^ 2, linestyle=:dash, label=L"\frac{1}{2}dt^2", xlabel="dt",
     ylabel=L"||U-u_a||", title="Timestep convergence, exponential test", xticks=timesteps)
 savefig("Timestep convergence, exponential test.pdf")
