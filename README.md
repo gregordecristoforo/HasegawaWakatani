@@ -1,3 +1,3 @@
 ﻿Code used for my master thesis to simulate the interchange instability in magnetized plasmas
 
-![Alt Text](vorticity.gif)
+![Alt Text](HasegawaWakatani/vorticity.gif)
