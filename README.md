@@ -1,5 +1,5 @@
 ﻿Code used for my master thesis to simulate the interchange instability in magnetized plasmas. The code will feature:
-* Biperiodic domain (perpendicular to $\bm{B}$) ✓
+* Biperiodic domain (perpendicular to $\bold{B}$) ✓
 * Fast Fourier transform for spatial derivatives (FFTW) ✓
 * Third order stiffly stable time integrator ✓
 * HDF data output for binary format storage X
