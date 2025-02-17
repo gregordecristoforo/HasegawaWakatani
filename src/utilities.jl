@@ -30,6 +30,10 @@ function exponential_background(x, y; kappa=1)
     exp(-kappa * x)
 end
 
+function quadratic_function(x, y; kappa=1)
+    abs(y) <= 1 ? 1-y.^2 : 0
+end
+
 function randomIC(x, y)
     rand()
 end
