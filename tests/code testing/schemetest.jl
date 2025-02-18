@@ -6,18 +6,17 @@ domain = Domain(1, 1, 50, 50, anti_aliased=false)
 u0 = initial_condition(gaussian, domain)
 u0[1] = 1
 
-# Diffusion 
 function L(u, d, p, t)
-    zero(u)#p["lambda"] * u
+    p["lambda"]*u
 end
 
 function N(u, d, p, t)
-    p["lambda"]*u
+    zero(u)#p["lambda"] * u
 end
 
 # Parameters
 parameters = Dict(
-    "lambda" => 1
+    "lambda" => -1
 )
 
 t_span = [0, 10]
@@ -25,28 +24,30 @@ t_span = [0, 10]
 prob = SpectralODEProblem(L, N, domain, u0, t_span, p=parameters, dt=0.0001)
 
 ## Solve and plot
-sol = spectral_solve(prob, MSS2())
+sol = spectral_solve(prob, MSS1(), Output(prob, -1, []))
 
 function analytical_solution(u, domain, p, t)
     [u0 * exp(p["lambda"] * t);;]
 end
 
-sol.u[end]
-analytical_solution(u0, domain, parameters, 10) .- sol.u[end]
-
 
 ## Time convergence test
-timesteps = [2^-3, 2^-4, 2^-5, 2^-6, 2^-7, 2^-8, 2^-9, 2^-10, 2^-11, 2^-12, 2^-13, 2^-14, 2^-15, 2^-16, 2^-17, 2^-18, 2^-19, 2^-20]
+#timesteps = [2^-3, 2^-4, 2^-5, 2^-6, 2^-7, 2^-8, 2^-9, 2^-10, 2^-11, 2^-12, 2^-13, 2^-14, 2^-15, 2^-16, 2^-17, 2^-18, 2^-19, 2^-20]
+timesteps = [1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6]
 _, convergence1 = test_timestep_convergence(prob, analytical_solution, timesteps, MSS1())
 _, convergence2 = test_timestep_convergence(prob, analytical_solution, timesteps, MSS2())
 _, convergence3 = test_timestep_convergence(prob, analytical_solution, timesteps, MSS3())
-plot(timesteps, convergence1, xaxis=:log2, yaxis=:log, label="MSS1")
-plot!(timesteps, convergence2, xaxis=:log2, yaxis=:log, label="MSS2", color="dark green")
-plot!(timesteps, convergence3, xaxis=:log2, yaxis=:log, label="MSS3", color="orange")
+plot(timesteps, convergence1, xaxis=:log, yaxis=:log, label="MSS1")
+plot!(timesteps, convergence2, xaxis=:log, yaxis=:log, label="MSS2", color="dark green")
+plot!(timesteps, convergence3, xaxis=:log, yaxis=:log, label="MSS3", color="orange")
 plot!(timesteps, 3000000 * timesteps.^ 2, linestyle=:dash, label=L"\frac{1}{2}dt^2", xlabel="dt",
     ylabel=L"||U-u_a||", title="Timestep convergence, exponential test", xticks=timesteps)
+plot!(timesteps, 0.0002*timesteps, linestyle=:dash)
+plot!(timesteps, 0.0001*timesteps.^2, linestyle=:dash)
+plot!(timesteps, 0.0001*timesteps.^3, linestyle=:dash)
 savefig("Timestep convergence, exponential test.pdf")
 
+convergence3
 ## ------------------------------ Old content -----------------------------------------------
 
 ## Run all (alt+enter)

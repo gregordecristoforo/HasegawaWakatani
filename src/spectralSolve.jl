@@ -13,20 +13,22 @@ function spectral_solve(prob::SpectralODEProblem, scheme=MSS3(), output=Output(p
 
     # Auxilary variables
     dt = prob.dt
-    t = first(prob.tspan) + dt
-    step = 1
+    t = first(prob.tspan)
+    step = 0
 
     # Calculate number of steps
-    total_steps = floor(Int, (last(prob.tspan) - first(prob.tspan)) / dt) + 1
+    total_steps = floor(Int, (last(prob.tspan) - first(prob.tspan)) / dt)
 
     # This method assumes step number does not overflow!
     while step < total_steps
         perform_step!(cache, prob, t)
-        handle_output!(output, step, cache.u, prob, t)
 
         # Increment step and time 
         step += 1
+        # TODO add time tracking to perform_step?
         t += dt
+
+        handle_output!(output, step, cache.u, prob, t)
     end
 
     # TODO catch edge case
