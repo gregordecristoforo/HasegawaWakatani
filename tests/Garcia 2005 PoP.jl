@@ -40,20 +40,24 @@ prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, 
 # Array of diagnostics want
 diagnostics = [
     #ProbeDensityDiagnostic([(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], N=10),
-    #RadialCOMDiagnostic(),
+    RadialCOMDiagnostic(1),
     ProgressDiagnostic(10),
     #CFLDiagnostic(),
     #RadialCFLDiagnostic(100),
-    PlotDensityDiagnostic(100),
-    PlotVorticityDiagnostic(100),
-    PlotPotentialDiagnostic(100),
+    PlotDensityDiagnostic(1000),
+    PlotVorticityDiagnostic(1000),
+    PlotPotentialDiagnostic(1000),
 ]
 
 # The output
-output = Output(prob, 21, diagnostics) #progressDiagnostic
+output = Output(prob, 21, diagnostics)
 
 ## Solve and plot
 sol = spectral_solve(prob, MSS3(), output)
+
+data = extract_diagnostic(sol.diagnostics[1].data)
+plot(data[1,:])
+plot(data[2,:])
 
 ## Recreate Garcia et al. plots
 display(heatmap(sol.u[6][:, :, 1], levels=10, aspect_ratio=:equal))
@@ -64,6 +68,28 @@ display(heatmap(sol.u[6][:, :, 2], levels=10, aspect_ratio=:equal, color=:jet))
 display(heatmap(sol.u[11][:, :, 2], levels=10, aspect_ratio=:equal, color=:jet))
 display(heatmap(sol.u[16][:, :, 2], levels=10, aspect_ratio=:equal, color=:jet))
 display(heatmap(sol.u[end][:, :, 2], levels=10, aspect_ratio=:equal, color=:jet))
+
+## Recreate max velocity plot
+amplitudes = logspace(-2,5,22)
+max_velocities = similar(amplitudes)
+velocities = Vector{typeof(data)}(undef, length(amplitudes))
+
+for (i,A) in enumerate(amplitudes)
+    # Update initial initial_condition
+    u0 = gaussian.(domain.x', domain.y, A=A, B=0, l=1)
+    # Update problem 
+    prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=1e-2)
+    # Update output
+    output = Output(prob, 21, diagnostics)
+    # Solve 
+    sol = spectral_solve(prob, MSS3(), output)
+    # Extract velocity
+    velocities[i] = extract_diagnostic(sol.diagnostics[1].data)
+    # Determine max velocity
+    max_velocities[i] = maximum(velocities[i][2,:])    
+end
+
+plot(amplitudes, max_velocities, xaxis=:log)
 
 ## Save data
 using JLD

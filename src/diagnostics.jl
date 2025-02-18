@@ -21,6 +21,7 @@ end
 
 # ----------------------------------- Diagnostics ------------------------------------------
 
+# TODO probabily should split diagnostic up to smaller more maintainable files
 # TODO evaluate wether or not to be mutable if push!(data) is used does not need to be mutable
 mutable struct Diagnostic
     name::String
@@ -185,16 +186,28 @@ end
 # ------------------------------------ COM -------------------------------------------------
 
 # TODO add argument for using quadratures
-function radial_COM(u, prob, t)#; previousPosition=0, dt=0)
+function radial_COM(u, prob, t, p)
     # 2:end is because the boundaries are periodic and thus should not contribute
     X_COM = sum(prob.domain.x[2:end]' .* u[2:end, 2:end, 1]) / sum(u[2:end, 2:end, 1])
-    #V_COM = X_COM - previousPosition / dt
-    X_COM
+    
+    # Check that do not divide by zero
+    if p["previous_time"] == t
+        V_COM = 0
+    else
+        V_COM = (X_COM .- p["previous_position"]) ./ (t .- p["previous_time"])
+    end
+
+    # Store 
+    p["previous_position"] = X_COM
+    p["previous_time"] = t
+    [X_COM, V_COM]
 end
 
 # "Constructor"
 function RadialCOMDiagnostic(N=100)
-    return Diagnostic("RadialCOMDiagnostic", radial_COM, N, "X_COM")
+    #kwargs = (previous_position=0, previous_time=0)
+    args = (Dict("previous_position" => 0.0, "previous_time" => 0.0),)
+    return Diagnostic("RadialCOMDiagnostic", radial_COM, N, "X_COM, V_COM", args)#, kwargs)
 end
 
 #---------------------------------- CFL ----------------------------------------------------
@@ -407,14 +420,6 @@ function compareGraphs(x, numerical, analytical; kwargs...)
     plot!(x, analytical; label="Analytical", kwargs...)
 end
 
-#n = u[:, :, 1]
-#W = u[:, :, 2]
-#println(size(n), size(W))
-#display(surface(domain.x, domain.y, n, xlabel="x", ylabel="y"))
-#display(contourf(W))
-#display(plot(domain.y, real(multi_ifft(cache.u, domain.transform)), title="t=$t, cfl=$cfl"))
-#display(contourf(domain, real(multi_ifft(cache.u, domain.transform)), title="t=$t, cfl=$cfl"))
-
 # --------------------------- Progress diagnostic ------------------------------------------
 
 function progress(u, prob, t)
@@ -432,9 +437,6 @@ end
 #cflDiagnostic = Diagnostic(CFLExB, 100, "cfl")
 const DEFAULT_DIAGNOSTICS = [ProgressDiagnostic()]
 
-
-# fields, radial velocity
-
 # --------------------------------------- Other --------------------------------------------
 
 #1D profile: n_0(x,t) = 1/L_y∫_0^L_y n(x,y,t)dy
@@ -448,13 +450,6 @@ function profile1D()
     display(plot(sum(Θ, dims=1)' ./ domain.Ly))
 end
 
-
-
-
-"""
-Empty
-"""
-
 # energy integrals 
 
 # P(t) = ∫dx 1/2n^2
@@ -462,8 +457,6 @@ Empty
 function energyIntegral()
     nothing
 end
-
-# outputCenterOfMass::Bool
 
 function plotFrequencies(u)
     heatmap(log10.(norm.(u)), title="Frequencies")
