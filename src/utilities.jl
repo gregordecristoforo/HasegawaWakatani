@@ -218,3 +218,7 @@ function compare(x, y, A::Matrix, B::Matrix)
     #plot(x, y, A)
     #plot(x,x,B)
 end
+
+function logspace(start, stop, length)
+    10 .^ range(start, stop, length)
+end

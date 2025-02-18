@@ -79,5 +79,6 @@ function extract_output(output::Output)
 end
 
 # TODO implement
-function extract_diagnostic()
+function extract_diagnostic(data::Vector)
+    Array(reshape(reduce(hcat, data), size(data[1])..., length(data)))
 end
