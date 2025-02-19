@@ -188,14 +188,14 @@ end
         #cache.u1 = u0*exp.(p["lambda"]*dt)#Exact
         
         # Perform 10000 steps with MSS1
-        N = 10000
-        cprob = deepcopy(prob)
-        cprob.dt = prob.dt/N
-        cache1 = get_cache(cprob, MSS1())
-        for n in 1:N
-            perform_step!(cache1, cprob, t + (n-1)*cprob.dt)
-        end
-        cache.u1 = cache1.u
+        #N = 10000
+        # cprob = deepcopy(prob)
+        # cprob.dt = prob.dt/N
+        # cache1 = get_cache(cprob, MSS1())
+        # for n in 1:N
+        #     perform_step!(cache1, cprob, t + (n-1)*cprob.dt)
+        # end
+        # cache.u1 = cache1.u
 
         cache.u = cache.u1 # For output handling
     elseif cache.step == 2
