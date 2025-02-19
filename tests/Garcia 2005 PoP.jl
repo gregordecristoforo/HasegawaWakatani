@@ -3,7 +3,7 @@ include("../src/HasagawaWakatini.jl")
 
 ## Run scheme test for Burgers equation
 #domain = Domain(512, 512, 200, 100, anti_aliased=false)
-domain = Domain(256, 256, 50, 50, anti_aliased=false)
+domain = Domain(1024, 1024, 50, 50, anti_aliased=false)
 #domain = Domain(1024, 1024, 50, 50, anti_aliased=false)
 u0 = gaussian.(domain.x', domain.y, A=1, B=0, l=1)
 
@@ -32,10 +32,10 @@ parameters = Dict(
 )
 
 # Time interval
-t_span = [0, 20]
+t_span = [0, 50]
 
 # The problem
-prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=1e-2)
+prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=1e-3)
 
 # Array of diagnostics want
 diagnostics = [
@@ -90,6 +90,7 @@ for (i,A) in enumerate(amplitudes)
 end
 
 plot(amplitudes, max_velocities, xaxis=:log)
+save("velocitydata.jld", "data", velocities)
 
 ## Save data
 using JLD
