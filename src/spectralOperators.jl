@@ -26,6 +26,7 @@ struct SpectralOperatorCache
         DiffYY = -ky .^ 2
         Laplacian = -kx' .^ 2 .- ky .^ 2
 
+        # CUDA
         QT = im * zeros(length(ky), length(kx))
 
         if anti_aliased
@@ -35,6 +36,7 @@ struct SpectralOperatorCache
             N, M = Nx, Ny
         end
 
+        # TODO make these CUDA
         if realTransform # TODO check if error is here
             m = M % 2 == 0 ? M ÷ 2 + 1 : (M - 1) ÷ 2 + 1
             QTp = im * zeros(m, N)

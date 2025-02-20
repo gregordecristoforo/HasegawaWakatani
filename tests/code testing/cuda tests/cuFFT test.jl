@@ -2,7 +2,8 @@ using CUDA
 using LinearAlgebra
 using FFTW
 N = 2^10
-A = CUDA.rand(Float64,N,N)
+A = rand(Float64,N,N)
+CuArray(A)
 FT = plan_rfft(A)
 B = FT*A
 iFT = plan_irfft(B, N)

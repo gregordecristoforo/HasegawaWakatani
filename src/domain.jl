@@ -1,6 +1,7 @@
 module Domains
 
 using FFTW
+using CUDA
 include("spectralOperators.jl")
 using .SpectralOperators
 
@@ -48,10 +49,15 @@ struct Domain
         # ------------------ If x-direction favored in rfft -------------------
         #kx = real ? 2 * π * rfftfreq(Nx, 1 / dx) : 2 * π * fftfreq(Nx, 1 / dx)
         #ky = 2 * π * fftfreq(Ny, 1 / dy)
+        # TODO make them CUDA
         kx = 2 * π * fftfreq(Nx, 1 / dx)
         ky = realTransform ? 2 * π * rfftfreq(Ny, 1 / dy) : 2 * π * fftfreq(Ny, 1 / dy)
 
-        utmp = zeros(Ny, Nx)
+        if CUDA.functional()
+            utmp = zeros(Ny, Nx)
+        else
+            utmp = zeros(Ny, Nx)
+        end
 
         if realTransform
             FT = plan_rfft(utmp)
