@@ -31,7 +31,7 @@ function exponential_background(x, y; kappa=1)
 end
 
 function quadratic_function(x, y; kappa=1)
-    abs(y) <= 1 ? 1-y.^2 : 0
+    abs(y) <= 1 ? 1 - y .^ 2 : 0
 end
 
 function randomIC(x, y)
@@ -72,7 +72,7 @@ function HeatEquationAnalyticalSolution(u0, domain, p, t)
 end
 
 function HeatEquationAnalyticalSolution2(u0, domain, p, t)
-    exp.(-(domain.x'.^2 .+ domain.y.^2)/(2*(1 + 2*p["nu"]*t)))/(1 + 2*p["nu"]*t)
+    exp.(-(domain.x' .^ 2 .+ domain.y .^ 2) / (2 * (1 + 2 * p["nu"] * t))) / (1 + 2 * p["nu"] * t)
 end
 
 # Burgers equation
@@ -104,20 +104,21 @@ end
 # ------------------------------- Convergence testing --------------------------------------
 function test_timestep_convergence(prob, analyticalSolution, timesteps, scheme=MSS3(), displayResults=true; kwargs...)
 
-    #Calculate analyticalSolution
-    u = analyticalSolution(prob.u0, prob.domain, prob.p, last(prob.tspan); kwargs...)
-
     #Initialize storage
     residuals = zeros(size(timesteps))
 
     for (i, dt) in enumerate(timesteps)
         # Create new spectralODEProblem with new dt
-        newProb = SpectralODEProblem(prob.L, prob.f, prob.domain, prob.u0, prob.tspan, p=prob.p, dt=dt)
+        newProb = SpectralODEProblem(prob.L, prob.N, prob.domain, prob.u0, prob.tspan, p=prob.p, dt=dt)
 
         output = Output(newProb, 2, [])
 
         #Calculate approximate solution
         sol = spectral_solve(newProb, scheme, output)
+
+        #Calculate analyticalSolution
+        u = analyticalSolution(prob.u0, prob.domain, prob.p, last(sol.t); kwargs...)
+
         residuals[i] = norm(sol.u[end] - u)
     end
 
@@ -131,7 +132,7 @@ end
 
 #
 function test_resolution_convergence(prob, initialField, analyticalSolution, resolutions,
-    scheme=MMS3(), displayResults=true; kwargs...)
+    scheme=MMS3(); displayResults=true, oneDimensional=false, kwargs...)
 
     od = prob.domain
     residuals = zeros(size(resolutions))
@@ -139,16 +140,22 @@ function test_resolution_convergence(prob, initialField, analyticalSolution, res
     for (i, N) in enumerate(resolutions)
 
         # Create higher resolution domain
-        domain = Domain(N, N, od.Lx, od.Ly, realTransform=od.realTransform)#, anti_aliased = od.anti_aliased)
+        if oneDimensional
+            domain = Domain(1, N, od.Lx, od.Ly, realTransform=od.realTransform)#, anti_aliased = od.anti_aliased)
+        else
+            domain = Domain(N, N, od.Lx, od.Ly, realTransform=od.realTransform)#, anti_aliased = od.anti_aliased)
+        end
         u0 = initial_condition(initialField, domain) #TODO rethink initial condition 
 
         # Create new spectralODEProblem but with updated resolution
-        newProb = SpectralODEProblem(prob.L, prob.f, domain, u0, prob.tspan, p=prob.p, dt=prob.dt)
+        newProb = SpectralODEProblem(prob.L, prob.N, domain, u0, prob.tspan, p=prob.p, dt=prob.dt)
         output = Output(newProb, 2, [])
 
         # Calculate solutions
         sol = spectral_solve(newProb, scheme, output)
-        u = analyticalSolution(u0, domain, prob.p, last(prob.tspan); kwargs...)
+        u = analyticalSolution(u0, domain, prob.p, last(sol.t); kwargs...)
+
+        println("$(size(sol.u[end])), vs $(size(u))")
 
         # Scaled residual to compensate for increased resolution
         residuals[i] = norm(sol.u[end] - u) / (domain.Nx * domain.Ny)
@@ -157,9 +164,9 @@ function test_resolution_convergence(prob, initialField, analyticalSolution, res
 
     if displayResults
         display(plot(resolutions, residuals, xaxis=:log2, yaxis=:log, xlabel=L"N_x \wedge N_y",
-        marker = :circle, ylabel=L"||u-u_a||/N_xN_y"))
-        display(plot!(resolutions, 1e-5*resolutions.^-2, linestyle=:dash))
-        display(plot!(resolutions, 1e-5*resolutions.^-1, linestyle=:dash))
+            marker=:circle, ylabel=L"||u-u_a||/N_xN_y"))
+        display(plot!(resolutions, 1e-5 * resolutions .^ -2, linestyle=:dash))
+        display(plot!(resolutions, 1e-5 * resolutions .^ -1, linestyle=:dash))
     end
 
     return resolutions, residuals

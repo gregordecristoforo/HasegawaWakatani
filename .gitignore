@@ -1,4 +1,5 @@
-# ignore ALL .jld files
+# ignore ALL .jld files and big data files
 *.jld
 *.pdf
 *.svg
+*.png

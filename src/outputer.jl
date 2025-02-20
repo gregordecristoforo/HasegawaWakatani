@@ -70,6 +70,11 @@ function handle_output!(output::Output, step::Integer, u::AbstractArray, prob::S
             perform_diagnostic!(diagnostic, step, u, prob, t) #diagnostic.data[step÷diagnostic.sampleStep] = diagnostic.method(U, prob, t)
         end
     end
+
+    # Check if first value is NaN, if the matrix has one NaN the whole array will turn NaN after fft
+    if isnan(u[1])
+        error("Breakdown occured at t=$t")
+    end
 end
 
 # Gives a more managle array compared to output.u

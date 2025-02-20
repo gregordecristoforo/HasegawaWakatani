@@ -34,7 +34,7 @@ end
 
 @muladd function perform_step!(cache::MSS1Cache, prob::SpectralODEProblem, t::Number)
     u, c, dt = unpack_cache(cache)
-    d, f, p = prob.domain, prob.f, prob.p
+    d, f, p = prob.domain, prob.N, prob.p
 
     # Perform step
     cache.u = c .* (u .+ dt * f(u, d, p, t))
@@ -93,7 +93,7 @@ end
 @muladd function perform_step!(cache::MSS2Cache, prob::SpectralODEProblem, t::Number)
     u, c, u0, u1, k0, tab, step = unpack_cache(cache)
     a0, a1, b0, b1 = tab.a0, tab.a1, tab.b0, tab.b1
-    d, f, p, dt = prob.domain, prob.f, prob.p, prob.dt
+    d, f, p, dt = prob.domain, prob.N, prob.p, prob.dt
 
     if cache.step == 1
         cache.step += 1
@@ -175,7 +175,7 @@ end
 @muladd function perform_step!(cache::MSS3Cache, prob::SpectralODEProblem, t::Number)
     u, c, u0, u1, u2, k0, k1, tab, step = unpack_cache(cache)
     a0, a1, a2, b0, b1, b2 = tab.a0, tab.a1, tab.a2, tab.b0, tab.b1, tab.b2
-    d, f, p, dt = prob.domain, prob.f, prob.p, prob.dt
+    d, f, p, dt = prob.domain, prob.N, prob.p, prob.dt
 
     if cache.step == 1
         cache.step += 1
@@ -184,6 +184,19 @@ end
         perform_step!(cache1, prob, t)
         cache.k0 = f(u0, d, p, t)
         cache.u1 = cache1.u
+        #TODO remove testing
+        #cache.u1 = u0*exp.(p["lambda"]*dt)#Exact
+        
+        # Perform 10000 steps with MSS1
+        #N = 10000
+        # cprob = deepcopy(prob)
+        # cprob.dt = prob.dt/N
+        # cache1 = get_cache(cprob, MSS1())
+        # for n in 1:N
+        #     perform_step!(cache1, cprob, t + (n-1)*cprob.dt)
+        # end
+        # cache.u1 = cache1.u
+
         cache.u = cache.u1 # For output handling
     elseif cache.step == 2
         cache.step += 1
