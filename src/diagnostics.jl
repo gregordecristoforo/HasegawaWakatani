@@ -226,6 +226,11 @@ end
 function cfl_ExB(u::AbstractArray, prob::SpectralODEProblem, t::Number)
     v_x, v_y = vExB(u, prob.domain)
     #(CFLx, CFLy, x, y)
+    # if maximum(v_x) * prob.dt / prob.domain.dx >= 0.5
+    #     println("Breakdown t=$t")
+    # elseif maximum(v_y) * prob.dt / prob.domain.dx >= 0.5
+    #     println("Breakdown t=$t")
+    # end
     maximum(v_x) * prob.dt / prob.domain.dx, maximum(v_y) * prob.dt / prob.domain.dy
 end
 
@@ -321,10 +326,6 @@ end
 function GetLogModeDiagnostic(N=100, kx=:ky)
     Diagnostic("Log mode diagnstic", get_log_modes, N, "log(|u_k|)", assumesSpectralField=true, (), (kx=kx,))
 end
-
-
-GetLogModeDiagnostic()
-
 
 # ------------------------------------------- Boundary diagnostics ---------------------------------------------------------
 function lowerXBoundary(u::Array)

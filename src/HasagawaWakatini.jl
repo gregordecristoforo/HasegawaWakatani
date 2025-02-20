@@ -11,5 +11,5 @@ include("spectralODEProblem.jl") # ✓
 include("schemes.jl")            # ✓   
 include("outputer.jl")           # ✓
 include("spectralSolve.jl")      # ✓
-include("diagnostics.jl")        # 
+include("diagnostics.jl")        # ✓
 include("utilities.jl")          # ✓

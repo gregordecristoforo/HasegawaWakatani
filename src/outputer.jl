@@ -82,3 +82,4 @@ end
 function extract_diagnostic(data::Vector)
     Array(reshape(reduce(hcat, data), size(data[1])..., length(data)))
 end
+# These are just stack() ^^

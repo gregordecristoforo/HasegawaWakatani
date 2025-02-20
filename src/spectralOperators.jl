@@ -157,7 +157,7 @@ end
 
 # TODO test solvePhi
 function solvePhi(field, SC::SpectralOperatorCache)
-    phi_hat = field ./ SC.Laplacian
+    phi_hat = field ./ SC.Laplacian # TODO make this a multiplication!
     phi_hat[1] = 0 # First entry will always be NaN
     return phi_hat
 end
