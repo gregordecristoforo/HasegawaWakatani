@@ -24,32 +24,23 @@ end
 # TODO probabily should split diagnostic up to smaller more maintainable files
 # TODO evaluate wether or not to be mutable if push!(data) is used does not need to be mutable
 mutable struct Diagnostic
-    name::String
+    name::AbstractString
     method::Function
     data::AbstractArray
     t::AbstractArray
     sampleStep::Integer
+    h5group::Any #::HDF5.Group
     label::Any
     assumesSpectralField::Bool
-    args::Any
-    kwargs::Any
+    args::Tuple
+    kwargs::NamedTuple
 
     function Diagnostic(name::String, method::Function, sampleStep::Integer=-1, label="", args=(), kwargs=NamedTuple(); assumesSpectralField=false)
-        new(name, method, Vector[], Vector[], sampleStep, label, assumesSpectralField, args, kwargs)
+        new(name, method, Vector[], Vector[], sampleStep, nothing, label, assumesSpectralField, args, kwargs)
     end
 end
 
-function perform_diagnostic!(diagnostic::Diagnostic, step::Integer, u::AbstractArray, prob::SpectralODEProblem, t::Number)
-    if diagnostic.assumesSpectralField
-        diagnostic.data[step÷diagnostic.sampleStep+1] = diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
-    else
-        U = real(transform(u, prob.domain.transform.iFT)) # transform to realspace
-        diagnostic.data[step÷diagnostic.sampleStep+1] = diagnostic.method(U, prob, t, diagnostic.args...; diagnostic.kwargs...)
-    end
-    diagnostic.t[step÷diagnostic.sampleStep+1] = t
-end
-
-function initialize_diagnostic!(diagnostic::Diagnostic, prob) #::SpectralODEProblem
+function initialize_diagnostic!(diagnostic::Diagnostic, prob, simulation, h5_kwargs) #::SpectralODEProblem
 
     # Calculate total number of steps
     N_steps = floor(Int, (last(prob.tspan) - first(prob.tspan)) / prob.dt)
@@ -89,13 +80,37 @@ function initialize_diagnostic!(diagnostic::Diagnostic, prob) #::SpectralODEProb
         id = diagnostic.method(prob.u0, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
     end
 
+    # Create group
+    diagnostic.h5group = create_group(simulation, diagnostic.name)
+
+    # Create dataset for fields and time
+    # Datatype and shape is not so trivial here..., will have to think about it tomorrow
+    dset = create_dataset(simulation, "data", datatype(Float64), (size(prob.u0)..., typemax(Int64)),
+    chunk=(size(prob.u0)..., 1); h5_kwargs...)
+    HDF5.set_extent_dims(dset, (size(prob.u0)..., N_data))
+    dset = create_dataset(simulation, "t", datatype(Float64), (typemax(Int64),),
+        chunk=(1,); h5_kwargs...)
+    HDF5.set_extent_dims(dset, (N_data,))
+
     # Allocate arrays
     diagnostic.data = Vector{typeof(id)}(undef, N)
     diagnostic.data[1] = id
     diagnostic.t = zeros(N)
     diagnostic.t[1] = first(prob.tspan)
+    # TODO push data to HDF5
 
 end
+
+function perform_diagnostic!(diagnostic::Diagnostic, step::Integer, u::AbstractArray, prob::SpectralODEProblem, t::Number)
+    if diagnostic.assumesSpectralField
+        diagnostic.data[step÷diagnostic.sampleStep+1] = diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
+    else
+        U = real(transform(u, prob.domain.transform.iFT)) # transform to realspace
+        diagnostic.data[step÷diagnostic.sampleStep+1] = diagnostic.method(U, prob, t, diagnostic.args...; diagnostic.kwargs...)
+    end
+    diagnostic.t[step÷diagnostic.sampleStep+1] = t
+end
+
 
 # --------------------------------- Probe --------------------------------------------------
 
@@ -189,7 +204,7 @@ end
 function radial_COM(u, prob, t, p)
     # 2:end is because the boundaries are periodic and thus should not contribute
     X_COM = sum(prob.domain.x[2:end]' .* u[2:end, 2:end, 1]) / sum(u[2:end, 2:end, 1])
-    
+
     # Check that do not divide by zero
     if p["previous_time"] == t
         V_COM = 0

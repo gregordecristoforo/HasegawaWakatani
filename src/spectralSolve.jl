@@ -29,6 +29,7 @@ function spectral_solve(prob::SpectralODEProblem, scheme=MSS3(), output=Output(p
         t += dt
 
         handle_output!(output, step, cache.u, prob, t)
+        sleep(1e-10000000000000) #To be able to interupt simulation
     end
 
     # TODO catch edge case

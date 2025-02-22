@@ -36,9 +36,6 @@ t_span = [0, 20]
 # Speed up simulation
 FFTW.set_num_threads(16)
 
-# Speed up simulation
-FFTW.set_num_threads(16)
-
 # The problem
 prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=1e-3)
 
@@ -54,12 +51,11 @@ diagnostics = [
 ]
 
 # The output
-output = Output(prob, 21, diagnostics)
+output = Output(prob, 21, diagnostics, "Garcia 2005 PoP")
 
 ## Solve and plot
 sol = spectral_solve(prob, MSS3(), output)
 
-output.diagnostics[2].data[49]
 # Folder path
 cd("tests/Garcia 2005 Pop/")
 
