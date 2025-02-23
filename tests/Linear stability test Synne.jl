@@ -29,7 +29,6 @@ function N(u, d, p, t)
     dη -= p["g"] * diffY(η, d)
     dη -= p["sigma_n"] * η
     dη -= p["sigma_n"] * ϕ
-    #dη -= p["sigma_n"] * η
     dΩ = -p["g"] * diffY(η, d)
     dΩ += p["sigma_Omega"] * ϕ
     return [dη;;; dΩ]
@@ -49,7 +48,7 @@ parameters = Dict(
 t_span = [0, 500]
 
 # The problem
-prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-3)
+prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-2)
 
 # Array of diagnostics want
 diagnostics = [
@@ -59,7 +58,8 @@ diagnostics = [
     #CFLDiagnostic(),
     #RadialCFLDiagnostic(100),
     PlotDensityDiagnostic(1000),
-    GetModeDiagnostic(100),
+    #GetModeDiagnostic(100),
+    GetLogModeDiagnostic(100, 1),
 ]
 
 # The output
@@ -99,3 +99,13 @@ plot(fftshift(domain.kx)[end-62:end], fftshift(real(diag(gamma)))[end-62:end], x
 ylims!(0, 0.003)
 
 fftshift(domain.kx)[end-62]
+
+growth_rates = stack(sol.diagnostics[end].data)
+gamma = (growth_rates[:,:,end] - growth_rates[:,:,end-1])/(100*prob.dt)
+p = parameters
+w0 = sqrt(p["g"]*p["kappa"])*sqrt(1-p["g"]/p["kappa"])
+plot(gamma[:,1])
+plot(gamma[:,2]/w0, xaxis=:log, xlabel=L"k_y = k_x", ylabel=L"\omega/\omega_0")
+#vline!([p["kappa"]^-1/4])
+
+plot()

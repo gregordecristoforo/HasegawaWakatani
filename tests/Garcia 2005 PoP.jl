@@ -41,17 +41,17 @@ prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, 
 
 # Array of diagnostics want
 diagnostics = [
-    #ProbeDensityDiagnostic([(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], N=1),
-    RadialCOMDiagnostic(1),
+    #ProbeDensityDiagnostic([(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], N=10),
+    #RadialCOMDiagnostic(1),
     ProgressDiagnostic(100),
-    #CFLDiagnostic(1),
+    CFLDiagnostic(1),
     #PlotDensityDiagnostic(1000),
     #PlotVorticityDiagnostic(1000),
     #PlotPotentialDiagnostic(1000),
 ]
 
 # The output
-output = Output(prob, 21, diagnostics)
+output = Output(prob, 21, diagnostics, "Garcia 2005 PoP.h5")
 
 ## Solve and plot
 sol = spectral_solve(prob, MSS3(), output)
@@ -126,6 +126,9 @@ for (i, A) in enumerate(amplitudes)
     # Update initial initial_condition
     u0 = gaussian.(domain.x', domain.y, A=A, B=0, l=1)
     # Update problem 
+    prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], [0, tends[i]], p=parameters, dt=dts[i])
+    # Reset diagnostics
+    diagnostics = [RadialCOMDiagnostic(1), ProgressDiagnostic(100), PlotDensityDiagnostic(1000),]
     prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], [0, tends[i]], p=parameters, dt=dts[i])
     # Reset diagnostics
     diagnostics = [RadialCOMDiagnostic(1), ProgressDiagnostic(100), PlotDensityDiagnostic(1000),]

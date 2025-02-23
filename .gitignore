@@ -3,3 +3,5 @@
 *.pdf
 *.svg
 *.png
+*.h5
+*.jlprof

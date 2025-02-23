@@ -19,19 +19,24 @@ function spectral_solve(prob::SpectralODEProblem, scheme=MSS3(), output=Output(p
     # Calculate number of steps
     total_steps = floor(Int, (last(prob.tspan) - first(prob.tspan)) / dt)
 
-    # This method assumes step number does not overflow!
-    while step < total_steps
-        perform_step!(cache, prob, t)
+    try
+        # This method assumes step number does not overflow!
+        while step < total_steps
+            perform_step!(cache, prob, t)
 
-        # Increment step and time 
-        step += 1
-        # TODO add time tracking to perform_step?
-        t += dt
+            # Increment step and time 
+            step += 1
+            # TODO add time tracking to perform_step?
+            t += dt
 
-        handle_output!(output, step, cache.u, prob, t)
+            handle_output!(output, step, cache.u, prob, t)
+            sleep(1e-10000000000000) #To be able to interupt simulation
+        end
+    catch error
+        # Here store the last 3 steps to be able to resume simulations after interupt
+        rethrow(error)
     end
-
-    # TODO catch edge case
+    # TODO catch edge case and close file
 
     # Returns output struct
     return output
