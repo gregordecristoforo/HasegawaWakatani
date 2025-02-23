@@ -63,6 +63,7 @@ mutable struct Output
         # TODO maybe remove u?
         u = Vector{typeof(prob.u0)}(undef, N_data)
         u[1] = prob.u0
+        prob.recover_fields!(U)
         simulation["fields"][fill(:, ndims(prob.u0))..., 1] = u[1]
         t = zeros(N_data)
         t[1] = first(prob.tspan)

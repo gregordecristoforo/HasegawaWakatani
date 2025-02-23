@@ -127,6 +127,7 @@ function perform_diagnostic!(diagnostic::Diagnostic, step::Integer, u::AbstractA
             diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
         else
             U = real(transform(u, prob.domain.transform.iFT)) # transform to realspace
+            prob.recover_fields!(U)
             diagnostic.method(U, prob, t, diagnostic.args...; diagnostic.kwargs...)
         end
     end

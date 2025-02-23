@@ -4,7 +4,7 @@ include("../src/HasagawaWakatini.jl")
 ## Run scheme test for Burgers equation
 domain = Domain(1024, 1024, 50, 50, anti_aliased=false)
 #domain = Domain(256, 256, 50, 50, anti_aliased=false)
-u0 = gaussian.(domain.x', domain.y, A=0.1, B=1, l=1)
+u0 = log.(gaussian.(domain.x', domain.y, A=1e5, B=1, l=1))
 
 # Linear operator
 function L(u, d, p, t)
@@ -33,38 +33,43 @@ parameters = Dict(
 )
 
 # Time interval
-t_span = [0, 20]
+t_span = [0, 16]
 
 # Speed up simulation
 FFTW.set_num_threads(16)
 
+# Inverse transform
+function inverse_transformation(u)
+    @. u[:,:,1] = exp(u[:,:,1]) - 1
+end
+
 # The problem
-prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=1e-3)
+prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=1e-3, 
+                            inverse_transformation = inverse_transformation)
 
 # Array of diagnostics want
 diagnostics = [
     #ProbeDensityDiagnostic([(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], N=10),
-    RadialCOMDiagnostic(),
+    RadialCOMDiagnostic(10),
     ProgressDiagnostic(100),
     #CFLDiagnostic(),
     PlotDensityDiagnostic(1000)
 ]
 
-# The problem
-prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=1e-3)
-
 # The output
-output = Output(prob, 21, diagnostics)
+output = Output(prob, 21, diagnostics, "Kube 2011 Pop test.h5")
 
 ## Solve and plot
 sol = spectral_solve(prob, MSS3(), output)
 
+plot(output.simulation["RadialCOMDiagnostic/t"][1:200], output.simulation["RadialCOMDiagnostic/data"][2,1:200])
+
 # Folder path
-cd("tests/Garcia 2005 Pop/")
+cd("tests/Kube 2011 Pop/")
 
 ## Recreate max velocity plot
-tends = logspace(2, -2, 22)
-dts = tends / 2000
+tends = logspace(2, 0.30, 22)
+dts = tends / 10000
 amplitudes = logspace(-2, 5, 22)
 max_velocities = similar(amplitudes)
 velocities = Vector{AbstractArray}(undef, length(amplitudes))
@@ -76,16 +81,14 @@ parameters = Dict(
 
 for (i, A) in enumerate(amplitudes)
     # Update initial initial_condition
-    u0 = gaussian.(domain.x', domain.y, A=A, B=1, l=1)
+    u0 = log.(gaussian.(domain.x', domain.y, A=A, B=1, l=1))
     # Update problem 
-    prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], [0, tends[i]], p=parameters, dt=dts[i])
+    prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], [0, tends[i]], p=parameters, dt=dts[i], 
+                                inverse_transformation = inverse_transformation)
     # Reset diagnostics
-    diagnostics = [RadialCOMDiagnostic(1), ProgressDiagnostic(100), PlotDensityDiagnostic(1000),]
-    prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], [0, tends[i]], p=parameters, dt=dts[i])
-    # Reset diagnostics
-    diagnostics = [RadialCOMDiagnostic(1), ProgressDiagnostic(100), PlotDensityDiagnostic(1000),]
+    diagnostics = [RadialCOMDiagnostic(10), ProgressDiagnostic(100), PlotDensityDiagnostic(1000),]
     # Update output
-    output = Output(prob, 21, diagnostics)
+    output = Output(prob, 21, diagnostics, "Kube 2011 Pop 1024x1024 max vel.h5")
     # Solve 
     sol = spectral_solve(prob, MSS3(), output)
     # Extract velocity
@@ -98,12 +101,6 @@ plot(amplitudes, max_velocities, xaxis=:log, yaxis=:log, marker=:circle)
 savefig("blob velocities log(n).pdf")
 
 save("max_velocities logn(n).jld", "data", max_velocities)
-max_velocities[4]
 
-A = rand(8192,8192,1,3)
-B = fill(2, 8192, 8192, 1)
-@btime selectdim(A, 4, 3) .= B; nothing
-# 0.003s
-
-@btime A[fill(:,3)..., 3] .= B; nothing
-#0.002985s
+fid = h5open("Kube 2011 Pop max vel.h5")
+maximum(fid["2025-02-23T14:20:21.560"]["fields"][:,:,1,1])
