@@ -15,8 +15,8 @@ end
 
 # Non-linear operator
 function N(u, d, p, t)
-    θ = u[:, :, 1]
-    Ω = u[:, :, 2]
+    θ = @view u[:, :, 1]
+    Ω = @view u[:, :, 2]
     ϕ = solvePhi(Ω, d)
     dθ = -poissonBracket(ϕ, θ, d)
     dΩ = -poissonBracket(ϕ, Ω, d)
@@ -56,7 +56,6 @@ output = Output(prob, 21, diagnostics)
 ## Solve and plot
 sol = spectral_solve(prob, MSS3(), output)
 
-output.diagnostics[2].data[49]
 # Folder path
 cd("tests/Garcia 2005 Pop/")
 
@@ -116,7 +115,7 @@ tends = logspace(2, -2, 22)
 dts = tends / 2000
 amplitudes = logspace(-2, 5, 22)
 max_velocities = similar(amplitudes)
-velocities = Vector{typeof(data)}(undef, length(amplitudes))
+velocities = Vector{Matrix}(undef, length(amplitudes))
 
 parameters = Dict(
     "nu" => 1e-3,
@@ -140,12 +139,5 @@ for (i, A) in enumerate(amplitudes)
     max_velocities[i] = maximum(velocities[i][2, :])
 end
 
-plot(amplitudes, max_velocities, xaxis=:log, yaxis=:log, marker=:circle)
-plot(velocities[end][3, 1:2000])
-plot!(velocities[end][2, :])
-
-for i in eachindex(velocities)
-    max_velocities[i] = maximum(velocities[i][3, :])
-end
-
-ic = [u0;;; zero(u0)]
+plot(amplitudes, max_velocities, xaxis=:log, yaxis=:log, marker=:circle, xlabel=L"\Delta n/N", ylabel="max "*L"V", label="")
+savefig("blob velocity linear.pdf")
