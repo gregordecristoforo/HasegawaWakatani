@@ -46,13 +46,24 @@ vels_id["A"] = rand(100,100)
 #close(fid)
 
 i = 0
-while true
-    try
+try
+    while true      
         sleep(1e-10000000000000000)
-    catch   
-        println("Success")
-        rethrow(e)
     end
+catch e
+    println("Success")
+    rethrow(e)
+end
+
+using OrderedCollections
+
+A = OrderedDict(
+    "hi" => 1,
+    "3" => 2
+)
+
+for (key, val) in A 
+    println(key)
 end
 
 A = rand(100,100)

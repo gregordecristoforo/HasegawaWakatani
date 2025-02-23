@@ -37,9 +37,10 @@ struct Domain
     transform::TransformPlans
     realTransform::Bool
     anti_aliased::Bool
+    nfields::Integer
     Domain(N) = Domain(N, 1)
     Domain(N, L) = Domain(N, N, L, L)
-    function Domain(Nx, Ny, Lx, Ly; realTransform=true, anti_aliased=false, x0=-Lx / 2, y0=-Ly / 2)
+    function Domain(Nx, Ny, Lx, Ly; realTransform=true, anti_aliased=false, x0=-Lx / 2, y0=-Ly / 2, nfields=3)
         dx = Lx / Nx
         dy = Ly / Ny
         # dx and dy is subtracted at the end, because periodic boundary conditions
@@ -64,7 +65,7 @@ struct Domain
         SC = SpectralOperatorCache(kx, ky, Nx, Ny, realTransform=realTransform,
             anti_aliased=anti_aliased)
 
-        new(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC, transform_plans, realTransform, anti_aliased)
+        new(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC, transform_plans, realTransform, anti_aliased, nfields)
     end
 end
 

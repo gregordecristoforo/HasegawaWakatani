@@ -10,10 +10,10 @@ mutable struct Output
     filename::AbstractString
     file::HDF5.File
     simulation::HDF5.Group
-    h5_kwargs::NamedTuple
+    h5_kwargs::NamedTuple #Possibly also called a filter
 
     function Output(prob, N_data::Integer, diagnostics::AbstractArray=DEFAULT_DIAGNOSTICS,
-        filename::AbstractString=basename(tempname())*".h5"; h5_kwargs...)
+        filename::AbstractString=basename(tempname()) * ".h5"; h5_kwargs...)
 
         # Calculate number of total samples
         N_steps = floor(Int, (last(prob.tspan) - first(prob.tspan)) / prob.dt)
@@ -39,6 +39,8 @@ mutable struct Output
             @warn "N_data and stepsize was not compatible, N_data is instead set to N_data = " * "$N_data"
         end
 
+        #TODO check if .h5 and add it if no extension
+
         # Create HDF5 file
         file = h5open(filename, "cw")
 
@@ -57,17 +59,29 @@ mutable struct Output
             chunk=(1,); h5_kwargs...)
         HDF5.set_extent_dims(dset, (N_data,))
 
-        # TODO something with parameters
-        # perhaps something like: create_attribute(simulation, prob) and create new method
-
         # Allocate data for fields
         # TODO maybe remove u?
         u = Vector{typeof(prob.u0)}(undef, N_data)
         u[1] = prob.u0
-        simulation["fields"][:,:,:,1] = u[1]#TODO remove hard coding 
+        simulation["fields"][fill(:, ndims(prob.u0))..., 1] = u[1]
         t = zeros(N_data)
         t[1] = first(prob.tspan)
         simulation["t"][1] = t[1]
+
+        # Store attributes
+        # TODO perhaps something like: create_attribute(simulation, prob) and create new method
+        create_attribute(simulation, "dt", prob.dt)
+        create_attribute(simulation, "dx", prob.domain.dx)
+        create_attribute(simulation, "dy", prob.domain.dy)
+        create_attribute(simulation, "L_x", prob.domain.Lx)
+        create_attribute(simulation, "L_y", prob.domain.Ly)
+        create_attribute(simulation, "N_x", prob.domain.Nx)
+        create_attribute(simulation, "N_y", prob.domain.Ny)
+        create_attribute(simulation, "anti_aliased", prob.domain.anti_aliased)
+        create_attribute(simulation, "real_transform", prob.domain.realTransform)
+        for (key, val) in prob.p
+            create_attribute(simulation, key, val)
+        end
 
         # Allocate data for diagnostics
         for diagnostic in diagnostics
@@ -88,17 +102,22 @@ function handle_output!(output::Output, step::Integer, u::AbstractArray, prob::S
         #if prob.domain.Ny % 2 == 0
         #    u[prob.domain.Ny÷2+1, :, :] .= 0
         #end
+        U = real(transform(u, prob.domain.transform.iFT))
+        prob.recover_fields!(U)
+        idx = step ÷ output.stride + 1
 
-        # TODO implement HDF5
+        output.simulation["fields"][fill(:, ndims(u))..., idx] = U
+        output.simulation["t"][idx] = t
+
         # TODO add method to recover field
-        output.u[step÷output.stride+1] = real(transform(u, prob.domain.transform.iFT))
-        output.t[step÷output.stride+1] = t
+        output.u[idx] = U
+        output.t[idx] = t
     end
 
     # Handle diagnostics
     for diagnostic in output.diagnostics
         if step % diagnostic.sampleStep == 0
-            perform_diagnostic!(diagnostic, step, u, prob, t) #diagnostic.data[step÷diagnostic.sampleStep] = diagnostic.method(U, prob, t)
+            perform_diagnostic!(diagnostic, step, u, prob, t)
         end
     end
 

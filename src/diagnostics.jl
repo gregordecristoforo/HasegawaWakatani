@@ -32,11 +32,12 @@ mutable struct Diagnostic
     h5group::Any #::HDF5.Group
     label::Any
     assumesSpectralField::Bool
+    storesData::Bool
     args::Tuple
     kwargs::NamedTuple
 
-    function Diagnostic(name::String, method::Function, sampleStep::Integer=-1, label="", args=(), kwargs=NamedTuple(); assumesSpectralField=false)
-        new(name, method, Vector[], Vector[], sampleStep, nothing, label, assumesSpectralField, args, kwargs)
+    function Diagnostic(name::String, method::Function, sampleStep::Integer=-1, label="", args=(), kwargs=NamedTuple(); assumesSpectralField=false, storesData=true)
+        new(name, method, Vector[], Vector[], sampleStep, nothing, label, assumesSpectralField, storesData, args, kwargs)
     end
 end
 
@@ -65,52 +66,71 @@ function initialize_diagnostic!(diagnostic::Diagnostic, prob, simulation, h5_kwa
         @warn "The sample step was larger than the number of steps and has been set to sampleStep = $N_steps"
     end
 
-    # Calculate number of samples with rounded sampling rate
-    N = floor(Int, N_steps / diagnostic.sampleStep) + 1
+    if diagnostic.storesData
+        # Calculate number of samples with rounded sampling rate
+        N = floor(Int, N_steps / diagnostic.sampleStep) + 1
 
-    if N_steps % diagnostic.sampleStep != 0
-        @warn "($(diagnostic.name)) Note, there is a $(diagnostic.sampleStep + N_steps%diagnostic.sampleStep) 
-                sample step at the end"
+        if N_steps % diagnostic.sampleStep != 0
+            @warn "($(diagnostic.name)) Note, there is a $(diagnostic.sampleStep + N_steps%diagnostic.sampleStep) 
+                    sample step at the end"
+        end
+
+        # Take diagnostic of initial field (id = initial diagnostic)
+        if diagnostic.assumesSpectralField
+            id = diagnostic.method(prob.u0_hat, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
+        else
+            id = diagnostic.method(prob.u0, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
+        end
+
+        # Create group
+        diagnostic.h5group = create_group(simulation, diagnostic.name)
+
+        # Create dataset for fields and time
+        ## Datatype and shape is not so trivial here..., will have to think about it tomorrow
+        dset = create_dataset(simulation[diagnostic.name], "data", datatype(Float64), (size(id)..., typemax(Int64)),
+            chunk=(size(id)..., 1); h5_kwargs...)
+        HDF5.set_extent_dims(dset, (size(id)..., N))
+        dset = create_dataset(simulation[diagnostic.name], "t", datatype(Float64), (typemax(Int64),),
+            chunk=(1,); h5_kwargs...)
+        HDF5.set_extent_dims(dset, (N,))
+
+        # Add label
+        create_attribute(diagnostic.h5group, "label", diagnostic.label)
+
+        # Allocate arrays
+        diagnostic.data = Vector{typeof(id)}(undef, N)
+        diagnostic.data[1] = id
+        diagnostic.h5group["data"][fill(:, ndims(id))..., 1] = id
+        diagnostic.t = zeros(N)
+        diagnostic.t[1] = first(prob.tspan)
+        diagnostic.h5group["t"][1] = first(prob.tspan)
     end
-
-    # Take diagnostic of initial field (id = initial diagnostic)
-    if diagnostic.assumesSpectralField
-        id = diagnostic.method(prob.u0_hat, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
-    else
-        id = diagnostic.method(prob.u0, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
-    end
-
-    # Create group
-    diagnostic.h5group = create_group(simulation, diagnostic.name)
-
-    # Create dataset for fields and time
-    # Datatype and shape is not so trivial here..., will have to think about it tomorrow
-    dset = create_dataset(simulation, "data", datatype(Float64), (size(prob.u0)..., typemax(Int64)),
-    chunk=(size(prob.u0)..., 1); h5_kwargs...)
-    HDF5.set_extent_dims(dset, (size(prob.u0)..., N_data))
-    dset = create_dataset(simulation, "t", datatype(Float64), (typemax(Int64),),
-        chunk=(1,); h5_kwargs...)
-    HDF5.set_extent_dims(dset, (N_data,))
-
-    # Allocate arrays
-    diagnostic.data = Vector{typeof(id)}(undef, N)
-    diagnostic.data[1] = id
-    diagnostic.t = zeros(N)
-    diagnostic.t[1] = first(prob.tspan)
-    # TODO push data to HDF5
-
 end
 
 function perform_diagnostic!(diagnostic::Diagnostic, step::Integer, u::AbstractArray, prob::SpectralODEProblem, t::Number)
-    if diagnostic.assumesSpectralField
-        diagnostic.data[step÷diagnostic.sampleStep+1] = diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
-    else
-        U = real(transform(u, prob.domain.transform.iFT)) # transform to realspace
-        diagnostic.data[step÷diagnostic.sampleStep+1] = diagnostic.method(U, prob, t, diagnostic.args...; diagnostic.kwargs...)
-    end
-    diagnostic.t[step÷diagnostic.sampleStep+1] = t
-end
+    if diagnostic.storesData
+        idx = step ÷ diagnostic.sampleStep + 1
 
+        if diagnostic.assumesSpectralField
+            diagnostic.data[idx] = diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
+        else
+            U = real(transform(u, prob.domain.transform.iFT)) # transform to realspace
+            prob.recover_fields!(U) # apply a transformation, for instance exp to get n from log(n)
+            diagnostic.data[idx] = diagnostic.method(U, prob, t, diagnostic.args...; diagnostic.kwargs...)
+        end
+        # TODO better check on ndims
+        diagnostic.h5group["data"][fill(:, ndims(diagnostic.data[idx]))..., idx] = diagnostic.data[idx]
+        diagnostic.t[idx] = t
+        diagnostic.h5group["t"][idx] = t
+    else
+        if diagnostic.assumesSpectralField
+            diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
+        else
+            U = real(transform(u, prob.domain.transform.iFT)) # transform to realspace
+            diagnostic.method(U, prob, t, diagnostic.args...; diagnostic.kwargs...)
+        end
+    end
+end
 
 # --------------------------------- Probe --------------------------------------------------
 
@@ -246,25 +266,25 @@ function cfl_ExB(u::AbstractArray, prob::SpectralODEProblem, t::Number)
     # elseif maximum(v_y) * prob.dt / prob.domain.dx >= 0.5
     #     println("Breakdown t=$t")
     # end
-    maximum(v_x) * prob.dt / prob.domain.dx, maximum(v_y) * prob.dt / prob.domain.dy
+    [maximum(v_x) * prob.dt / prob.domain.dx, maximum(v_y) * prob.dt / prob.domain.dy]
 end
 
 function CFLDiagnostic(N=100)
-    Diagnostic("ExB cfl", cfl_ExB, N, ["max CFL x", "max CFL y"])
+    Diagnostic("ExB cfl", cfl_ExB, N, "max CFL x, max CFL y")
 end
 
 function radial_cfl_ExB(u::AbstractArray, prob::SpectralODEProblem, t::Number, v::Function=vExB)
     v_x, v_y = v(u, prob.domain)
-    maximum(v_x) * prob.dt / domain.dx, argmax(v_x)
+    [maximum(v_x) * prob.dt / domain.dx, argmax(v_x)]
 end
 
 function RadialCFLDiagnostic(N=100)
-    Diagnostic("Radial CFL", radial_cfl_ExB, N, ["max radial CFL", "position"])
+    Diagnostic("Radial CFL", radial_cfl_ExB, N, "max radial CFL, position")
 end
 
 function cfl_y(u::AbstractArray, prob::SpectralODEProblem, t::Number, v::Function=vExB)
     v_x, v_y = v(u, prob.domain)
-    maximum(v_y) * prob.dt / domain.dy, argmax(v_y)
+    [maximum(v_y) * prob.dt / domain.dy, argmax(v_y)]
 end
 
 # TODO test Burger and maybe remove it and include in the above functions
@@ -286,7 +306,7 @@ function plot_density(u::AbstractArray, prob, t::Number)
 end
 
 function PlotDensityDiagnostic(N=1000)
-    Diagnostic("Plot density", plot_density, N, "Display density")
+    Diagnostic("Plot density", plot_density, N, "Display density", storesData=false)
 end
 
 function plot_vorticity(u::AbstractArray, prob, t::Number)
@@ -296,7 +316,7 @@ function plot_vorticity(u::AbstractArray, prob, t::Number)
 end
 
 function PlotVorticityDiagnostic(N=1000)
-    Diagnostic("Plot vorticity", plot_vorticity, N, "Display vorticity")
+    Diagnostic("Plot vorticity", plot_vorticity, N, "Display vorticity", storesData=false)
 end
 
 function plot_potential(u::AbstractArray, prob, t::Number)
@@ -308,7 +328,7 @@ function plot_potential(u::AbstractArray, prob, t::Number)
 end
 
 function PlotPotentialDiagnostic(N=1000)
-    Diagnostic("Plot potential", plot_potential, N, "Display potential", assumesSpectralField=true)
+    Diagnostic("Plot potential", plot_potential, N, "Display potential", assumesSpectralField=true, storesData=false)
 end
 
 #-------------------------------------- Spectral -------------------------------------------
@@ -446,7 +466,7 @@ function progress(u, prob, t)
 end
 
 function ProgressDiagnostic(N=100)
-    Diagnostic("Progress", progress, N, "progress", assumesSpectralField=true)
+    Diagnostic("Progress", progress, N, "progress", assumesSpectralField=true, storesData=false)
 end
 
 # Default diagnostic

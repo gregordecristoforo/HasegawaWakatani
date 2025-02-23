@@ -51,7 +51,7 @@ diagnostics = [
 ]
 
 # The output
-output = Output(prob, 21, diagnostics, "Garcia 2005 PoP")
+output = Output(prob, 21, diagnostics, "Garcia 2005 PoP.h5")
 
 ## Solve and plot
 sol = spectral_solve(prob, MSS3(), output)

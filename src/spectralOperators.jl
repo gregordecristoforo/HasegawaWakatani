@@ -35,7 +35,7 @@ struct SpectralOperatorCache
             N, M = Nx, Ny
         end
 
-        if realTransform # TODO check if error is here
+        if realTransform 
             m = M % 2 == 0 ? M ÷ 2 + 1 : (M - 1) ÷ 2 + 1
             QTp = im * zeros(m, N)
             iFT = plan_irfft(im * QTp, M)
