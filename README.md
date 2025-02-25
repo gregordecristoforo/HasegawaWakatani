@@ -15,3 +15,10 @@ with $\Omega = \nabla^2\phi$. The code features:
 ![Alt Text](vorticity.gif)
 
 The code atempts to be modular and generalizable to be able to solve other spectral problems. 
+
+Things want to add in future versions:
+* Operators, remediscent of SciMLOperators
+* Consistent parameterization
+* In-place all the way
+* Rosenbrock-Euler method for first step
+* CUDA support
