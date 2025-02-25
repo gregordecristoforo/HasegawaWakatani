@@ -67,8 +67,10 @@ plot(output.simulation["RadialCOMDiagnostic/t"][1:200], output.simulation["Radia
 # Folder path
 cd("tests/Kube 2011 Pop/")
 
-## Recreate max velocity plot
+## Recreate max velocity plot Kube 2011
 tends = logspace(2, 0.30, 22)
+tends[8] = 10^(1.131939295)
+tends[9:end] = logspace(0.771485063978876, 0.30, 14)
 dts = tends / 10000
 amplitudes = logspace(-2, 5, 22)
 max_velocities = similar(amplitudes)
@@ -79,7 +81,8 @@ parameters = Dict(
     "kappa" => 1e-3
 )
 
-for (i, A) in enumerate(amplitudes)
+for (i, A) in enumerate(amplitudes[12:end])
+    i = i + 11
     # Update initial initial_condition
     u0 = log.(gaussian.(domain.x', domain.y, A=A, B=1, l=1))
     # Update problem 
@@ -97,10 +100,18 @@ for (i, A) in enumerate(amplitudes)
     max_velocities[i] = maximum(velocities[i][2, :])
 end
 
-plot(amplitudes, max_velocities, xaxis=:log, yaxis=:log, marker=:circle)
+# Ploting
+ytickslabels = ["";"";L"10^{-1}";fill("",8);L"10^{0}";fill("",8);L"10^{1}"]
+scatter(amplitudes, max_velocities, xaxis=:log, yaxis=:log, marker=:circle, linestyle=:dash, label="")
+plot!(amplitudes[1:7], 0.83*amplitudes[1:7].^0.5, label=L"0.83(\Delta n/N)^{0.5}", ylabel="max "*L"V", xlabel=L"\Delta n/N", 
+xticks=amplitudes[1:3:end], legend=:bottomright, yticks=([0.08;0.09;0.1:0.1:1; 2:1:10], ytickslabels), ylim=[max_velocities[1]- 0.01, 10])
 savefig("blob velocities log(n).pdf")
 
-save("max_velocities logn(n).jld", "data", max_velocities)
+## Backup
+max_velocities = [0.08144987557214223, 0.12116171785371747, 0.17908891760090645, 0.2627304330198832, 0.3812298636057552, 
+ 0.5436405787806564, 0.7554935875115005, 1.0158889263024147, 1.317316393304872, 1.6476427382449557, 
+ 1.993949292800375, 2.345936231222947, 2.6969337556930855, 3.043242064725629, 3.38310106072764, 
+ 3.7158630435705096, 4.04143715620406, 4.3600155702429, 4.6719064564576, 4.97746001501175, 
+ 5.277028416262867, 5.570952278649872]
 
-fid = h5open("Kube 2011 Pop max vel.h5")
-maximum(fid["2025-02-23T14:20:21.560"]["fields"][:,:,1,1])
+## Can use one of the many .h5 files and groups to reproduce other plots from section 2 A

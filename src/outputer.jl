@@ -62,9 +62,10 @@ mutable struct Output
         # Allocate data for fields
         # TODO maybe remove u?
         u = Vector{typeof(prob.u0)}(undef, N_data)
-        u[1] = prob.u0
+        U = copy(prob.u0)
         prob.recover_fields!(U)
-        simulation["fields"][fill(:, ndims(prob.u0))..., 1] = u[1]
+        u[1] = U
+        simulation["fields"][fill(:, ndims(U))..., 1] = u[1]
         t = zeros(N_data)
         t[1] = first(prob.tspan)
         simulation["t"][1] = t[1]
