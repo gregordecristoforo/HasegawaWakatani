@@ -11,13 +11,14 @@ struct SpectralOperatorCache
     DiffXX::AbstractArray
     DiffYY::AbstractArray
     Laplacian::AbstractArray
-
+    invLaplacian::AbstractArray
     # QT stands for quadratic terms
     QT::AbstractArray
     up::AbstractArray
     vp::AbstractArray
     QTp::AbstractArray
     QTPlans::TransformPlans
+    C::Number
     function SpectralOperatorCache(kx, ky, Nx, Ny; realTransform=true, anti_aliased=true)
         # Spectral coefficents
         DiffX = im * kx'
@@ -25,17 +26,18 @@ struct SpectralOperatorCache
         DiffXX = -kx' .^ 2
         DiffYY = -ky .^ 2
         Laplacian = -kx' .^ 2 .- ky .^ 2
-
+        invLaplacian = Laplacian .^ -1
+        invLaplacian[1] = 0 # First entry will always be NaN or Inf
         QT = im * zeros(length(ky), length(kx))
 
         if anti_aliased
-            N = ceil(Int, 3 * Nx / 2)
-            M = ceil(Int, 3 * Ny / 2)
+            N = Nx > 1 ? ceil(Int, 3 * Nx / 2) : 1
+            M = Ny > 1 ? ceil(Int, 3 * Ny / 2) : 1
         else
             N, M = Nx, Ny
         end
 
-        if realTransform 
+        if realTransform
             m = M % 2 == 0 ? M ÷ 2 + 1 : (M - 1) ÷ 2 + 1
             QTp = im * zeros(m, N)
             iFT = plan_irfft(im * QTp, M)
@@ -51,20 +53,20 @@ struct SpectralOperatorCache
         up = im * zero(QTp)
         vp = im * zero(QTp)
 
-        new(DiffX, DiffY, DiffXX, DiffYY, Laplacian, QT, up, vp, QTp, QT_plans)
+        # Count number of dimensions that has more than one dimension along an axis
+        C = M * N / (Nx * Ny)
+
+        new(DiffX, DiffY, DiffXX, DiffYY, Laplacian, invLaplacian, QT, up, vp, QTp, QT_plans, C)
     end
 end
 
 #------------------------- Quadratic terms interface ---------------------------------------
 function quadraticTerm(u, v, SC::SpectralOperatorCache)
-    # TODO fix anti-aliasing, atm it has the wrong scaling leading to "faster dynamics"
-    # Can use ndims(A) to get number of dimensions 
     if length(u) != length(SC.up)
         pad!(SC.up, u, SC.QTPlans)
         pad!(SC.vp, v, SC.QTPlans)
         unpad!(SC.QT, spectral_conv(SC.up, SC.vp, SC.QTPlans), SC.QTPlans)
-        # TODO fix this factor, which is probably wrong
-        3 * SC.QT
+        SC.C * SC.QT
     else
         spectral_conv(u, v, SC.QTPlans)
     end
@@ -155,11 +157,8 @@ function poissonBracket(A, B, SC::SpectralOperatorCache)
     quadraticTerm(diffX(A, SC), diffY(B, SC), SC) - quadraticTerm(diffY(A, SC), diffX(B, SC), SC)
 end
 
-# TODO test solvePhi
 function solvePhi(field, SC::SpectralOperatorCache)
-    phi_hat = field ./ SC.Laplacian # TODO make this a multiplication!
-    phi_hat[1] = 0 # First entry will always be NaN
-    return phi_hat
+    SC.invLaplacian .* field
 end
 
 end

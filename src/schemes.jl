@@ -187,6 +187,7 @@ end
         #TODO remove testing
         #cache.u1 = u0*exp.(p["lambda"]*dt)#Exact
         
+        #cache.u1 = u0.*exp.(prob.L(1, prob.domain, prob.p, 0)*dt) .+ dt.*cache.k0
         # Perform 10000 steps with MSS1
         #N = 10000
         # cprob = deepcopy(prob)

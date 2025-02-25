@@ -2,7 +2,7 @@
 include("../src/HasagawaWakatini.jl")
 
 ## Run scheme test for Burgers equation
-domain = Domain(1, 1024, 1, 20, anti_aliased=false) 
+domain = Domain(1, 1024, 1, 20, anti_aliased=true) 
 u0 = initial_condition(gaussianWallY, domain)
 
 # Diffusion 
@@ -31,7 +31,7 @@ t_span = [0, 0.9 * t_b]
 prob = SpectralODEProblem(L, N, domain, u0, t_span, p=parameters, dt=0.0001)
 
 # Initialize output
-output = Output(prob, 1000, [BurgerCFLDiagnostic(10), ProgressDiagnostic(10)])
+output = Output(prob, 1000, [BurgerCFLDiagnostic(10), ProgressDiagnostic(10)], "burgers equation gaussian.h5")
 
 ## Solve problem
 sol = spectral_solve(prob, MSS3(), output)
