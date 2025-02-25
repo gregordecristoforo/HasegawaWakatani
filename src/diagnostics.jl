@@ -66,6 +66,15 @@ function initialize_diagnostic!(diagnostic::Diagnostic, prob, simulation, h5_kwa
         @warn "The sample step was larger than the number of steps and has been set to sampleStep = $N_steps"
     end
 
+    # Take diagnostic of initial field (id = initial diagnostic)
+    if diagnostic.assumesSpectralField
+        id = diagnostic.method(prob.u0_hat, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
+    else
+        U = copy(prob.u0)
+        prob.recover_fields!(U)
+        id = diagnostic.method(U, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
+    end
+
     if diagnostic.storesData
         # Calculate number of samples with rounded sampling rate
         N = floor(Int, N_steps / diagnostic.sampleStep) + 1
@@ -73,13 +82,6 @@ function initialize_diagnostic!(diagnostic::Diagnostic, prob, simulation, h5_kwa
         if N_steps % diagnostic.sampleStep != 0
             @warn "($(diagnostic.name)) Note, there is a $(diagnostic.sampleStep + N_steps%diagnostic.sampleStep) 
                     sample step at the end"
-        end
-
-        # Take diagnostic of initial field (id = initial diagnostic)
-        if diagnostic.assumesSpectralField
-            id = diagnostic.method(prob.u0_hat, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
-        else
-            id = diagnostic.method(prob.u0, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
         end
 
         # Create group
@@ -127,6 +129,7 @@ function perform_diagnostic!(diagnostic::Diagnostic, step::Integer, u::AbstractA
             diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
         else
             U = real(transform(u, prob.domain.transform.iFT)) # transform to realspace
+            prob.recover_fields!(U)
             diagnostic.method(U, prob, t, diagnostic.args...; diagnostic.kwargs...)
         end
     end

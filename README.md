@@ -8,7 +8,7 @@ with $\Omega = \nabla^2\phi$. The code will feature:
 * Biperiodic domain (perpendicular to $\textbf{B}$) ✓
 * Fast Fourier transform for spatial derivatives (FFTW) ✓
 * Third order stiffly stable time integrator ✓
-* HDF data output for binary format storage X
+* HDF data output for binary format storage with blosc compression ✓
 * 2/3 Antialiasing on quadratic terms X
 * Diagnostic modules ✓
 
