@@ -1,5 +1,3 @@
-#include("spectralODEProblem.jl")
-include("schemes.jl")
 include("fftutilities.jl")
 
 export spectralSolve

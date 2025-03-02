@@ -45,27 +45,6 @@ vels_id["A"] = rand(100,100)
 
 #close(fid)
 
-i = 0
-try
-    while true      
-        sleep(1e-10000000000000000)
-    end
-catch e
-    println("Success")
-    rethrow(e)
-end
-
-using OrderedCollections
-
-A = OrderedDict(
-    "hi" => 1,
-    "3" => 2
-)
-
-for (key, val) in A 
-    println(key)
-end
-
 A = rand(100,100)
 g1["A", chunk=(5,5), compress=3] = A
 g2["A", chunk=(5,5), shuffle=(), deflate=3] = A
@@ -76,17 +55,6 @@ g3["A", chunk=(5,5), blosc=3] = A
 dset = create_dataset(g, "B", datatype(Float64), dataspace(1000,100,10), chunk=(100,100,1))
 dset[:,1,1] = rand(1000)
 #^^ Incremently write to drive
-
-initialize_diagnostics!
-    #Create group
-    create_group(diagnostic.name)
-
-    #Dataset for time
-    create_dataset("t", diagnostic.t)
-    #Dataset for data
-    create_dataset("data", diagnostic.data)
-    #Attributes?
-    diagnostic.label
 
 
 a = fill(undef, (100, 100, 1000))
