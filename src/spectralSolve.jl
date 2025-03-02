@@ -34,7 +34,8 @@ function spectral_solve(prob::SpectralODEProblem, scheme=MSS3(), output=Output(p
         end
     catch error
         # Here store the last 3 steps to be able to resume simulations after interupt
-        rethrow(error)
+        println(error.msg)
+        #rethrow(error)
     end
     # TODO catch edge case and close file
 

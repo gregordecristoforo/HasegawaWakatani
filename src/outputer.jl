@@ -96,6 +96,8 @@ mutable struct Output
 end
 
 function handle_output!(output::Output, step::Integer, u::AbstractArray, prob::SpectralODEProblem, t::Number)
+    #remove_zonal_modes!(u)
+    
     if step % output.stride == 0
         # TODO move logic to spectralSolve
         #if prob.domain.Nx % 2 == 0
@@ -104,6 +106,8 @@ function handle_output!(output::Output, step::Integer, u::AbstractArray, prob::S
         #if prob.domain.Ny % 2 == 0
         #    u[prob.domain.Ny÷2+1, :, :] .= 0
         #end
+        #u[prob.domain.Ny÷2+1, :, :] .= 0
+
         U = real(transform(u, prob.domain.transform.iFT))
         prob.recover_fields!(U)
         idx = step ÷ output.stride + 1
@@ -123,8 +127,8 @@ function handle_output!(output::Output, step::Integer, u::AbstractArray, prob::S
         end
     end
 
-    # Check if first value is NaN, if the matrix has one NaN the whole array will turn NaN after fft
-    if isnan(u[1])
+    # Check if last value is NaN, if the matrix has one NaN the whole array will turn NaN after fft
+    if isnan(u[end])
         error("Breakdown occured at t=$t")
     end
 end
@@ -140,3 +144,7 @@ function extract_diagnostic(data::Vector)
     Array(reshape(reduce(hcat, data), size(data[1])..., length(data)))
 end
 # These are just stack() ^^
+
+function remove_zonal_modes!(u::AbstractArray{<:Number})
+    @inbounds u[1, ntuple(_ -> :, ndims(u) - 1)...] .= 0
+end

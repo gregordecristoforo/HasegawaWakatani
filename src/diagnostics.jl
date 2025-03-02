@@ -146,7 +146,7 @@ function probe_field(u::AbstractArray, domain::Domain, positions; interpolation=
     end
 
     # Initilize vectors
-    data = Vector{Number}(undef, length(positions))
+    data = zeros(length(positions))
 
     if isnothing(interpolation)
         for n in eachindex(positions)
@@ -269,6 +269,7 @@ function cfl_ExB(u::AbstractArray, prob::SpectralODEProblem, t::Number)
     # elseif maximum(v_y) * prob.dt / prob.domain.dx >= 0.5
     #     println("Breakdown t=$t")
     # end
+    println("CFL", maximum(v_x) * prob.dt / prob.domain.dx)
     [maximum(v_x) * prob.dt / prob.domain.dx, maximum(v_y) * prob.dt / prob.domain.dy]
 end
 

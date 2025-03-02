@@ -63,7 +63,7 @@ diagnostics = [
 ]
 
 # The output
-output = Output(prob, 1001, diagnostics) #progressDiagnostic
+output = Output(prob, 1001, diagnostics) 
 
 ## Solve and plot
 sol = spectral_solve(prob, MSS3(), output)
