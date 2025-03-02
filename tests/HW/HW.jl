@@ -35,17 +35,20 @@ parameters = Dict(
     "C" => 1,
 )
 
-t_span = [0, 500]
+t_span = [0, 2000]
 
 prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-3)
 
 # Diagnostics
 diagnostics = [
     ProgressDiagnostic(1000),
-    ProbeDensityDiagnostic((0, 0), N=100),
-    PlotDensityDiagnostic(5000),
+    #ProbeDensityDiagnostic((0, 0), N=100),
+    #PlotDensityDiagnostic(5000),
+    RadialFluxDiagnostic(1),
+    KineticEnergyDiagnostic(1),
+    PotentialEnergyDiagnostic(1),
     GetLogModeDiagnostic(10, :ky),
-    CFLDiagnostic(100)
+    CFLDiagnostic(100),
 ]
 
 # Output
@@ -59,9 +62,10 @@ cd("tests/HW")
 C_values = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0]
 
 for C in C_values
+    println("Started simulation for C = $(C)!")
     prob.p["C"] = C
     #prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-2)
-    output = Output(prob, 1001, diagnostics, "Hasagawa-Wakatani C new scan.h5")
+    output = Output(prob, 201, diagnostics, "Hasagawa-Wakatani C weekend scan.h5")
     sol = spectral_solve(prob, MSS3(), output)
 end
 
@@ -70,18 +74,14 @@ end
 #    display(plot((logmode[:,1,i] - logmode[:,1,i-1]), title=i))
 #end
 
+# fid = h5open("tests/HW/Hasagawa-Wakatani C new scan.h5")
 
+# "2025-02-26T17:33:29.888" #0.1
+# "2025-02-26T18:21:50.996" #0.2
+# data = fid["2025-02-26T17:33:29.888/fields"][:,:,:,:] #0.5
 
-fid = h5open("tests/HW/Hasagawa-Wakatani C new scan.h5")
-
-"2025-02-26T17:33:29.888" #0.1
-"2025-02-26T18:21:50.996" #0.2
-data = fid["2025-02-26T17:33:29.888/fields"][:,:,:,:] #0.5
-
-## Make gif
-default(legend=false)
-@gif for i in axes(data, 4)
-    contourf(data[:, :, 1, i])
-end
-
-fid
+# ## Make gif
+# default(legend=false)
+# @gif for i in axes(data, 4)
+#     contourf(data[:, :, 1, i])
+# end
