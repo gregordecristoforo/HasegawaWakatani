@@ -75,16 +75,16 @@ function quadraticTerm(u, v, SC::SpectralOperatorCache)
     end
 end
 
-# function quadraticTerm!(dqt, u, v, SC::SpectralOperatorCache)
-#     if length(u) != length(SC.up)
-#         pad!(SC.up, u, SC.QTPlans)
-#         pad!(SC.vp, v, SC.QTPlans)
-#         unpad!(SC.QT, spectral_conv(SC.up, SC.vp, SC.QTPlans), SC.QTPlans)
-#         SC.C * SC.QT
-#     else
-#         spectral_conv(u, v, SC.QTPlans)
-#     end
-# end
+function quadraticTerm!(dqt, u, v, SC::SpectralOperatorCache)
+    if length(u) != length(SC.up)
+        pad!(SC.up, u, SC.QTPlans)
+        pad!(SC.vp, v, SC.QTPlans)
+        unpad!(SC.QT, spectral_conv(SC.up, SC.vp, SC.QTPlans), SC.QTPlans)
+        SC.C * SC.QT
+    else
+        spectral_conv(u, v, SC.QTPlans)
+    end
+end
 
 function spectral_conv(u_hat, v_hat, plans)
     u = transform(u_hat, plans.iFT)
@@ -92,12 +92,12 @@ function spectral_conv(u_hat, v_hat, plans)
     transform(u .* v, plans.FT)
 end
 
-# function spectral_conv!(SC, u_hat, v_hat)
-#     mul!(SC.U, SC.plans.iFT, u_hat)
-#     mul!(SC.V, SC.plans.iFT, v_hat)
-#     SC.QTp .= SC.U.*SC.V
-#     mul!(SC.qtp, SC.plans.FT, sc.QTp)
-# end
+function spectral_conv!(SC, u_hat, v_hat)
+    mul!(SC.U, SC.plans.iFT, u_hat)
+    mul!(SC.V, SC.plans.iFT, v_hat)
+    SC.QTp .= SC.U.*SC.V
+    mul!(SC.qtp, SC.plans.FT, sc.QTp)
+end
 
 # Specialized for 2D arrays
 function pad!(up, u, plan::FFTPlans)
