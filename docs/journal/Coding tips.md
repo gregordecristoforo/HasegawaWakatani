@@ -26,3 +26,8 @@ Shift + Delete - Delete all plots
 
 # Array tips
 * stack(vector) to create one big array from vector of matricies, eachslice(array) reverses this
+
+# Linux tips
+* Use screen -S <sessionname> to create a screen, which can run a process while disconnected from
+server. Use ctrl+A followed by D to detach from the session before logging off. Use sreen -r <sessionname> 
+to reconnect to the session and continue where left off. Usefull for overnight simulations
