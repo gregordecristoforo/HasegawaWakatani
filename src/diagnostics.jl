@@ -363,7 +363,7 @@ function get_log_modes(u::AbstractArray, prob, t::Number; kx=:ky)
 end
 
 function GetLogModeDiagnostic(N=100, kx=:ky)
-    Diagnostic("Log mode diagnstic", get_log_modes, N, "log(|u_k|)", assumesSpectralField=true, (), (kx=kx,))
+    Diagnostic("Log mode diagnostic", get_log_modes, N, "log(|u_k|)", assumesSpectralField=true, (), (kx=kx,))
 end
 
 function plotFrequencies(u)

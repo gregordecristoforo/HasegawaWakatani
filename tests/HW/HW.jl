@@ -1,7 +1,7 @@
 ## Run all (alt+enter)
 include("../../src/HasagawaWakatini.jl")
 
-## Run scheme test for Burgers equation
+## Run Hasagawa Wakatani simulations
 domain = Domain(128, 128, 2 * pi / 0.15, 2 * pi / 0.15, anti_aliased=true)
 
 #Random initial conditions
@@ -68,20 +68,3 @@ for C in C_values
     output = Output(prob, 201, diagnostics, "Hasagawa-Wakatani C weekend scan.h5")
     sol = spectral_solve(prob, MSS3(), output)
 end
-
-#logmode = output.simulation["Log mode diagnstic/data"][:,:,:]
-#for i in 2:10:1000
-#    display(plot((logmode[:,1,i] - logmode[:,1,i-1]), title=i))
-#end
-
-# fid = h5open("tests/HW/Hasagawa-Wakatani C new scan.h5")
-
-# "2025-02-26T17:33:29.888" #0.1
-# "2025-02-26T18:21:50.996" #0.2
-# data = fid["2025-02-26T17:33:29.888/fields"][:,:,:,:] #0.5
-
-# ## Make gif
-# default(legend=false)
-# @gif for i in axes(data, 4)
-#     contourf(data[:, :, 1, i])
-# end
