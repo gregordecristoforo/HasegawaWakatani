@@ -1,7 +1,7 @@
 ﻿Code used for my master thesis to simulate sheath-interchange instability and resistive drift-wave turbulence in magnetized plasmas.
 The resisitve drift-wave turbulence is described by the Hasegawa-Wakatani model
 
-$$\frac{\partial n}{\partial t} + \\{\phi, n\\} + \kappa\frac{\partial\phi}{\partial y} = \alpha(\phi-n) D_n\nabla^2_\perp$$
+$$\frac{\partial n}{\partial t} + \\{\phi, n\\} + \kappa\frac{\partial\phi}{\partial y} = \alpha(\phi-n) + D_n\nabla^2_\perp$$
 
 $$\frac{\partial\Omega}{\partial t} + \\{\phi,\Omega\\} = \alpha(\phi-n) + D_\Omega\nabla^2_\perp\Omega$$
 
