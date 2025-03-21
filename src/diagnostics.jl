@@ -370,6 +370,25 @@ function plotFrequencies(u)
     heatmap(log10.(norm.(u)), title="Frequencies")
 end
 
+
+function radial_energy_spectra(u::AbstractArray{<:Number}, prob::SpectralODEProblem, t::Number)
+    sum(abs.(ifft(u_hat,1)), dims=1)' #Average?
+end
+
+function RadialEnergySpectraDiagnostic(N=100)
+    #iFT = ifft() # TODO allocate transform plan
+    Diagnostic("Radial energy spectra", radial_energy_spectra, N, "radial energy spectra")
+end
+
+function poloidal_energy_spectra(u::AbstractArray{<:Number}, prob::SpectralODEProblem, t::Number)
+    sum(abs.(ifft(u_hat,2)), dims=2) #Average?
+end
+
+function PoloidalEnergySpectraDiagnostic(N=100)
+    #iFT = ifft() # TODO allocate transform plan
+    Diagnostic("Poloidal energy spectra", poloidal_energy_spectra, N, "poloidal energy spectra")
+end
+
 # ------------------------------------------- Boundary diagnostics ---------------------------------------------------------
 function lowerXBoundary(u::Array)
     u[1, :]
