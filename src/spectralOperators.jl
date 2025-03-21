@@ -12,6 +12,7 @@ struct SpectralOperatorCache
     DiffYY::AbstractArray
     Laplacian::AbstractArray
     invLaplacian::AbstractArray
+    HyperLaplacian::AbstractArray
     # QT stands for quadratic terms
     QT::AbstractArray
     up::AbstractArray
@@ -29,6 +30,7 @@ struct SpectralOperatorCache
         DiffYY = -ky .^ 2
         Laplacian = -kx' .^ 2 .- ky .^ 2
         invLaplacian = Laplacian .^ -1
+        HyperLaplacian = Laplacian .^3
         invLaplacian[1] = 0 # First entry will always be NaN or Inf
         QT = im * zeros(length(ky), length(kx))
 
@@ -59,7 +61,8 @@ struct SpectralOperatorCache
         C = M * N / (Nx * Ny)
         U = similar(QTp)
         V = similar(QTp)
-        new(DiffX, DiffY, DiffXX, DiffYY, Laplacian, invLaplacian, QT, up, vp, QTp, U, V, QT_plans, C)
+        new(DiffX, DiffY, DiffXX, DiffYY, Laplacian, invLaplacian, HyperLaplacian, QT, up, 
+            vp, QTp, U, V, QT_plans, C)
     end
 end
 
@@ -173,6 +176,10 @@ end
 function diffYY(field, SC::SpectralOperatorCache)
     SC.DiffYY .* field
 end
+
+function hyper_diffusion(field, SC::SpectralOperatorCache)
+    SC.HyperLaplacian .* field
+end 
 
 function poissonBracket(A, B, SC::SpectralOperatorCache)
     quadraticTerm(diffX(A, SC), diffY(B, SC), SC) - quadraticTerm(diffY(A, SC), diffX(B, SC), SC)

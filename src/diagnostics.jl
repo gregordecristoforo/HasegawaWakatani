@@ -540,3 +540,25 @@ function KineticEnergyDiagnostic(N = 10)
 end
 
 # ---------------------------------- Other -------------------------------------------------
+
+# Total energy
+
+# Density energy
+function P(u)
+    0.5*u[:,:,1]
+end
+
+# Kinetic energy
+function K(u)
+    0.5*u[:,:,1]
+end
+
+# Enstrophy
+
+# Density flux
+
+# Resistive flux
+
+# Energy dissipation
+
+# Enstrophy dissipation

@@ -1,5 +1,5 @@
 ## Initialize (alt+enter)
-include("../../src/HasagawaWakatini.jl")
+include("../../src/HasegawaWakatini.jl")
 cd("tests/HW")
 domain = Domain(128, 128, 2 * pi / 0.15, 2 * pi / 0.15, anti_aliased=true)
 C_values = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0]
@@ -28,7 +28,7 @@ fid = h5open("Hasagawa-Wakatani C weekend scan.h5", "cw")
 # Quantitivaly would conclude 50
 
 # Open solution
-S = 6
+S = 1
 simulation = fid[keys(fid)[S]]
 
 # Get data
@@ -39,7 +39,7 @@ data = read(simulation["fields"])
 t = read(simulation["Kinetic energy integral/t"])
 
 # Find when "transient period ends"
-M = 1750000 
+M = 230000 
 plot(t[1:2000:M], K[1:2000:M], xlabel=L"t", ylabel=L"P(t)", label="", title="C = $(C_values[S])")
 
 # Visualy confirm with density field
@@ -94,6 +94,15 @@ savefig("Number of peaks detected C=$(C_values[S]), Ns=$Ns.pdf")
 (length.(indicies_P)/length(indicies_P[1]))[30]
 
 ## Get plots
+
+moving_average(vs,n) = [sum(@view vs[i:(i+n-1)])/n for i in 1:(length(vs)-(n-1))]
+
+K_m = moving_average(K[M:end], 10000)
+
+plot(K_m)
+
+mean(K_m)
+mean(K_m)
 
 indicies, heights = findmaxima(P[M:M+M÷2])
 plotpeaks(P[M:end];peaks=indicies)

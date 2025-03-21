@@ -1,5 +1,5 @@
 ## Include all modules
-include("../../src/HasagawaWakatini.jl")
+include("../../src/HasegawaWakatini.jl")
 
 ## Test implementation of vExB
 domain = Domain(128, 1)

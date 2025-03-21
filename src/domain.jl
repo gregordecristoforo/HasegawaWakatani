@@ -95,6 +95,10 @@ end
 const Δ = laplacian
 const diffusion = laplacian
 
+function hyper_diffusion(field, domain::Domain)
+    SpectralOperators.hyper_diffusion(field, domain.SC)
+end
+
 function quadraticTerm(u, v, domain::Domain)
     if size(u) != size(v)
         error("u and v must have the same size")
@@ -126,6 +130,6 @@ function spectral_log(field, domain::Domain)
 end
 
 export Domain, diffX, diffXX, diffY, diffYY, poissonBracket, solvePhi, quadraticTerm,
-    diffusion, laplacian, Δ, SpectralOperatorCache, reciprocal, spectral_exp, spectral_log
-
+    diffusion, laplacian, Δ, SpectralOperatorCache, reciprocal, spectral_exp, spectral_log,
+    hyper_diffusion
 end

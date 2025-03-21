@@ -1,5 +1,5 @@
 ## Run all (alt+enter)
-include("../src/HasagawaWakatini.jl")
+include("../src/HasegawaWakatini.jl")
 
 ## Run scheme test for Burgers equation
 domain = Domain(1, 1024, 1, 20, anti_aliased=true) 
