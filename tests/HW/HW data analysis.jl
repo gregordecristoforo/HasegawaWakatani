@@ -45,8 +45,8 @@ plot(t[1:2000:M], K[1:2000:M], xlabel=L"t", ylabel=L"P(t)", label="", title="C =
 # Visualy confirm with density field
 # Get the time
 simulation["Kinetic energy integral/t"][M]
-simulation["t"][176]
-heatmap(domain, data[:,:,1, 176], aspect_ratio=:equal)
+simulation["t"][24]
+heatmap(domain, data[:,:,1, 179], aspect_ratio=:equal)
 
 # Qualitative
 plot(P[end-500000:4000:end-240000], marker=:dot)
@@ -163,5 +163,33 @@ end
 simulation
 
 read(attributes(simulation)["L_x"])
-
 read_attribute(simulation, "C")
+
+## Energy spectra
+
+u_hat = transform(data[:,:,:,end], domain.transform.FT)
+function N(u,p,t) u  end
+prob = SpectralODEProblem(N, domain, data[:,:,:,end], [1,2])
+
+plot(domain.kx[1:64], radial_energy_spectra(u_hat,prob,0)[1:64], xaxis=:log, yaxis=:log, xlim=[domain.kx[2],domain.kx[64]])
+plot(domain.ky, poloidal_energy_spectra(u_hat,prob,0), xaxis=:log, yaxis=:log, xlim=[domain.ky[2],domain.ky[64]])
+
+
+average_spectra = zero(poloidal_energy_spectra(u_hat,prob,0))
+for i in eachindex(axes(data[:,:,:,24:end])[end]) 
+    i += 23
+    u_hat = transform(data[:,:,:,i], domain.transform.FT)
+    average_spectra .+= poloidal_energy_spectra(u_hat,prob,0)
+end
+
+plot(domain.ky, average_spectra, xaxis=:log, yaxis=:log, xlim=[domain.ky[2],domain.ky[65]])
+plot!(domain.ky, 1000000*domain.ky.^-1.2)
+plot(domain.ky, average_spectra.*(domain.ky.^1.36), xaxis=:log, yaxis=:log, xlim=[domain.ky[2],domain.ky[65]])
+
+plot((average_spectra.*(domain.ky.^2.3))[2:end]/1.64e6,xaxis=:log, yaxis=:log)
+
+"""
+    C_value         0.1         0.2         0.5         1.0         2.0         5.0 (Not enough data) 
+    alpha           1.15        1.26        1.57        1.97        2.54        4.85
+
+"""

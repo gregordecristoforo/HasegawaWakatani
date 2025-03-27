@@ -21,7 +21,7 @@ mutable struct SpectralODEProblem
             zero(u)
         end
 
-        SpectralODEProblem(L, N, domain, u0, u0_hat, tspan, p=p, dt=dt, 
+        SpectralODEProblem(L, N, domain, u0, tspan, p=p, dt=dt, 
                             inverse_transformation=inverse_transformation)
     end
 

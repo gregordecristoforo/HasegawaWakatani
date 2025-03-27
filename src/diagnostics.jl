@@ -372,7 +372,7 @@ end
 
 
 function radial_energy_spectra(u::AbstractArray{<:Number}, prob::SpectralODEProblem, t::Number)
-    sum(abs.(ifft(u_hat,1)), dims=1)' #Average?
+    sum(abs.(ifft(u_hat[:,:,1], 1)).^2, dims=1)' #Average?
 end
 
 function RadialEnergySpectraDiagnostic(N=100)
@@ -381,7 +381,7 @@ function RadialEnergySpectraDiagnostic(N=100)
 end
 
 function poloidal_energy_spectra(u::AbstractArray{<:Number}, prob::SpectralODEProblem, t::Number)
-    sum(abs.(ifft(u_hat,2)), dims=2) #Average?
+    sum(abs.(ifft(u_hat[:,:,1] ,2)).^2, dims=2) #Average?
 end
 
 function PoloidalEnergySpectraDiagnostic(N=100)
@@ -563,14 +563,14 @@ end
 # Total energy
 
 # Density energy
-function P(u)
-    0.5*u[:,:,1]
-end
+# function P(u)
+#     0.5*u[:,:,1]
+# end
 
-# Kinetic energy
-function K(u)
-    0.5*u[:,:,1]
-end
+# # Kinetic energy
+# function K(u)
+#     0.5*u[:,:,1]
+# end
 
 # Enstrophy
 
