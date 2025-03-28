@@ -2,6 +2,8 @@
 #Includes Domain, diagnostics, utilities, spectralSolve, spectralODEProblem and schemes
 #"""
 
+using DotEnv
+DotEnv.load!("src/.env")
 using Plots                      # ✓
 include("domain.jl")             # 
 using .Domains                   # ✓
@@ -13,6 +15,3 @@ include("outputer.jl")           # ✓
 include("spectralSolve.jl")      # ✓
 include("diagnostics.jl")        # ✓
 include("utilities.jl")          # ✓
-
-using DotEnv
-DotEnv.load!("src/.env")
