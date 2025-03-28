@@ -1,4 +1,5 @@
 using MuladdMacro
+using UnPack
 
 # TODO inherit type from SciML 
 abstract type AbstractODEAlgorithm end
@@ -6,15 +7,17 @@ abstract type AbstractODEAlgorithm end
 # Equivalent to OrdinaryDiffEqConstantCache in SciML
 abstract type AbstractTableau end
 
-export MMS1, MSS2, MSS3, perform_step!, get_cache
+# Equivalent to DECache in SciMLBase 
+abstract type AbstractCache end
+
+export MMS1, MSS2, MSS3, perform_step!, get_cache, unpack_cache
 
 # ----------------------------------------- MSS1 -------------------------------------------
 
-mutable struct MSS1Cache
+mutable struct MSS1Cache{U, C} <: AbstractCache
     #Coefficents are all 1
-    u::AbstractArray
-    c::Union{AbstractArray,Number}
-    dt::Number
+    u::U
+    c::C
 end
 
 struct MSS1 <: AbstractODEAlgorithm end
@@ -25,16 +28,16 @@ function get_cache(prob::SpectralODEProblem, alg::MSS1)
     # Calculate linear differential operator coefficent once to cache it
     D = prob.L(1, prob.domain, prob.p, 0)
     c = @. (1 - D * dt)^-1
-    MSS1Cache(u, c, dt)
+    MSS1Cache(u, c)
 end
 
 function unpack_cache(cache::MSS1Cache)
-    cache.u, cache.c, cache.dt
+    cache.u, cache.c
 end
 
 @muladd function perform_step!(cache::MSS1Cache, prob::SpectralODEProblem, t::Number)
-    u, c, dt = unpack_cache(cache)
-    d, f, p = prob.domain, prob.N, prob.p
+    @unpack u, c = cache
+    d, f, p, dt = prob.domain, prob.N, prob.p, prob.dt
 
     # Perform step
     cache.u = c .* (u .+ dt * f(u, d, p, t))
@@ -44,33 +47,33 @@ end
 
 struct MSS2 <: AbstractODEAlgorithm end
 
-mutable struct MSS2Cache
-    #Coefficents
-    u::AbstractArray
-    c::Union{AbstractArray,Number}
-    u0::AbstractArray
-    u1::AbstractArray
-    k0::AbstractArray
-    tab::AbstractTableau
-    step::Integer
-end
-
 # Coefficents/tableu
-struct MSS2Tableau <: AbstractTableau
-    g0::Number # = 3 / 2
-    a0::Number # = -1 / 2
-    a1::Number # = 2
-    b0::Number # = -1
-    b1::Number # = 2
+struct MSS2Tableau{T} <: AbstractTableau
+    g0::T # = 3 / 2
+    a0::T # = -1 / 2
+    a1::T # = 2
+    b0::T # = -1
+    b1::T # = 2
 end
 
 function MSS2Tableau()
     g0 = 3 / 2
     a0 = -1 / 2
-    a1 = 2
-    b0 = -1
-    b1 = 2
+    a1 = 2.0
+    b0 = -1.0
+    b1 = 2.0
     MSS2Tableau(g0, a0, a1, b0, b1)
+end
+
+mutable struct MSS2Cache{U, C, K} <: AbstractCache
+    #Coefficents
+    u::U
+    c::C
+    u0::U
+    u1::U
+    k0::K
+    tab::MSS2Tableau
+    step::Int
 end
 
 function get_cache(prob::SpectralODEProblem, alg::MSS2)
@@ -80,8 +83,8 @@ function get_cache(prob::SpectralODEProblem, alg::MSS2)
     D = prob.L(1, prob.domain, prob.p, 0)
     c = @. (tab.g0 - D * dt)^-1
     u0 = prob.u0_hat
-    u1 = zeros(size(u))
-    k0 = zeros(size(u))
+    u1 = zero(u)
+    k0 = zero(u)
     step = 1
     MSS2Cache(u, c, u0, u1, k0, tab, step)
 end
@@ -91,8 +94,8 @@ function unpack_cache(cache::MSS2Cache)
 end
 
 @muladd function perform_step!(cache::MSS2Cache, prob::SpectralODEProblem, t::Number)
-    u, c, u0, u1, k0, tab, step = unpack_cache(cache)
-    a0, a1, b0, b1 = tab.a0, tab.a1, tab.b0, tab.b1
+    @unpack u, c, u0, u1, k0, tab, step = cache
+    @unpack a0, a1, b0, b1 = tab
     d, f, p, dt = prob.domain, prob.N, prob.p, prob.dt
 
     if cache.step == 1
@@ -118,39 +121,39 @@ end
 
 struct MSS3 <: AbstractODEAlgorithm end
 
-mutable struct MSS3Cache
-    #Coefficents
-    u::AbstractArray
-    c::Union{AbstractArray,Number}
-    u0::AbstractArray
-    u1::AbstractArray
-    u2::AbstractArray
-    k0::AbstractArray
-    k1::AbstractArray
-    tab::AbstractTableau
-    step::Integer
-end
-
 # Coefficents/tableu
-struct MSS3Tableau <: AbstractTableau
-    g0::Number # = 11 / 6
-    a0::Number # = 1 / 3
-    a1::Number # = -3/2
-    a2::Number # = 3
-    b0::Number # = 1
-    b1::Number # = -3
-    b2::Number # = 3
+struct MSS3Tableau{T} <: AbstractTableau
+    g0::T # = 11 / 6
+    a0::T # = 1 / 3
+    a1::T # = -3/2
+    a2::T # = 3
+    b0::T # = 1
+    b1::T # = -3
+    b2::T # = 3
 end
 
 function MSS3Tableau()
     g0 = 11 / 6 #1.833333352
     a0 = 1 / 3
     a1 = -3 / 2
-    a2 = 3
-    b0 = 1
-    b1 = -3
-    b2 = 3
+    a2 = 3.0
+    b0 = 1.0
+    b1 = -3.0
+    b2 = 3.0
     MSS3Tableau(g0, a0, a1, a2, b0, b1, b2)
+end
+
+mutable struct MSS3Cache{U,C,K} <: AbstractCache
+    #Coefficents
+    u::U
+    c::C
+    u0::U
+    u1::U
+    u2::U
+    k0::K
+    k1::K
+    tab::MSS3Tableau
+    step::Int
 end
 
 function get_cache(prob::SpectralODEProblem, alg::MSS3)
@@ -160,10 +163,10 @@ function get_cache(prob::SpectralODEProblem, alg::MSS3)
     D = prob.L(1, prob.domain, prob.p, 0)
     c = @. (tab.g0 - D * dt)^-1
     u0 = prob.u0_hat
-    u1 = zeros(size(u))
-    u2 = zeros(size(u))
-    k0 = zeros(size(u))
-    k1 = zeros(size(u))
+    u1 = zero(u)
+    k0 = zero(u)
+    u2 = zero(u)
+    k1 = zero(u)
     step = 1
     MSS3Cache(u, c, u0, u1, u2, k0, k1, tab, step)
 end
@@ -173,8 +176,8 @@ function unpack_cache(cache::MSS3Cache)
 end
 
 @muladd function perform_step!(cache::MSS3Cache, prob::SpectralODEProblem, t::Number)
-    u, c, u0, u1, u2, k0, k1, tab, step = unpack_cache(cache)
-    a0, a1, a2, b0, b1, b2 = tab.a0, tab.a1, tab.a2, tab.b0, tab.b1, tab.b2
+    @unpack u, c, u0, u1, u2, k0, k1, tab, step = cache
+    @unpack a0, a1, a2, b0, b1, b2 = tab
     d, f, p, dt = prob.domain, prob.N, prob.p, prob.dt
 
     if cache.step == 1
@@ -223,3 +226,5 @@ end
         cache.u2 = cache.u
     end
 end
+
+# TODO investigate if possible to remove u1 for MSS2 and similarly u2 for MSS3
