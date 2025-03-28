@@ -6,3 +6,4 @@
 *.h5
 *.jlprof
 .env.*
+*.env
