@@ -13,3 +13,6 @@ include("outputer.jl")           # ✓
 include("spectralSolve.jl")      # ✓
 include("diagnostics.jl")        # ✓
 include("utilities.jl")          # ✓
+
+using DotEnv
+DotEnv.load!("src/.env")
