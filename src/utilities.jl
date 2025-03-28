@@ -222,3 +222,23 @@ end
 function logspace(start, stop, length)
     10 .^ range(start, stop, length)
 end
+
+# --------------------------------------- Mailing ------------------------------------------
+using SMTPClient
+
+function send_mail(subject; output="")
+    # Dates.format(now(), RFC1123Format)
+    url = "smtps://smtp.gmail.com:465"
+    rcpt = split(ENV["MAIL_RECIPIANT"], ",")
+    
+    to = ["You"]
+    from = "Simulation update"
+    message = "Simulation finished" # TODO add better message
+    mime_msg = get_mime_msg(message)
+    #attachments = [""]
+
+    body = get_body(to, from, subject, mime_msg)#; attachments) 
+    opt = SendOptions(isSSL = true, username = ENV["MAIL_USERNAME"], passwd = ENV["MAIL_PASSWORD"])
+
+    resp = send(url, rcpt, from, body, opt)
+end
