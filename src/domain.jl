@@ -23,8 +23,8 @@ Rectangular Domain can be constructed using:\\
 ``Domain(Nx,Ny,Lx,Ly)``
 """
 struct Domain
-    Nx::Int64
-    Ny::Int64
+    Nx::Int
+    Ny::Int
     Lx::Float64
     Ly::Float64
     dx::Float64
@@ -37,21 +37,25 @@ struct Domain
     transform::TransformPlans
     realTransform::Bool
     anti_aliased::Bool
-    nfields::Integer
+    nfields::Int
+
     Domain(N) = Domain(N, 1)
     Domain(N, L) = Domain(N, N, L, L)
     function Domain(Nx, Ny, Lx, Ly; realTransform=true, anti_aliased=false, x0=-Lx / 2, y0=-Ly / 2, nfields=3)
         dx = Lx / Nx
         dy = Ly / Ny
-        # dx and dy is subtracted at the end, because periodic boundary conditions
+        # dx and dy is subtracted at the end, because of periodic boundary conditions
         x = LinRange(x0, x0 + Lx - dx, Nx)
         y = LinRange(y0, y0 + Ly - dy, Ny)
+
         # ------------------ If x-direction favored in rfft -------------------
-        #kx = real ? 2 * π * rfftfreq(Nx, 1 / dx) : 2 * π * fftfreq(Nx, 1 / dx)
-        #ky = 2 * π * fftfreq(Ny, 1 / dy)
+        #if Nx > Ny
+        #    kx = realTransform ? 2 * π * rfftfreq(Nx, 1 / dx) : 2 * π * fftfreq(Nx, 1 / dx)
+        #    ky = 2 * π * fftfreq(Ny, 1 / dy)
+        #else
         kx = 2 * π * fftfreq(Nx, 1 / dx)
         ky = realTransform ? 2 * π * rfftfreq(Ny, 1 / dy) : 2 * π * fftfreq(Ny, 1 / dy)
-
+        
         utmp = zeros(Ny, Nx)
 
         if realTransform
@@ -72,61 +76,61 @@ end
 # Allow spectralOperators to be called using the domains
 
 # TODO add snake_case
-function diffX(field, domain::Domain)
+function diffX(field::F, domain::Domain) where {F<:AbstractArray}
     SpectralOperators.diffX(field, domain.SC)
 end
 
-function diffY(field, domain::Domain)
+function diffY(field::F, domain::Domain) where {F<:AbstractArray}
     SpectralOperators.diffY(field, domain.SC)
 end
 
-function diffXX(field, domain::Domain)
+function diffXX(field::F, domain::Domain) where {F<:AbstractArray}
     SpectralOperators.diffXX(field, domain.SC)
 end
 
-function diffYY(field, domain::Domain)
+function diffYY(field::F, domain::Domain) where {F<:AbstractArray}
     SpectralOperators.diffYY(field, domain.SC)
 end
 
-function laplacian(field, domain::Domain)
+function laplacian(field::F, domain::Domain) where {F<:AbstractArray}
     SpectralOperators.laplacian(field, domain.SC)
 end
 
 const Δ = laplacian
 const diffusion = laplacian
 
-function hyper_diffusion(field, domain::Domain)
+function hyper_diffusion(field::F, domain::Domain) where {F<:AbstractArray}
     SpectralOperators.hyper_diffusion(field, domain.SC)
 end
 
-function quadraticTerm(u, v, domain::Domain)
+function quadraticTerm(u::F, v::F, domain::Domain) where {F<:AbstractArray}
     if size(u) != size(v)
         error("u and v must have the same size")
     end
     SpectralOperators.quadraticTerm(u, v, domain.SC)
 end
 
-function poissonBracket(A, B, domain::Domain)
+function poissonBracket(A::F, B::F, domain::Domain) where {F<:AbstractArray}
     SpectralOperators.poissonBracket(A, B, domain.SC)
 end
 
-function solvePhi(field, domain::Domain)
+function solvePhi(field::F, domain::Domain) where {F<:AbstractArray}
     SpectralOperators.solvePhi(field, domain.SC)
 end
 
-function reciprocal(field, domain::Domain)
-    F = domain.transform.iFT * field
-    domain.transform.FT * (F .^ (-1))
+function reciprocal(field::F, domain::Domain) where {F<:AbstractArray}
+    U = domain.transform.iFT * field
+    domain.transform.FT * (U .^ (-1))
 end
 
-function spectral_exp(field, domain::Domain)
-    F = domain.transform.iFT * field
-    domain.transform.FT * (exp.(F))
+function spectral_exp(field::F, domain::Domain) where {F<:AbstractArray}
+    U = domain.transform.iFT * field
+    domain.transform.FT * (exp.(U))
 end
 
-function spectral_log(field, domain::Domain)
-    F = domain.transform.iFT * field
-    domain.transform.FT * (log.(F))
+function spectral_log(field::F, domain::Domain) where {F<:AbstractArray}
+    U = domain.transform.iFT * field
+    domain.transform.FT * (log.(U))
 end
 
 export Domain, diffX, diffXX, diffY, diffYY, poissonBracket, solvePhi, quadraticTerm,
