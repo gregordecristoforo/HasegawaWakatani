@@ -2,7 +2,7 @@
 
 julia_version = "1.11.3"
 manifest_format = "2.0"
-project_hash = "38b9ffbf6d9c4399b51afe769f1c7a2b1e3329e1"
+project_hash = "c55581aeb5f533f29ee21dac8f91722e06db2484"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -286,6 +286,12 @@ deps = ["ANSIColoredPrinters", "AbstractTrees", "Base64", "CodecZlib", "Dates", 
 git-tree-sha1 = "182a9a3fe886587ba230a417f1651a4cbc2b92d4"
 uuid = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 version = "1.8.1"
+
+[[deps.DotEnv]]
+deps = ["PrecompileTools"]
+git-tree-sha1 = "92e88cb68a5b10545234f46dfaeb2fa8a8a50c45"
+uuid = "4dc1fcf4-5e3b-5448-94ab-0c38ec0385c1"
+version = "1.0.0"
 
 [[deps.Downloads]]
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
@@ -1179,6 +1185,12 @@ deps = ["PrecompileTools"]
 git-tree-sha1 = "fea870727142270bdf7624ad675901a1ee3b4c87"
 uuid = "fdea26ae-647d-5447-a871-4b548cad5224"
 version = "3.7.1"
+
+[[deps.SMTPClient]]
+deps = ["Base64", "Dates", "Distributed", "LibCURL", "Markdown", "Sockets"]
+git-tree-sha1 = "fc2e0dbf5df044c8790fb2d89f5c8684922b93b3"
+uuid = "c35d69d1-b747-5018-a192-25bc5e63c83d"
+version = "0.6.4"
 
 [[deps.Scratch]]
 deps = ["Dates"]
