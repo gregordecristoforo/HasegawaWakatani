@@ -1,7 +1,7 @@
 using FFTW
 using LinearAlgebra
 export TransformPlans, FFTPlans, rFFTPlans, spectral_transform, spectral_transform!, 
-multi_fft, multi_ifft,
+multi_fft, multi_ifft
 
 abstract type TransformPlans end
 
