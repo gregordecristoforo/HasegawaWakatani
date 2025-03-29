@@ -81,8 +81,8 @@ mutable struct Output{V<:AbstractArray,U<:AbstractArray,T<:AbstractArray,FN<:Abs
         end
 
         # Create output
-        new{typeof(diagnostics),typeof(u),typeof(t),typeof(filename)}(stride, diagnostics,
-            u, t, filename, file, simulation, h5_kwargs)
+        new{typeof(diagnostics),typeof(u),typeof(t),typeof(filename),typeof(h5_kwargs)}
+        (stride, diagnostics, u, t, filename, file, simulation, h5_kwargs)
     end
 end
 
