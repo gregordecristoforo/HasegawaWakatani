@@ -3,8 +3,6 @@ using LinearAlgebra
 export TransformPlans, FFTPlans, rFFTPlans, spectral_transform, spectral_transform!, 
 multi_fft, multi_ifft,
 
-# Collection of plans for a transform and its inverse
-
 abstract type TransformPlans end
 
 struct FFTPlans <: TransformPlans
@@ -17,7 +15,7 @@ struct rFFTPlans <: TransformPlans
     iFT::FFTW.Plan
 end
 
-# General transform plan
+# General transform plans
 function spectral_transform(U::T, p::FFTW.Plan) where {T<:AbstractArray}
     mapslices(u -> p * u, U, dims=(1, 2))
 end
@@ -43,6 +41,7 @@ end
 
 # ------------------------------------- Old ------------------------------------------------
 # TODO make these typed or remove
+# Collection of plans for a transform and its inverse
 
 # Fourier transform applied to "stacked" fields
 function multi_fft(U::AbstractArray, plans::TransformPlans)
