@@ -22,19 +22,21 @@ Square Domain can be constructed using:\\
 Rectangular Domain can be constructed using:\\
 ``Domain(Nx,Ny,Lx,Ly)``
 """
-struct Domain
+struct Domain{X<:LinRange,Y<:LinRange,KX<:Frequencies,KY<:Frequencies,
+    SOC<:SpectralOperatorCache,TP<:TransformPlans}
+    
     Nx::Int
     Ny::Int
     Lx::Float64
     Ly::Float64
     dx::Float64
     dy::Float64
-    x::LinRange
-    y::LinRange
-    kx::Frequencies
-    ky::Frequencies
-    SC::SpectralOperatorCache
-    transform::TransformPlans
+    x::X
+    y::Y
+    kx::KX
+    ky::KY
+    SC::SOC
+    transform::TP
     realTransform::Bool
     anti_aliased::Bool
     nfields::Int
@@ -69,7 +71,9 @@ struct Domain
         SC = SpectralOperatorCache(kx, ky, Nx, Ny, realTransform=realTransform,
             anti_aliased=anti_aliased)
 
-        new(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC, transform_plans, realTransform, anti_aliased, nfields)
+        new{typeof(x),typeof(y),typeof(kx),typeof(ky),typeof(SpectralOperatorCache),
+        typeof(transform_plans)}(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC, 
+        transform_plans, realTransform, anti_aliased, nfields)
     end
 end
 
