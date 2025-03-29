@@ -71,7 +71,7 @@ function initialize_diagnostic!(diagnostic::Diagnostic, prob, simulation, h5_kwa
         id = diagnostic.method(prob.u0_hat, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
     else
         U = copy(prob.u0)
-        prob.recover_fields!(U)
+        #prob.recover_fields!(U)
         id = diagnostic.method(U, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
     end
 
@@ -117,7 +117,7 @@ function perform_diagnostic!(diagnostic::Diagnostic, step::Integer, u::AbstractA
             diagnostic.data[idx] = diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
         else
             U = real(transform(u, prob.domain.transform.iFT)) # transform to realspace
-            prob.recover_fields!(U) # apply a transformation, for instance exp to get n from log(n)
+            #prob.recover_fields!(U) # apply a transformation, for instance exp to get n from log(n)
             diagnostic.data[idx] = diagnostic.method(U, prob, t, diagnostic.args...; diagnostic.kwargs...)
         end
         # TODO better check on ndims
@@ -129,7 +129,7 @@ function perform_diagnostic!(diagnostic::Diagnostic, step::Integer, u::AbstractA
             diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
         else
             U = real(transform(u, prob.domain.transform.iFT)) # transform to realspace
-            prob.recover_fields!(U)
+            #prob.recover_fields!(U)
             diagnostic.method(U, prob, t, diagnostic.args...; diagnostic.kwargs...)
         end
     end
