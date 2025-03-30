@@ -53,10 +53,12 @@ diagnostics = [
 
 # Output
 cd("tests/HW")
-output = Output(prob, 201, diagnostics, "Hasegawa-Wakatani high-k damping demo.h5") 
+output = Output(prob, 201, diagnostics, "debuging things.h5") 
+
+FFTW.set_num_threads(16)
 
 # Solve and plot
-sol = spectral_solve(prob, MSS3(), output)
+sol = spectral_solve(prob, MSS3(), output; resume=true)
 
 plot(sol.diagnostics[end-3].t, sol.diagnostics[end-3].data)
 

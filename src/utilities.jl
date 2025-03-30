@@ -223,6 +223,20 @@ function logspace(start, stop, length)
     10 .^ range(start, stop, length)
 end
 
+# Extend plotting to allow domain as input
+import Plots.plot
+function plot(domain::Domain, args...; kwargs...)
+    plot(domain.x, domain.y, args...; kwargs...)
+end
+
+# Extending PlotlyJS to easily plot surfaces when using Plots for academic figures
+function plotlyjsSurface(args...; kwargs...)
+    i = findfirst(k -> k === :z, keys(kwargs))
+    kwargs = collect(pairs(kwargs))
+    kwargs[i] = :z => transpose(kwargs[i][2])
+    PlotlyJS.plot(PlotlyJS.surface(args...; kwargs...))
+end
+
 # --------------------------------------- Mailing ------------------------------------------
 using SMTPClient
 
