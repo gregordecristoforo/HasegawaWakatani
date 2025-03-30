@@ -82,6 +82,7 @@ function quadraticTerm(u::F, v::F, SC::SOC) where {F<:AbstractArray,SOC<:Spectra
     spectral_conv!(SC.qtl, u, v, SC)
 end
 
+# TODO perhaps remove and make alias as it has the same parameters
 function quadraticTerm!(out::DF, u::F, v::F, SC::SOC) where {DF<:AbstractArray,
     F<:AbstractArray,SOC<:SpectralOperatorCache}
     spectral_conv!(out, u, v, SC)
