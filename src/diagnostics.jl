@@ -116,7 +116,7 @@ function perform_diagnostic!(diagnostic::Diagnostic, step::Integer, u::AbstractA
         if diagnostic.assumesSpectralField
             diagnostic.data[idx] = diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
         else
-            U = real(transform(u, prob.domain.transform.iFT)) # transform to realspace
+            U = real(spectral_transform(u, prob.domain.transform.iFT)) # transform to realspace
             #prob.recover_fields!(U) # apply a transformation, for instance exp to get n from log(n)
             diagnostic.data[idx] = diagnostic.method(U, prob, t, diagnostic.args...; diagnostic.kwargs...)
         end
@@ -128,7 +128,7 @@ function perform_diagnostic!(diagnostic::Diagnostic, step::Integer, u::AbstractA
         if diagnostic.assumesSpectralField
             diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
         else
-            U = real(transform(u, prob.domain.transform.iFT)) # transform to realspace
+            U = real(spectral_transform(u, prob.domain.transform.iFT)) # transform to realspace
             #prob.recover_fields!(U)
             diagnostic.method(U, prob, t, diagnostic.args...; diagnostic.kwargs...)
         end

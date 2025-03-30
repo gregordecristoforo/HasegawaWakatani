@@ -99,7 +99,7 @@ function handle_output!(output::Output, step::Integer, u::AbstractArray, prob::S
         #end
         #u[prob.domain.Ny÷2+1, :, :] .= 0
 
-        U = real(transform(u, prob.domain.transform.iFT))
+        U = real(spectral_transform(u, prob.domain.transform.iFT))
         #prob.recover_fields!(U)
         idx = step ÷ output.stride + 1
 
