@@ -22,7 +22,7 @@ Square Domain can be constructed using:\\
 Rectangular Domain can be constructed using:\\
 ``Domain(Nx,Ny,Lx,Ly)``
 """
-struct Domain{X<:LinRange,Y<:LinRange,KX<:Frequencies,KY<:Frequencies,
+struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractArray,
     SOC<:SpectralOperatorCache,TP<:TransformPlans}
     
     Nx::Int
@@ -57,7 +57,7 @@ struct Domain{X<:LinRange,Y<:LinRange,KX<:Frequencies,KY<:Frequencies,
         #else
         kx = 2 * π * fftfreq(Nx, 1 / dx)
         ky = realTransform ? 2 * π * rfftfreq(Ny, 1 / dy) : 2 * π * fftfreq(Ny, 1 / dy)
-        
+
         utmp = zeros(Ny, Nx)
 
         if realTransform
