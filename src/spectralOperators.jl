@@ -31,7 +31,7 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
 
     function SpectralOperatorCache(kx, ky, Nx, Ny; realTransform=true, anti_aliased=true)
         # Spectral coefficents (TODO All have to be CUDA)
-        DiffX = im * kx'
+        DiffX = (im * kx)'
         DiffY = im * ky
         DiffXX = -kx' .^ 2
         DiffYY = -ky .^ 2
