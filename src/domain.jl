@@ -80,59 +80,59 @@ end
 # Allow spectralOperators to be called using the domains
 
 # TODO add snake_case
-function diffX(field::F, domain::Domain) where {F<:AbstractArray}
+function diffX(field::F, domain::D) where {F<:AbstractArray, D<:Domain}
     SpectralOperators.diffX(field, domain.SC)
 end
 
-function diffY(field::F, domain::Domain) where {F<:AbstractArray}
+function diffY(field::F, domain::D) where {F<:AbstractArray, D<:Domain}
     SpectralOperators.diffY(field, domain.SC)
 end
 
-function diffXX(field::F, domain::Domain) where {F<:AbstractArray}
+function diffXX(field::F, domain::D) where {F<:AbstractArray, D<:Domain}
     SpectralOperators.diffXX(field, domain.SC)
 end
 
-function diffYY(field::F, domain::Domain) where {F<:AbstractArray}
+function diffYY(field::F, domain::D) where {F<:AbstractArray, D<:Domain}
     SpectralOperators.diffYY(field, domain.SC)
 end
 
-function laplacian(field::F, domain::Domain) where {F<:AbstractArray}
+function laplacian(field::F, domain::D) where {F<:AbstractArray, D<:Domain}
     SpectralOperators.laplacian(field, domain.SC)
 end
 
 const Δ = laplacian
 const diffusion = laplacian
 
-function hyper_diffusion(field::F, domain::Domain) where {F<:AbstractArray}
+function hyper_diffusion(field::F, domain::D) where {F<:AbstractArray, D<:Domain}
     SpectralOperators.hyper_diffusion(field, domain.SC)
 end
 
-function quadraticTerm(u::F, v::F, domain::Domain) where {F<:AbstractArray}
+function quadraticTerm(u::U, v::V, domain::D) where {U<:AbstractArray, V<:AbstractArray, D<:Domain}
     if size(u) != size(v)
         error("u and v must have the same size")
     end
     SpectralOperators.quadraticTerm(u, v, domain.SC)
 end
 
-function poissonBracket(A::F, B::F, domain::Domain) where {F<:AbstractArray}
+function poissonBracket(A::U, B::V, domain::D) where {U<:AbstractArray, V<:AbstractArray, D<:Domain}
     SpectralOperators.poissonBracket(A, B, domain.SC)
 end
 
-function solvePhi(field::F, domain::Domain) where {F<:AbstractArray}
+function solvePhi(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
     SpectralOperators.solvePhi(field, domain.SC)
 end
 
-function reciprocal(field::F, domain::Domain) where {F<:AbstractArray}
+function reciprocal(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
     U = domain.transform.iFT * field
     domain.transform.FT * (U .^ (-1))
 end
 
-function spectral_exp(field::F, domain::Domain) where {F<:AbstractArray}
+function spectral_exp(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
     U = domain.transform.iFT * field
     domain.transform.FT * (exp.(U))
 end
 
-function spectral_log(field::F, domain::Domain) where {F<:AbstractArray}
+function spectral_log(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
     U = domain.transform.iFT * field
     domain.transform.FT * (log.(U))
 end
