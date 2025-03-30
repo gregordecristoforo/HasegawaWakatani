@@ -71,7 +71,7 @@ struct Domain{X<:LinRange,Y<:LinRange,KX<:Frequencies,KY<:Frequencies,
         SC = SpectralOperatorCache(kx, ky, Nx, Ny, realTransform=realTransform,
             anti_aliased=anti_aliased)
 
-        new{typeof(x),typeof(y),typeof(kx),typeof(ky),typeof(SpectralOperatorCache),
+        new{typeof(x),typeof(y),typeof(kx),typeof(ky),typeof(SC),
         typeof(transform_plans)}(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC, 
         transform_plans, realTransform, anti_aliased, nfields)
     end
