@@ -132,23 +132,13 @@ include("diagnostics/boundary.jl")
 include("diagnostics/projection.jl")
 include("diagnostics/parameter_study.jl")
 include("diagnostics/progress.jl")
+include("diagnostics/profiles.jl")
 include("diagnostics/energy_integrals.jl")
+include("diagnostics/fluxes.jl")
 
 # ---------------------------------- Other -------------------------------------------------
 
 # Total energy
-
-# Density energy
-# function P(u)
-#     0.5*u[:,:,1]
-# end
-
-# # Kinetic energy
-# function K(u)
-#     0.5*u[:,:,1]
-# end
-
-# Enstrophy
 
 # Density flux
 
