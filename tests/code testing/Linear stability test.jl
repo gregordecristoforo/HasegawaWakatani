@@ -1,5 +1,5 @@
 ## Run all (alt+enter)
-include("../src/HasegawaWakatini.jl")
+include(relpath(pwd(), @__DIR__)*"/src/HasegawaWakatini.jl")
 
 ## Run scheme test for Burgers equation
 #domain = Domain(512, 512, 200, 100, anti_aliased=false)

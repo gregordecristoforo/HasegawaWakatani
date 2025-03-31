@@ -1,11 +1,14 @@
 ## Initialize (alt+enter)
-include("../../src/HasegawaWakatini.jl")
-cd("tests/HW")
+include(relpath(pwd(), @__DIR__)*"/src/HasegawaWakatini.jl")
+cd(relpath(@__DIR__, pwd()))
+
+##
+
 domain = Domain(128, 128, 2 * pi / 0.15, 2 * pi / 0.15, anti_aliased=true)
 C_values = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0]
 using Statistics
 # Open data file
-fid = h5open("Hasagawa-Wakatani C weekend scan.h5", "cw")
+fid = h5open("output/Hasagawa-Wakatani C weekend scan.h5", "cw")
 
 # Open solution
 S = 1
@@ -198,3 +201,17 @@ plot((average_spectra.*(domain.ky.^2.3))[2:end]/1.64e6,xaxis=:log, yaxis=:log)
     alpha           1.15        1.26        1.57        1.97        2.54        4.85
 
 """
+
+
+
+# What folder is include in? 
+include(relpath(pwd(), @__DIR__)*"/src/HasegawaWakatini.jl")
+
+
+# What folder is cd in?
+pwd()
+using Plots
+plot([1,2])
+savefig
+
+relpath("HasegawaWakatani/src", "HasegawaWakatani/tests/HW/")

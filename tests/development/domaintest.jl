@@ -1,4 +1,4 @@
-include("../../src/domain.jl")
+include(relpath(pwd(), @__DIR__)*"/src/HasegawaWakatini.jl")
 using .Domains
 using Plots
 using FFTW

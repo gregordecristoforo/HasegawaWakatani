@@ -1,5 +1,5 @@
 ## Run all (alt+enter)
-include("../src/HasegawaWakatini.jl")
+include(relpath(pwd(), @__DIR__)*"/src/HasegawaWakatini.jl")
 
 ## Run scheme test for Burgers equation
 #domain = Domain(512, 512, 200, 100, anti_aliased=false)
@@ -17,18 +17,21 @@ end
 
 # Non-linear operator, linearized
 function N(u, d, p, t)
-    n = u[:, :, 1]
-    Ω = u[:, :, 2]
+    n = @view u[:, :, 1]
+    Ω = @view u[:, :, 2]
     phi = solvePhi(W, d)
+    
     dn = -poissonBracket(phi, n, d)
     dn += p["g"] * diffY(phi, d)
     dn += -p["g"] * diffY(n, d)
     dn += -p["sigma"] * n
+
     dW = -poissonBracket(phi, W, d)
     #dW += -p["g"] * diffY(spectral_log(n, d), d)
     dW += -p["g"] * diffY(n, d)
     dW += n
     dW += -quadraticTerm(n, spectral_exp(phi, d), d)
+    
     [dn;;; dW]
 end
 

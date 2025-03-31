@@ -1,5 +1,5 @@
 ## Include all modules
-include("../../src/HasegawaWakatini.jl")
+include(relpath(pwd(), @__DIR__)*"/src/HasegawaWakatini.jl")
 
 ## Test implementation of vExB
 domain = Domain(128, 1)

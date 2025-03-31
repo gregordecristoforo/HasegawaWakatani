@@ -1,5 +1,5 @@
 ## Run all (alt+enter)
-include("../../src/HasegawaWakatini.jl")
+include(relpath(pwd(), @__DIR__)*"/src/HasegawaWakatini.jl")
 using JLD
 using Plots
 data = load("reproduced data Garcia 2005 PoP.jld", "data")
