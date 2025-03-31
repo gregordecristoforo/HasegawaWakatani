@@ -35,8 +35,7 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Ty
         p=Dict(), dt=0.01, kwargs...)
 
         u0_hat = spectral_transform(u0, domain.transform.FT)
-        #  #u0_hat[:, domain.Nx÷2+1] .= 0
-        #  #u0_hat[domain.Ny÷2+1, :] .= 0
+        remove_zonal_modes!(u0_hat)
 
         if length(tspan) != 2
             throw("tspan should have exactly two elements tsart and tend")

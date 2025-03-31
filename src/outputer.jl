@@ -87,7 +87,7 @@ mutable struct Output{V<:AbstractArray,U<:AbstractArray,T<:AbstractArray,FN<:Abs
 end
 
 function handle_output!(output::Output, step::Integer, u::AbstractArray, prob::SpectralODEProblem, t::Number)
-    #remove_zonal_modes!(u)
+    remove_zonal_modes!(u)
 
     if step % output.stride == 0
         # TODO move logic to spectralSolve
@@ -177,6 +177,10 @@ function extract_diagnostic(data::Vector)
 end
 # These are just stack() ^^
 
+# function remove_zonal_modes!(u::AbstractArray{<:Number})
+#     @inbounds u[1, ntuple(_ -> :, ndims(u) - 1)...] .= 0
+# end
+
 function remove_zonal_modes!(u::AbstractArray{<:Number})
-    @inbounds u[1, ntuple(_ -> :, ndims(u) - 1)...] .= 0
+    @inbounds u[1, :, :] .= 0
 end
