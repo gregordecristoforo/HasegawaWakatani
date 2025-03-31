@@ -7,26 +7,6 @@ using Statistics
 # Open data file
 fid = h5open("Hasagawa-Wakatani C weekend scan.h5", "cw")
 
-## Qualitative inspection of temporal resolution
-
-"""
-    C_value         0.1         0.2         0.5         1.0         2.0         5.0 (Not enough data)
-    fieldStrides    300-600     600-700     800-1000    500         500-600     4000-5000
-    dt              0.3-0.6     0.6-0.7     0.8-1       0.5         0.5-0.6     4-5
-"""
-
-# Quantitivaly would conclude with around 500 strides
-
-# Quantitive inspection of temporal resolution (less qualitative atleast)
-
-"""
-    C_value         0.1         0.2         0.5         1.0         2.0         5.0 (Not enough data) 
-    fieldStrides    10-50       10-50       30-100      100-250     80-250      < 2000
-    dt              0.01-0.05   0.01-0.05   0.03-0.1    0.1-0.25     0.08-0.25  < 2
-"""
-
-# Quantitivaly would conclude 50
-
 # Open solution
 S = 1
 simulation = fid[keys(fid)[S]]
@@ -48,8 +28,23 @@ simulation["Kinetic energy integral/t"][M]
 simulation["t"][24]
 heatmap(domain, data[:,:,1, 179], aspect_ratio=:equal)
 
+
+
+
 # Qualitative
 plot(P[end-500000:4000:end-240000], marker=:dot)
+
+## Qualitative inspection of temporal resolution
+
+"""
+    C_value         0.1         0.2         0.5         1.0         2.0         5.0 (Not enough data)
+    fieldStrides    300-600     600-700     800-1000    500         500-600     4000-5000
+    dt              0.3-0.6     0.6-0.7     0.8-1       0.5         0.5-0.6     4-5
+"""
+
+# Qualitatively would conclude with around 500 strides
+
+
 
 # Quantitive
 # Difference in mean value
@@ -68,6 +63,18 @@ end
 plot(strides, log.(sqrt.((mean_K.-mean_K[1]).^2))/(maximum(mean_K) - minimum(mean_K)))
 plot(strides, log.(sqrt.((mean_P.-mean_P[1]).^2))/(maximum(mean_P) - minimum(mean_P)))
 plot(strides, log.(sqrt.((mean_Γ.-mean_Γ[1]).^2))/(maximum(mean_Γ) - minimum(mean_Γ)))
+
+# Quantitive inspection of temporal resolution (less qualitative atleast)
+
+"""
+    C_value         0.1         0.2         0.5         1.0         2.0         5.0 (Not enough data) 
+    fieldStrides    10-50       10-50       30-100      100-250     80-250      < 2000
+    dt              0.01-0.05   0.01-0.05   0.03-0.1    0.1-0.25     0.08-0.25  < 2
+"""
+
+# Quantitivaly would conclude 50
+
+
 
 # Difference in peaks
 using Peaks
@@ -93,6 +100,8 @@ savefig("Number of peaks detected C=$(C_values[S]), Ns=$Ns.pdf")
 
 (length.(indicies_P)/length(indicies_P[1]))[30]
 
+
+
 ## Get plots
 
 moving_average(vs,n) = [sum(@view vs[i:(i+n-1)])/n for i in 1:(length(vs)-(n-1))]
@@ -109,8 +118,6 @@ plotpeaks(P[M:end];peaks=indicies)
 #plot(P[M:1000:M+M÷2])
 #plotpeaks(P[M:50:M+M÷2];peaks=indicies, prominences=true, widths=true)
 
-length(indicies)
-
 for (i,group) in enumerate(keys(fid))
     simulation = fid[group]
     
@@ -126,6 +133,8 @@ for (i,group) in enumerate(keys(fid))
     display(plot(t[1000000:end], K[1000000:end] .+ P[1000000:end], xlabel="t", ylabel="P+K", title="C = $(C_values[i])"))
     display(plot(t[1000000:end], flux[1000000:end], xlabel="t", ylabel=L"\Gamma", title="C = $(C_values[i])"))
 end
+
+
 
 ## Spectral analysis
 
@@ -152,18 +161,15 @@ growth = logn[:,1,N] .- logn[:,1,N-1]
 
 # Should aim for 100_000-1_000_000 of points for time series!
 
-simulation["t"]
 attributes(simulation)
 
-for (key, val) in prob.p
-    write_attribute(simulation, key*"3", val)
-end
-#attributes(simulation)[key] = val
 
-simulation
+#attributes(simulation)[key] = val
 
 read(attributes(simulation)["L_x"])
 read_attribute(simulation, "C")
+
+
 
 ## Energy spectra
 
@@ -173,7 +179,6 @@ prob = SpectralODEProblem(N, domain, data[:,:,:,end], [1,2])
 
 plot(domain.kx[1:64], radial_energy_spectra(u_hat,prob,0)[1:64], xaxis=:log, yaxis=:log, xlim=[domain.kx[2],domain.kx[64]])
 plot(domain.ky, poloidal_energy_spectra(u_hat,prob,0), xaxis=:log, yaxis=:log, xlim=[domain.ky[2],domain.ky[64]])
-
 
 average_spectra = zero(poloidal_energy_spectra(u_hat,prob,0))
 for i in eachindex(axes(data[:,:,:,24:end])[end]) 
