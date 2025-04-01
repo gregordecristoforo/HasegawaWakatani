@@ -1,7 +1,8 @@
 # ------------------------------------ COM -------------------------------------------------
 
 # TODO add argument for using quadratures
-function radial_COM(u, prob, t, p)
+function radial_COM(u::U, prob::OP, t::T,p::P) where {U<:AbstractArray,OP<:SpectralODEProblem,
+    T<:Number, P<:AbstractArray}
     # 2:end is because the boundaries are periodic and thus should not contribute
     X_COM = sum(prob.domain.x[2:end]' .* u[2:end, 2:end, 1]) / sum(u[2:end, 2:end, 1])
 
@@ -19,7 +20,7 @@ function radial_COM(u, prob, t, p)
 end
 
 # "Constructor"
-function RadialCOMDiagnostic(N=100)
+function RadialCOMDiagnostic(N::Int=100)
     #kwargs = (previous_position=0, previous_time=0)
     args = (Dict("previous_position" => 0.0, "previous_time" => 0.0),)
     return Diagnostic("RadialCOMDiagnostic", radial_COM, N, "X_COM, V_COM", args)#, kwargs)

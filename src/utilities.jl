@@ -253,6 +253,6 @@ function send_mail(subject; output="")
 
     body = get_body(to, from, subject, mime_msg)#; attachments) 
     opt = SendOptions(isSSL = true, username = ENV["MAIL_USERNAME"], passwd = ENV["MAIL_PASSWORD"])
-
-    resp = send(url, rcpt, from, body, opt)
+    args = (url, rcpt, from, body, opt) # Have to wrap the args to remove "problem"
+    resp = send(args...)
 end

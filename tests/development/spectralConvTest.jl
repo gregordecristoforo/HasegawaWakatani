@@ -251,7 +251,7 @@ flux_data[end]
 
 function spectral_flux()
     spectral_v_x!(V, transform(u,domain.transform.FT), domain)
-    mul!(n)
+    #mul!(n)
 end
 
 u0 = initial_condition(gaussianWallY, domain)

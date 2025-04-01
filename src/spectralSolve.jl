@@ -46,9 +46,9 @@ function spectral_solve(prob::SpectralODEProblem, scheme::AbstractODEAlgorithm=M
     
     # TODO catch edge case and close file
     
-    if false #TODO add output.email
-        send_mail("Simulation finished!")
-    end
+    #if false #TODO add output.email
+    #    send_mail("Simulation finished!")
+    #end
 
     # Returns output struct
     return output

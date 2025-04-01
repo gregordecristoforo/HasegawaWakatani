@@ -136,6 +136,10 @@ include("diagnostics/profiles.jl")
 include("diagnostics/energy_integrals.jl")
 include("diagnostics/fluxes.jl")
 
+# Default diagnostic
+#cflDiagnostic = Diagnostic(CFLExB, 100, "cfl")
+const DEFAULT_DIAGNOSTICS = [ProgressDiagnostic()]
+
 # ---------------------------------- Other -------------------------------------------------
 
 # Total energy

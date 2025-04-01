@@ -1,21 +1,21 @@
 # ------------------------------------------- Boundary diagnostics ---------------------------------------------------------
-function lowerXBoundary(u::Array)
+function lowerXBoundary(u::T) where {T<:AbstractArray}
     u[1, :]
 end
 
-function upperXBoundary(u::Array)
+function upperXBoundary(u::T) where {T<:AbstractArray}
     u[end, :]
 end
 
-function lowerYBoundary(u::Array)
+function lowerYBoundary(u::T) where {T<:AbstractArray}
     u[:, 1]
 end
 
-function upperYBoundary(u::Array)
+function upperYBoundary(u::T) where {T<:AbstractArray}
     u[:, end]
 end
 
-function plotBoundaries(domain::Domain, u::Array)
+function plotBoundaries(domain::D, u::T) where {D<:Domain, T<:AbstractArray}
     lx = domain.y[1]
     ux = domain.y[end]
     ly = domain.x[1]
@@ -24,6 +24,6 @@ function plotBoundaries(domain::Domain, u::Array)
     plot([domain.y, domain.y, domain.x, domain.x], [lowerXBoundary(u), upperXBoundary(u), lowerYBoundary(u), upperYBoundary(u)], labels=labels)
 end
 
-function maximumBoundaryValue(u::Array)
+function maximumBoundaryValue(u::T) where {T<:AbstractArray}
     maximum([lowerXBoundary(u) upperXBoundary(u) lowerYBoundary(u) upperYBoundary(u)])
 end
