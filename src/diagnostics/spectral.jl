@@ -33,70 +33,61 @@ function plotFrequencies(u)
     heatmap(log10.(norm.(u)), title="Frequencies")
 end
 
+#--------------------------------- Energy spectra ------------------------------------------
 
-function radial_energy_spectra(u::AbstractArray{<:Number}, prob::SpectralODEProblem, t::Number)
-    sum(abs.(ifft(u_hat[:,:,1], 1)).^2, dims=1)' #Average?
+function radial_potential_energy_spectra(u::U, prob::P, t::T) where {U<:AbstractArray,
+    P<:SpectralODEProblem,T<:Number}
+    sum(abs.(u[:, :, 1]).^ 2, dims=1)'
 end
 
-function RadialEnergySpectraDiagnostic(N=100)
-    #iFT = ifft() # TODO allocate transform plan
-    Diagnostic("Radial energy spectra", radial_energy_spectra, N, "radial energy spectra")
+function RadialPotentialEnergySpectraDiagnostic(N::Int=100)
+    Diagnostic("Radial potential energy spectra", radial_potential_energy_spectra, N,
+        "radial potential energy spectra", assumesSpectralField=true)
 end
 
-function poloidal_energy_spectra(u::AbstractArray{<:Number}, prob::SpectralODEProblem, t::Number)
-    sum(abs.(ifft(u_hat[:,:,1] ,2)).^2, dims=2) #Average?
+function poloidal_potential_energy_spectra(u::U, prob::P, t::T) where {U<:AbstractArray,
+    P<:SpectralODEProblem,T<:Number}
+    sum(abs.(u[:, :, 1]).^ 2, dims=2)
 end
 
-function PoloidalEnergySpectraDiagnostic(N=100)
-    #iFT = ifft() # TODO allocate transform plan
-    Diagnostic("Poloidal energy spectra", poloidal_energy_spectra, N, "poloidal energy spectra")
+function PoloidalPotentialEnergySpectraDiagnostic(N::Int=100)
+    Diagnostic("Poloidal potential energy spectra", poloidal_potential_energy_spectra, N,
+        "poloidal potential energy spectra", assumesSpectralField=true)
 end
 
-# u_hat = transform(sol.u[end], domain.transform.FT)
+function radial_kinetic_energy_spectra(u::U, prob::P, t::T) where {U<:AbstractArray,
+    P<:SpectralODEProblem,T<:Number}
+    sum(abs.(u[:, :, 2]) .^ 2, dims=1)'
+end
 
-# n_hat = u_hat[:,:,1]
-# omega_hat = u_hat[:,:,2]
+function RadialKineticEnergySpectraDiagnostic(N::Int=100)
+    Diagnostic("Radial kinetic energy spectra", radial_kinetic_energy_spectra, N,
+        "radial kinetic energy spectra", assumesSpectralField=true)
+end
 
+function poloidal_kinetic_energy_spectra(u::U, prob::P, t::T) where {U<:AbstractArray,
+    P<:SpectralODEProblem,T<:Number}
+    sum(abs.(u[:, :, 2]).^ 2, dims=2)
+end
 
-# plot([sum(abs.(irfft(n_hat[:,i], 128))) for i in 1:128])
-# plot([sum(abs.(ifft(n_hat[i,:]))) for i in 1:65])
+function PoloidalKineticEnergySpectraDiagnostic(N::Int=100)
+    Diagnostic("Poloidal kinetic energy spectra", poloidal_kinetic_energy_spectra, N,
+        "poloidal kinetic energy spectra", assumesSpectralField=true)
+end
 
-# test = fft(n_hat[:,:])
-
-# plot(abs.(test))
-
-# sum(abs.(n_hat[:,:]))/(domain.Lx*domain.Ly)
-# sol.diagnostics[4].data[end]
-
-
-# sum(-domain.SC.Laplacian.*abs.(u_hat[:,:,2]))
-
-
-# (sum(abs.(n_hat[1:end,:])) - 0.5*sum(abs.(n_hat[1,:])))/(domain.Nx*domain.Ny)
-# sol.diagnostics[5].data[end]
-
-# 1/2*sum(sol.u[end][:,:,1].^2)
-
-
-# test = fft(sol.u[end][:,:,2])
-
-# 1/2*sum(abs.(test).^2)/(128*128) - sol.diagnostics[5].data[end]
-
-
-# # Calculate density energy using Parsevals theorem:
-# E_k = abs.(n_hat).^2 
-# (sum(E_k) - 0.5*sum(E_k[1,:]))/(domain.Nx*domain.Ny)
-# sol.diagnostics[5].data[end]
-
-# # Calculate kinetic energy using Parsevals theorem:
-# E_k = abs.(omega_hat).^2 #(domain.kx'.^2 .+ domain.ky.^2).*
-# (sum(E_k) - 0.5*sum(E_k[1,:]))/(domain.Nx*domain.Ny) - sol.diagnostics[4].data[end]
-
-# kinetic_energy_integral(sol.u[end], prob, 1)
 
 # phi_hat = solvePhi(u_hat[:,:,2], domain)
 
 # contourf(domain.transform.iFT*-diffY(phi_hat, domain))
+
+
+
+
+
+
+
+
+
 
 # radii = -domain.SC.Laplacian
 # dk = 0.5*0.15
