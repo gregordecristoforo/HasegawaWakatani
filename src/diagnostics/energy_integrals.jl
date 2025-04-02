@@ -1,6 +1,8 @@
 # --------------------------------- Energy integrals ---------------------------------------
 
 # TODO use Parsevals theorem
+# Need to differentiate between if realTransform
+# (sum(abs.(n_hat[1:end,:]).^2) - 0.5*sum(abs.(n_hat[1,:]).^2))/(domain.Nx*domain.Ny*domain.Lx*domain.Ly)
 
 # Energy integrals 
 # P(t) = ∫dx 1/2n^2
