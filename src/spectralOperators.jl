@@ -31,7 +31,7 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
 
     function SpectralOperatorCache(kx, ky, Nx, Ny; realTransform=true, anti_aliased=true)
         # Spectral coefficents (TODO All have to be CUDA)
-        DiffX = (im * kx)'
+        DiffX = transpose(im * kx)
         DiffY = im * ky
         DiffXX = -kx' .^ 2
         DiffYY = -ky .^ 2
@@ -102,9 +102,7 @@ function spectral_conv!(out::DF, u::F, v::F, SC::SOC) where {DF<:AbstractArray,
         SC.U[i] *= SC.V[i]
     end
     mul!(SC.padded ? SC.up : out, plans.FT, SC.U)
-    if SC.padded
-        SC.C * unpad!(out, SC.up, plans)
-    end
+    SC.padded ? SC.C * unpad!(out, SC.up, plans) : out
 end
 
 # Kept for legacy 
@@ -215,7 +213,7 @@ end
 
 function poissonBracket(A::U, B::V, SC::SOC) where {U<:AbstractArray,V<:AbstractArray,
     SOC<:SpectralOperatorCache}
-    quadraticTerm!(SC.qtl, diffX(A, SC), diffY(B, SC), SC) .-= quadraticTerm!(SC.qtr, diffY(A, SC), diffX(B, SC), SC)
+    spectral_conv!(SC.qtl, diffX(A, SC), diffY(B, SC), SC) .-= spectral_conv!(SC.qtr, diffY(A, SC), diffX(B, SC), SC)
 end
 
 end
