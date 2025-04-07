@@ -20,7 +20,7 @@ function N(u, d, p, t)
     ϕ = solvePhi(Ω, d)
     dθ = -poissonBracket(ϕ, θ, d)
     dΩ = -poissonBracket(ϕ, Ω, d)
-    dΩ -= diffY(θ, d)
+    dΩ .-= diffY(θ, d)
     return [dθ;;; dΩ]
 end
 
@@ -37,12 +37,13 @@ t_span = [0, 20]
 FFTW.set_num_threads(16)
 
 # The problem
-prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=1e-3)
+prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=1e-2)#3)
 
 # Array of diagnostics want
 diagnostics = [
     #ProbeDensityDiagnostic([(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], N=10),
     #RadialCOMDiagnostic(1),
+    PlotDensityDiagnostic(5),
     ProgressDiagnostic(100),
     CFLDiagnostic(1),
     #PlotDensityDiagnostic(1000),
@@ -50,14 +51,14 @@ diagnostics = [
     #PlotPotentialDiagnostic(1000),
 ]
 
+# Folder path
+cd("tests/Garcia 2005 Pop/")
+
 # The output
 output = Output(prob, 21, diagnostics, "Garcia 2005 PoP.h5")
 
 ## Solve and plot
 sol = spectral_solve(prob, MSS3(), output)
-
-# Folder path
-cd("tests/Garcia 2005 Pop/")
 
 ## Recreate Garcia et al. plots Figure 1.
 savefig(heatmap(domain, sol.u[6][:, :, 1], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600,280),
