@@ -37,7 +37,7 @@ end
 
 function radial_potential_energy_spectra(u::U, prob::P, t::T) where {U<:AbstractArray,
     P<:SpectralODEProblem,T<:Number}
-    sum(abs.(u[:, :, 1]).^ 2, dims=1)'
+    sum(abs.(u[:, :, 1]).^ 2, dims=1)'/(prob.domain.Nx*prob.domain.Ny)
 end
 
 function RadialPotentialEnergySpectraDiagnostic(N::Int=100)
@@ -47,7 +47,7 @@ end
 
 function poloidal_potential_energy_spectra(u::U, prob::P, t::T) where {U<:AbstractArray,
     P<:SpectralODEProblem,T<:Number}
-    sum(abs.(u[:, :, 1]).^ 2, dims=2)
+    sum(abs.(u[:, :, 1]).^ 2, dims=2)/(prob.domain.Nx*prob.domain.Ny)
 end
 
 function PoloidalPotentialEnergySpectraDiagnostic(N::Int=100)
@@ -57,7 +57,7 @@ end
 
 function radial_kinetic_energy_spectra(u::U, prob::P, t::T) where {U<:AbstractArray,
     P<:SpectralODEProblem,T<:Number}
-    sum(abs.(u[:, :, 2]) .^ 2, dims=1)'
+    sum(abs.(u[:, :, 2]) .^ 2, dims=1)'/(prob.domain.Nx*prob.domain.Ny)
 end
 
 function RadialKineticEnergySpectraDiagnostic(N::Int=100)
@@ -67,7 +67,7 @@ end
 
 function poloidal_kinetic_energy_spectra(u::U, prob::P, t::T) where {U<:AbstractArray,
     P<:SpectralODEProblem,T<:Number}
-    sum(abs.(u[:, :, 2]).^ 2, dims=2)
+    sum(abs.(u[:, :, 2]).^ 2, dims=2)/(prob.domain.Nx*prob.domain.Ny)
 end
 
 function PoloidalKineticEnergySpectraDiagnostic(N::Int=100)
@@ -75,10 +75,6 @@ function PoloidalKineticEnergySpectraDiagnostic(N::Int=100)
         "poloidal kinetic energy spectra", assumesSpectralField=true)
 end
 
-
-# phi_hat = solvePhi(u_hat[:,:,2], domain)
-
-# contourf(domain.transform.iFT*-diffY(phi_hat, domain))
 
 
 
