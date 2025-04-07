@@ -2,7 +2,7 @@
 include(relpath(pwd(), @__DIR__)*"/src/HasegawaWakatini.jl")
 
 ## Run scheme test for Burgers equation
-domain = Domain(128, 128, 500, 500, anti_aliased=true)
+domain = Domain(128, 128, 100, 100, anti_aliased=true)
 ic = initial_condition_linear_stability(domain,1e-1)
 
 # Linear operator
@@ -52,9 +52,9 @@ parameters = Dict(
     "D_Ω" => 1e-2,
     "D_n" => 1e-2,
     "g" => 1e-3,
-    "sigma_Ω" => 1e-5,
-    "sigma_n" => 1e-5,
-    "kappa" => sqrt(1e-3)
+    "sigma_Ω" => 1e-3,
+    "sigma_n" => 1e-3,
+    "kappa" => sqrt(1e-1)
 )
 
 t_span = [0, 5000000]
@@ -80,10 +80,20 @@ diagnostics = [
 
 # Output
 cd("tests/Sheath-interchange")
-output = Output(prob, 1001, diagnostics, "output/sheath-interchange april first.h5")
+output = Output(prob, 1001, diagnostics, "output/sheath-interchange april forth.h5")
 
 FFTW.set_num_threads(16)
 
 ## Solve and plot
 sol = spectral_solve(prob, MSS3(), output)
 ic = sol.u[end]
+
+# data = sol.simulation["fields"][:,:,:,:]
+# t = sol.simulation["t"][:]
+# default(legend=false)
+# anim = @animate for i in axes(data, 4)
+#     heatmap(data[:, :, 1, i], aspect_ratio=:equal, xaxis=L"x", yaxis=L"y", title=L"n(t="*"$(round(t[i], digits=0)))")
+# end
+# gif(anim, "σ=10e-3.gif", fps = 20)
+
+close(output.file)
