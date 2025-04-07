@@ -40,7 +40,7 @@ end
     d, f, p, dt = prob.domain, prob.N, prob.p, prob.dt
 
     # Perform step
-    cache.u = c .* (u .+ dt * f(u, d, p, t))
+    @. cache.u = c * (u + dt * f(u, d, p, t))
 end
 
 # ----------------------------------------- MSS2 -------------------------------------------
@@ -109,7 +109,7 @@ end
     else
         k1 = f(u1, d, p, t)
         # Step
-        cache.u = c .* (a0 * u0 .+ a1 * u1 .+ dt * (b0 * k0 .+ b1 * k1))
+        @. cache.u = c * (a0 * u0 + a1 * u1 + dt * (b0 * k0 + b1 * k1))
         # Shifting values downwards    
         cache.k0 = k1
         cache.u0 = u1
@@ -217,7 +217,7 @@ end
     else
         k2 = f(u2, d, p, t)
         # Step
-        cache.u = c .* (a0 * u0 .+ a1 * u1 .+ a2 * u2 .+ dt * (b0 * k0 .+ b1 * k1 .+ b2 * k2))
+        @. cache.u = c * (a0 * u0 + a1 * u1 + a2 * u2 + dt * (b0 * k0 + b1 * k1 + b2 * k2))
         # Shifting values downwards    
         cache.k1 = k2
         cache.k0 = k1
