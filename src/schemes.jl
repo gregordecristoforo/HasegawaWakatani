@@ -40,7 +40,7 @@ end
     d, f, p, dt = prob.domain, prob.N, prob.p, prob.dt
 
     # Perform step
-    @. cache.u = c * (u + dt * f(u, d, p, t))
+    cache.u .= c .* (u .+ dt .* f(u, d, p, t))
 end
 
 # ----------------------------------------- MSS2 -------------------------------------------
