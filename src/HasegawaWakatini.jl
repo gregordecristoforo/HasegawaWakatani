@@ -3,7 +3,7 @@
 #"""
 
 using DotEnv                     # ✓
-DotEnv.load!("src/.env")         # ✓
+DotEnv.load!()                   # ✓
 using Plots                      # ✓
 include("domain.jl")             # ✓
 using .Domains                   # ✓
