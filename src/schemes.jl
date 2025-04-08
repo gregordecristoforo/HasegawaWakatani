@@ -24,7 +24,7 @@ struct MSS1 <: AbstractODEAlgorithm end
 
 function get_cache(prob::SpectralODEProblem, alg::MSS1)
     dt = prob.dt
-    u = prob.u0_hat
+    u = copy(prob.u0_hat)
     # Calculate linear differential operator coefficent once to cache it
     D = prob.L(ones(size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
     c = @. (1 - D * dt)^-1
@@ -79,10 +79,10 @@ end
 function get_cache(prob::SpectralODEProblem, alg::MSS2)
     tab = MSS2Tableau()
     dt = prob.dt
-    u = prob.u0_hat
+    u = copy(prob.u0_hat)
     D = prob.L(ones(size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
     c = @. (tab.g0 - D * dt)^-1
-    u0 = prob.u0_hat
+    u0 = copy(prob.u0_hat)
     u1 = zero(u)
     k0 = zero(u)
     step = 1
@@ -159,10 +159,10 @@ end
 function get_cache(prob::SpectralODEProblem, alg::MSS3)
     tab = MSS3Tableau()
     dt = prob.dt
-    u = prob.u0_hat
+    u = copy(prob.u0_hat)
     D = prob.L(ones(size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
     c = @. (tab.g0 - D * dt)^-1
-    u0 = prob.u0_hat
+    u0 = copy(prob.u0_hat)
     u1 = zero(u)
     k0 = zero(u)
     u2 = zero(u)
