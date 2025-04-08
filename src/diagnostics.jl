@@ -7,27 +7,33 @@ import PlotlyJS
 
 # ----------------------------------- Diagnostics ------------------------------------------
 
-# TODO probabily should split diagnostic up to smaller more maintainable files
-# TODO evaluate wether or not to be mutable if push!(data) is used does not need to be mutable
-mutable struct Diagnostic
-    name::AbstractString
-    method::Function
-    data::AbstractArray
-    t::AbstractArray
-    sampleStep::Integer
-    h5group::Any #::HDF5.Group
-    label::Any
+mutable struct Diagnostic{N<:AbstractString,M<:Function,D<:AbstractArray,T<:AbstractArray,
+    HG<:Union{Nothing,HDF5.Group},L<:Any,A<:Tuple,K<:NamedTuple}
+
+    name::N
+    method::M
+    data::D
+    t::T
+    sampleStep::Int
+    h5group::HG
+    label::L
     assumesSpectralField::Bool
     storesData::Bool
-    args::Tuple
-    kwargs::NamedTuple
+    args::A
+    kwargs::K
 
-    function Diagnostic(name::String, method::Function, sampleStep::Integer=-1, label="", args=(), kwargs=NamedTuple(); assumesSpectralField=false, storesData=true)
-        new(name, method, Vector[], Vector[], sampleStep, nothing, label, assumesSpectralField, storesData, args, kwargs)
+    function Diagnostic(name::N, method::M, sampleStep::Int=-1, label::L="", args::A=(),
+        kwargs::K=NamedTuple(); assumesSpectralField::Bool=false, storesData::Bool=true) where {
+        N<:AbstractString,M<:Function,L<:Any,A<:Tuple,K<:NamedTuple}
+        new{typeof(name),typeof(method),Vector,Vector,Union{Nothing,HDF5.Group},typeof(label),
+            typeof(args),typeof(kwargs)}(name, method, Vector[], Vector[], sampleStep, nothing,
+            label, assumesSpectralField, storesData, args, kwargs)
     end
 end
 
-function initialize_diagnostic!(diagnostic::Diagnostic, prob, simulation, h5_kwargs) #::SpectralODEProblem
+function initialize_diagnostic!(diagnostic::D, U::T, prob::SOP, simulation::S, h5_kwargs::K;
+    store_hdf::Bool=true, store_locally::Bool=true) where {D<:Diagnostic,T<:AbstractArray,
+    SOP<:SpectralODEProblem,S<:Union{HDF5.Group,Nothing},K<:Any}
 
     # Calculate total number of steps
     N_steps = floor(Int, (last(prob.tspan) - first(prob.tspan)) / prob.dt)
@@ -56,8 +62,6 @@ function initialize_diagnostic!(diagnostic::Diagnostic, prob, simulation, h5_kwa
     if diagnostic.assumesSpectralField
         id = diagnostic.method(prob.u0_hat, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
     else
-        U = copy(prob.u0)
-        #prob.recover_fields!(U)
         id = diagnostic.method(U, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
     end
 
@@ -69,55 +73,71 @@ function initialize_diagnostic!(diagnostic::Diagnostic, prob, simulation, h5_kwa
             @warn "($(diagnostic.name)) Note, there is a $(diagnostic.sampleStep + N_steps%diagnostic.sampleStep) 
                     sample step at the end"
         end
+        if store_hdf
+            if !haskey(simulation, diagnostic.name)
+                # Create group
+                diagnostic.h5group = create_group(simulation, diagnostic.name)
 
-        # Create group
-        diagnostic.h5group = create_group(simulation, diagnostic.name)
+                # Create dataset for fields and time
+                ## Datatype and shape is not so trivial here..., will have to think about it tomorrow
+                dset = create_dataset(simulation[diagnostic.name], "data", datatype(Float64), (size(id)..., typemax(Int64)),
+                    chunk=(size(id)..., 1); h5_kwargs...)
+                HDF5.set_extent_dims(dset, (size(id)..., N))
+                dset = create_dataset(simulation[diagnostic.name], "t", datatype(Float64), (typemax(Int64),),
+                    chunk=(1,); h5_kwargs...)
+                HDF5.set_extent_dims(dset, (N,))
 
-        # Create dataset for fields and time
-        ## Datatype and shape is not so trivial here..., will have to think about it tomorrow
-        dset = create_dataset(simulation[diagnostic.name], "data", datatype(Float64), (size(id)..., typemax(Int64)),
-            chunk=(size(id)..., 1); h5_kwargs...)
-        HDF5.set_extent_dims(dset, (size(id)..., N))
-        dset = create_dataset(simulation[diagnostic.name], "t", datatype(Float64), (typemax(Int64),),
-            chunk=(1,); h5_kwargs...)
-        HDF5.set_extent_dims(dset, (N,))
+                # Add label
+                create_attribute(diagnostic.h5group, "label", diagnostic.label)
 
-        # Add label
-        create_attribute(diagnostic.h5group, "label", diagnostic.label)
+                # Store initial diagnostic
+                diagnostic.h5group["data"][fill(:, ndims(id))..., 1] = id
+                diagnostic.h5group["t"][1] = first(prob.tspan)
+            else
+                diagnostic.h5group = open_group(simulation, diagnostic.name)
+                # TODO extend size of array
+                # Open dataset
+                # HDF5.set_extent_dims(dset, (size(id)..., N))
+            end
+        end
 
-        # Allocate arrays
-        diagnostic.data = Vector{typeof(id)}(undef, N)
-        diagnostic.data[1] = id
-        diagnostic.h5group["data"][fill(:, ndims(id))..., 1] = id
-        diagnostic.t = zeros(N)
-        diagnostic.t[1] = first(prob.tspan)
-        diagnostic.h5group["t"][1] = first(prob.tspan)
+        if store_locally
+            # Allocate arrays
+            diagnostic.data = Vector{typeof(id)}(undef, N)
+            diagnostic.t = zeros(N)
+
+            # Store intial diagnostic
+            diagnostic.data[1] = id
+            diagnostic.t[1] = first(prob.tspan)
+        end
     end
 end
 
-function perform_diagnostic!(diagnostic::Diagnostic, step::Integer, u::AbstractArray, prob::SpectralODEProblem, t::Number)
+function perform_diagnostic!(diagnostic::D, step::Int, u::U, prob::SOP, t::N;
+    store_hdf::Bool=true, store_locally::Bool=true) where {D<:Diagnostic,U<:AbstractArray,
+    SOP<:SpectralODEProblem,N<:Number}
+    # u might be real or complex depending on previous handle_output and diagnostic.assumesSpectralField
+
     if diagnostic.storesData
+        # Calculate index
         idx = step ÷ diagnostic.sampleStep + 1
 
-        if diagnostic.assumesSpectralField
-            diagnostic.data[idx] = diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
-        else
-            U = real(spectral_transform(u, prob.domain.transform.iFT)) # transform to realspace
-            #prob.recover_fields!(U) # apply a transformation, for instance exp to get n from log(n)
-            diagnostic.data[idx] = diagnostic.method(U, prob, t, diagnostic.args...; diagnostic.kwargs...)
+        # Perform diagnostic
+        data = diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
+
+        if store_hdf
+            # TODO better check on ndims
+            diagnostic.h5group["data"][fill(:, ndims(data))..., idx] = data
+            diagnostic.h5group["t"][idx] = t
         end
-        # TODO better check on ndims
-        diagnostic.h5group["data"][fill(:, ndims(diagnostic.data[idx]))..., idx] = diagnostic.data[idx]
-        diagnostic.t[idx] = t
-        diagnostic.h5group["t"][idx] = t
+
+        if store_locally
+            diagnostic.data[idx] = data
+            diagnostic.t[idx] = t
+        end
     else
-        if diagnostic.assumesSpectralField
-            diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
-        else
-            U = real(spectral_transform(u, prob.domain.transform.iFT)) # transform to realspace
-            #prob.recover_fields!(U)
-            diagnostic.method(U, prob, t, diagnostic.args...; diagnostic.kwargs...)
-        end
+        # Apply diagnostic
+        diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
     end
 end
 
