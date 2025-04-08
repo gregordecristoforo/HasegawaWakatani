@@ -37,4 +37,3 @@ end
 function EnstropyEnergyDiagnostic(N::Int = 10)
     Diagnostic("Enstropy energy integral", enstropy_energy_integral, N, "enstropy energy")
 end
-
