@@ -28,7 +28,7 @@ function spectral_transform!(du::DU, u::U, p::FFTW.Plan) where {DU<:AbstractArra
     @assert ndims(du) == ndims(u)
     idx = ntuple(_ -> :, ndims(p))
     for i in axes(u, ndims(p)+1)
-        mul!(du[idx..., i], p, u[idx..., i])
+        mul!(view(du, idx..., i), p, u[idx..., i])
     end
 end
 
