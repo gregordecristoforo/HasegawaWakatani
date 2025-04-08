@@ -1,8 +1,10 @@
 using FFTW
 export SpectralODEProblem
 
+# TODO add get_velocity=vExB,
+
 mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Type<:AbstractArray,
-    u0_hatType<:AbstractArray,tType<:AbstractArray,pType<:Dict,N<:Number,kwargsType}
+    u0_hatType<:AbstractArray,tType<:AbstractArray,pType<:Dict,N<:Number,RM<:Function,kwargsType}
 
     L::LType
     N::NType
@@ -15,8 +17,8 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Ty
 
     # Passed onto something # TODO find out what this something is
     dt::N
+    remove_modes::RM
     kwargs::kwargsType
-    #recover_fields!::Ltype
 
     function SpectralODEProblem(N::Function, domain::Domain, u0, tspan; 
         p=Dict(), dt=0.01, kwargs...)
@@ -32,17 +34,18 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Ty
     # function SpectralODEProblem(L::F, N::F, domain::D, u0, tspan; p=Dict(),
     #     dt=0.01, inverse_transformation::F=identity) where {F<:Function, D}
     function SpectralODEProblem(L::Function, N::Function, domain::Domain, u0, tspan;
-        p=Dict(), dt=0.01, kwargs...)
+        p=Dict(), dt=0.01, remove_modes=remove_nothing, kwargs...)
 
         u0_hat = spectral_transform(u0, domain.transform.FT)
-        remove_zonal_modes!(u0_hat)
+        remove_modes(u0_hat, domain)
 
         if length(tspan) != 2
             throw("tspan should have exactly two elements tsart and tend")
         end
 
         new{typeof(L),typeof(N),typeof(domain),typeof(u0),typeof(u0_hat),typeof(tspan),
-        typeof(p),typeof(dt),typeof(kwargs)}(L, N, domain, u0, u0_hat, tspan, p, dt, kwargs)
+        typeof(p),typeof(dt),typeof(remove_modes),typeof(kwargs)}(L, N, domain, u0, u0_hat, 
+        tspan, p, dt, remove_modes, kwargs)
     end
 end
 
