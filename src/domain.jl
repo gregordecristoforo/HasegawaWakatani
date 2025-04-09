@@ -58,7 +58,7 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
         kx = 2 * π * fftfreq(Nx, 1 / dx)
         ky = realTransform ? 2 * π * rfftfreq(Ny, 1 / dy) : 2 * π * fftfreq(Ny, 1 / dy)
 
-        utmp = zeros(Ny, Nx)
+       utmp = zeros(Float64, Ny, Nx)
 
         if realTransform
             FT = plan_rfft(utmp)
