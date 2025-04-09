@@ -43,13 +43,13 @@ function initial_condition(fun::Function, domain::Domain; kwargs...)
 end
 
 function all_modes(domain::Domain, value=10^-6)
-    n_hat = 1e-6 * ones(domain.Ny, domain.Nx)
+    n_hat = value * ones(domain.Ny, domain.Nx)
     real(ifft(n_hat))
 end
 
 function all_modes_with_random_phase(domain::Domain, value=10^-6)
     θ = 2 * π * rand(domain.Ny, domain.Nx)
-    n_hat = 1e-6 * ones(domain.Ny, domain.Nx) .* exp.(im * θ)
+    n_hat = value * ones(domain.Ny, domain.Nx) .* exp.(im * θ)
     n_hat[:, 1] .= 0
     n_hat[1, :] .= 0
     real(ifft(n_hat))
@@ -57,7 +57,7 @@ end
 
 function initial_condition_linear_stability(domain::Domain, value=10^-6)
     θ = 2 * π * rand(domain.Ny, domain.Nx)
-    phi_hat = 1e-6 * ones(domain.Ny, domain.Nx) .* exp.(im * θ)
+    phi_hat = value * ones(domain.Ny, domain.Nx) .* exp.(im * θ)
     phi_hat[:, 1] .= 0
     phi_hat[1, :] .= 0
     n_hat = phi_hat .* exp(im * pi / 2)
@@ -244,7 +244,7 @@ function send_mail(subject; output="")
     # Dates.format(now(), RFC1123Format)
     url = "smtps://smtp.gmail.com:465"
     rcpt = split(ENV["MAIL_RECIPIANT"], ",")
-    
+
     to = ["You"]
     from = "Simulation update"
     message = "Simulation finished" # TODO add better message
@@ -252,7 +252,7 @@ function send_mail(subject; output="")
     #attachments = [""]
 
     body = get_body(to, from, subject, mime_msg)#; attachments) 
-    opt = SendOptions(isSSL = true, username = ENV["MAIL_USERNAME"], passwd = ENV["MAIL_PASSWORD"])
+    opt = SendOptions(isSSL=true, username=ENV["MAIL_USERNAME"], passwd=ENV["MAIL_PASSWORD"])
     args = (url, rcpt, from, body, opt) # Have to wrap the args to remove "problem"
     resp = send(args...)
 end
