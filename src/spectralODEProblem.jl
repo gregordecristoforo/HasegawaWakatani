@@ -36,7 +36,8 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Ty
     function SpectralODEProblem(L::Function, N::Function, domain::Domain, u0, tspan;
         p=Dict(), dt=0.01, remove_modes=remove_nothing, kwargs...)
 
-        u0_hat = spectral_transform(u0, domain.transform.FT)
+        u0_hat = zeros(eltype(domain.transform.iFT), size(domain.transform.iFT)...)
+        spectral_transform!(u0_hat, u0, domain.transform.FT)
         remove_modes(u0_hat, domain)
 
         if length(tspan) != 2
