@@ -7,7 +7,7 @@ export SpectralOperatorCache, FFTPlans, diffX, diffY, diffXX, diffYY, diffusion,
 
 struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractArray,
     DYY<:AbstractArray,L<:AbstractArray,SP<:AbstractArray,P<:AbstractArray,DU<:AbstractArray,
-    T<:TransformPlans}
+    T<:TransformPlans,PHI<:AbstractArray}
 
     # Spectral coefficents
     DiffX::DX
@@ -29,6 +29,9 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
     C::Float64                    # Coefficient used for correct anti-aliasing normalization
     QTPlans::T                                               # QT stands for quadratic terms
 
+    # Other cache
+    phi::PHI
+
     function SpectralOperatorCache(kx, ky, Nx, Ny; realTransform=true, anti_aliased=true)
         # Spectral coefficents (TODO All have to be CUDA)
         DiffX = transpose(im * kx)
@@ -41,6 +44,7 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
         invLaplacian[1] = 0 # First entry will always be NaN or Inf
         qtl = im * zeros(length(ky), length(kx)) # TODO This has to be CUDA
         qtr = zero(qtl)
+        phi = zero(qtl)
 
         if anti_aliased
             N = Nx > 1 ? div(3 * Nx, 2, RoundUp) : 1
@@ -69,10 +73,11 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
         C = M * N / (Nx * Ny)
         U = iFT * up
         V = iFT * vp
+
         new{typeof(DiffX),typeof(DiffY),typeof(DiffXX),typeof(DiffYY),typeof(Laplacian),
-            typeof(up),typeof(U),typeof(qtr),typeof(QT_plans)
+            typeof(up),typeof(U),typeof(qtr),typeof(QT_plans),typeof(phi)
         }(DiffX, DiffY, DiffXX, DiffYY, Laplacian, invLaplacian, HyperLaplacian,
-            anti_aliased, up, vp, U, V, qtl, qtr, C, QT_plans)
+            anti_aliased, up, vp, U, V, qtl, qtr, C, QT_plans,phi)
     end
 end
 
@@ -204,7 +209,7 @@ function hyper_diffusion(field::F, SC::SOC) where {F<:AbstractArray,SOC<:Spectra
 end
 
 function solvePhi(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
-    SC.invLaplacian .* field
+    SC.phi .= SC.invLaplacian .* field
 end
 
 # function poissonBracket(A::U, B::V, SC::SOC) where {U<:AbstractArray,SOC<:SpectralOperatorCache}
