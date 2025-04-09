@@ -2,10 +2,10 @@
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run Hasegawa Wakatani simulations
-domain = Domain(128, 128, 2 * pi / 0.15, 2 * pi / 0.15, anti_aliased=true)
+domain = Domain(256, 256, 2 * pi * 26.7, 2 * pi * 26.7, anti_aliased=true)
 
 #Random initial conditions
-ic = initial_condition_linear_stability(domain, 10^-1)
+ic = initial_condition_linear_stability(domain, 1e-3)
 
 # Linear operator
 function L(u, d, p, t)
@@ -29,13 +29,13 @@ end
 
 # Parameters
 parameters = Dict(
-    "D_n" => 1e-2,
-    "D_Ω" => 1e-2,
-    "kappa" => 1,
-    "C" => 5,
+    "D_n" => 1e-4,
+    "D_Ω" => 1e-4,
+    "kappa" => 1.0,
+    "C" => 0.1,
 )
 
-t_span = [0, 20000]
+t_span = [0, 2000]
 
 prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-3)
 
@@ -43,31 +43,28 @@ prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-3)
 diagnostics = [
     ProgressDiagnostic(1000),
     ProbeDensityDiagnostic((0, 0), N=1000),
-    #PlotDensityDiagnostic(500),
-    RadialFluxDiagnostic(500),
-    KineticEnergyDiagnostic(500),
-    PotentialEnergyDiagnostic(500),
-    EnstropyEnergyDiagnostic(500),
-    GetLogModeDiagnostic(500, :ky),
+    #PlotDensityDiagnostic(1000),
+    #RadialFluxDiagnostic(500),
+    #KineticEnergyDiagnostic(500),
+    #PotentialEnergyDiagnostic(500),
+    #EnstropyEnergyDiagnostic(500),
+    #GetLogModeDiagnostic(500, :ky),
     CFLDiagnostic(500),
-    RadialPotentialEnergySpectraDiagnostic(500),
-    PoloidalPotentialEnergySpectraDiagnostic(500),
-    RadialKineticEnergySpectraDiagnostic(500),
-    PoloidalKineticEnergySpectraDiagnostic(500),
+    #RadialPotentialEnergySpectraDiagnostic(500),
+    #PoloidalPotentialEnergySpectraDiagnostic(500),
+    #RadialKineticEnergySpectraDiagnostic(500),
+    #PoloidalKineticEnergySpectraDiagnostic(500),
 ]
 
 # Output
 cd("tests/HW")
-output = Output(prob, 201, diagnostics, "output/Hasegawa-Wakatini april first C=5.h5")
+output = Output(prob, 201, diagnostics, "output/Hasegawa-Wakatini camargo test.h5",
+    simulation_name=:parameters, store_locally=true)
 
 FFTW.set_num_threads(16)
 
 # Solve and plot
 sol = spectral_solve(prob, MSS3(), output; resume=true)
-
-#data = sol.simulation["Kinetic energy integral/data"][:]
-#t = sol.simulation
-#plot(data)
 
 #plot(sol.diagnostics[end-3].t, sol.diagnostics[end-3].data)
 
@@ -81,3 +78,6 @@ sol = spectral_solve(prob, MSS3(), output; resume=true)
 #    output = Output(prob, 201, diagnostics, "output/Hasegawa-Wakatini april first.h5")
 #    sol = spectral_solve(prob, MSS3(), output)
 #end
+
+send_mail("Camargo simulation finished!")
+close(output.file)
