@@ -2,7 +2,8 @@
 
 # probe/high time resolution (fields, velocity etc...)
 
-function probe_field(u::AbstractArray, domain::Domain, positions; interpolation=nothing)
+function probe_field(u::U, domain::D, positions::P; interpolation::I=nothing) where {
+    U<:AbstractArray,D<:Domain,P<:Union{AbstractArray,Tuple,Number},I<:Union{Nothing,Function}}
     # Check if the user sent in tuple of points or single point
     if isa(positions, Tuple) && isa(positions[1], Number)
         positions = [positions]
@@ -19,21 +20,25 @@ function probe_field(u::AbstractArray, domain::Domain, positions; interpolation=
         end
     else
         # Only want to do this once
-        U = interpolation((domain.y, domain.x), u)
+        u_interpolated = interpolation((domain.y, domain.x), u)
         for n in eachindex(positions)
-            data[n] = U(positions[n][2], positions[n][1])
+            data[n] = u_interpolated(positions[n][2], positions[n][1])
         end
     end
 
-    return data
+    # Return either the one point, or the array
+    length(data) == 1 ? data[1] : data
 end
 
-function probe_density(u::AbstractArray, prob::SpectralODEProblem, t::Number, positions; interpolation=nothing)
+function probe_density(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
+    U<:AbstractArray,SOP<:SpectralODEProblem,N<:Number,P<:Union{AbstractArray,Tuple,Number},
+    I<:Union{Nothing,Function}}
     probe_field(u[:, :, 1], prob.domain, positions; interpolation)
 end
 
 # "Constructor" for density probe
-function ProbeDensityDiagnostic(positions; interpolation=nothing, N=100)::Diagnostic
+function ProbeDensityDiagnostic(positions::P; interpolation::I=nothing, N::Int=100) where {
+    P<:Union{AbstractArray,Tuple,Number},I<:Union{Nothing,Function}}
     # Check if the user sent in tuple of points or single point
     if isa(positions, Tuple) && isa(positions[1], Number)
         positions = [positions]
@@ -48,12 +53,15 @@ function ProbeDensityDiagnostic(positions; interpolation=nothing, N=100)::Diagno
     return Diagnostic("Density probe", probe_density, N, label, args, kwargs)
 end
 
-function probe_vorticity(u::AbstractArray, prob::SpectralODEProblem, t::Number, positions; interpolation)
+function probe_vorticity(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
+    U<:AbstractArray,SOP<:SpectralODEProblem,N<:Number,P<:Union{AbstractArray,Tuple,Number},
+    I<:Union{Nothing,Function}}
     probe_field(u[:, :, 2], prob.domain, positions; interpolation)
 end
 
 # "Constructor" for vorticity probe
-function ProbeVorticityDiagnostic(positions; interpolation=nothing, N=100)::Diagnostic
+function ProbeVorticityDiagnostic(positions::P; interpolation::I=nothing, N::Int=100) where {
+    P<:Union{AbstractArray,Tuple,Number},I<:Union{Nothing,Function}}
     # Check if the user sent in tuple of points or single point
     if isa(positions, Tuple) && isa(positions[1], Number)
         positions = [positions]
