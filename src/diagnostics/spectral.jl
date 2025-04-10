@@ -1,14 +1,15 @@
 #-------------------------------------- Spectral -------------------------------------------
 
-function get_modes(u::AbstractArray, prob, t::Number)
+function get_modes(u::U, prob::P, t::N) where {U<:AbstractArray,P<:SpectralODEProblem,N<:Number}
     return u
 end
 
-function GetModeDiagnostic(N=100)
+function GetModeDiagnostic(N::Int=100)
     Diagnostic("Mode diagnstic", get_modes, N, "Display density", assumesSpectralField=true)
 end
 
-function get_log_modes(u::AbstractArray, prob, t::Number; kx=:ky)
+function get_log_modes(u::U, prob::P, t::N; kx::K=:ky) where {U<:AbstractArray,
+    P<:SpectralODEProblem,N<:Number,K<:Union{Int,Symbol}}
     if kx == :ky
         if length(size(u)) >= 3
             data = zeros(prob.domain.Nx ÷ 2, last(size(u)))
@@ -25,11 +26,11 @@ function get_log_modes(u::AbstractArray, prob, t::Number; kx=:ky)
     end
 end
 
-function GetLogModeDiagnostic(N=100, kx=:ky)
+function GetLogModeDiagnostic(N::Int=100, kx::K=:ky) where {K<:Union{Int,Symbol}}
     Diagnostic("Log mode diagnostic", get_log_modes, N, "log(|u_k|)", assumesSpectralField=true, (), (kx=kx,))
 end
 
-function plotFrequencies(u)
+function plotFrequencies(u::U) where {U<:AbstractArray}
     heatmap(log10.(norm.(u)), title="Frequencies")
 end
 
@@ -74,8 +75,6 @@ function PoloidalKineticEnergySpectraDiagnostic(N::Int=100)
     Diagnostic("Poloidal kinetic energy spectra", poloidal_kinetic_energy_spectra, N,
         "poloidal kinetic energy spectra", assumesSpectralField=true)
 end
-
-
 
 
 
