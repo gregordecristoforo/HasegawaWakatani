@@ -262,12 +262,12 @@ function write_attribute(simulation::HDF5.Group, prob::SOP) where {SOP<:Spectral
     write_attribute(simulation, "dt", prob.dt)
     write_attribute(simulation, "dx", prob.domain.dx)
     write_attribute(simulation, "dy", prob.domain.dy)
-    write_attribute(simulation, "L_x", prob.domain.Lx)
-    write_attribute(simulation, "L_y", prob.domain.Ly)
-    write_attribute(simulation, "N_x", prob.domain.Nx)
-    write_attribute(simulation, "N_y", prob.domain.Ny)
+    write_attribute(simulation, "Lx", prob.domain.Lx)
+    write_attribute(simulation, "Ly", prob.domain.Ly)
+    write_attribute(simulation, "Nx", prob.domain.Nx)
+    write_attribute(simulation, "Ny", prob.domain.Ny)
     write_attribute(simulation, "anti_aliased", prob.domain.anti_aliased)
-    write_attribute(simulation, "real_transform", prob.domain.realTransform)
+    write_attribute(simulation, "realTransform", prob.domain.realTransform)
     for (key, val) in prob.p
         write_attribute(simulation, key, val)
     end
