@@ -162,12 +162,4 @@ const DEFAULT_DIAGNOSTICS = [ProgressDiagnostic()]
 
 # ---------------------------------- Other -------------------------------------------------
 
-# Total energy
-
-# Density flux
-
-# Resistive flux
-
-# Energy dissipation
-
 # Enstrophy dissipation
