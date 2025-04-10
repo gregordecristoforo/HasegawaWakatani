@@ -1,7 +1,8 @@
 # -------------------------------------- Fluxes  -------------------------------------------
-# Does not take into account anti-aliasing
+using Base.Threads
 
 #Γ_0(t) = 1/(L_xL_y)∫_0^L_x∫_0^L_y nv_x dydx
+# Does not take into account anti-aliasing
 # TODO implement quadrature as bonus
 function radial_flux(u::U, prob::P, t::T; quadrature=nothing) where
 {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
