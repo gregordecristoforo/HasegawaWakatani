@@ -240,7 +240,7 @@ end
 # --------------------------------------- Mailing ------------------------------------------
 using SMTPClient
 
-function send_mail(subject; output="")
+function send_mail(subject; attachment="")
     # Dates.format(now(), RFC1123Format)
     url = "smtps://smtp.gmail.com:465"
     rcpt = split(ENV["MAIL_RECIPIANT"], ",")
@@ -249,9 +249,12 @@ function send_mail(subject; output="")
     from = "Simulation update"
     message = "Simulation finished" # TODO add better message
     mime_msg = get_mime_msg(message)
-    #attachments = [""]
-
-    body = get_body(to, from, subject, mime_msg)#; attachments) 
+    attachments = [attachment]
+    if attachment != ""
+        body = get_body(to, from, subject, mime_msg; attachments) 
+    else
+        body = get_body(to, from, subject, mime_msg)
+    end    
     opt = SendOptions(isSSL=true, username=ENV["MAIL_USERNAME"], passwd=ENV["MAIL_PASSWORD"])
     args = (url, rcpt, from, body, opt) # Have to wrap the args to remove "problem"
     resp = send(args...)
