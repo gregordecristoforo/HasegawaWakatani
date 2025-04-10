@@ -17,7 +17,7 @@ end
 
 # Parameters
 parameters = Dict(
-    "nu" => 0#0.01
+    "nu" => 0.0#0.01
 )
 
 # Break down time 
@@ -31,11 +31,14 @@ t_span = [0, 0.9 * t_b]
 prob = SpectralODEProblem(L, N, domain, u0, t_span, p=parameters, dt=0.0001)
 
 # Initialize output
-output = Output(prob, 1000, [BurgerCFLDiagnostic(10), ProgressDiagnostic(10)], "burgers equation gaussian.h5")
+cd(relpath(@__DIR__, pwd()))
+output = Output(prob, 1000, [BurgerCFLDiagnostic(10), ProgressDiagnostic(10)], 
+"output/burgers equation gaussian.h5", simulation_name=:parameters)
 
 ## Solve problem
 sol = spectral_solve(prob, MSS3(), output)
 plot(sol.u[end])
+
 #plot(sol.u[end] - burgers_equation_analytical_solution(u0, domain, parameters, last(t_span)))
 #plot(burgers_equation_analytical_solution(u0, domain, parameters, last(t_span)))
 
@@ -48,7 +51,7 @@ plot(timesteps, convergence1, xaxis=:log, yaxis=:log, label="MSS1")
 plot!(timesteps, convergence2, xaxis=:log, yaxis=:log, label="MSS2", color="dark green")
 plot!(timesteps, convergence3, xaxis=:log, yaxis=:log, label="MSS3", color="orange", xlabel="dt",
     ylabel=L"||U-u_a||", title="Timestep convergence, Burgers equation (N =$(domain.Ny))", xticks=timesteps)
-savefig("Timestep convergence, Burgers equation (N =$(domain.Ny)).pdf")
+#savefig("Timestep convergence, Burgers equation (N =$(domain.Ny)).pdf")
 
 ## Resolution convergence test
 resolutions = [2, 4, 8, 16, 32, 64, 128, 256]#, 512, 1024] #[2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]
@@ -62,25 +65,12 @@ plot!(resolutions, convergence3, xaxis=:log2, yaxis=:log, label="MSS3", color="o
 plot!(resolutions[1:end-4], 0.5 * exp.(-0.5 * resolutions)[1:end-4], label=L"\frac{1}{2}\exp\left(-\frac{N}{2}\right)", linestyle=:dash,
     xaxis=:log2, yaxis=:log, xticks=resolutions, xlabel=L"N_x \wedge N_y",
     ylabel=L"||U-u_a||/N_xN_y", title="Resolution convergence, Burgers equation (dt=$(prob.dt))")
-savefig("Resolution convergence, Burgers equation (dt=$(prob.dt)).pdf")
+#savefig("Resolution convergence, Burgers equation (dt=$(prob.dt)).pdf")
 
-
-
-
-
-
-
-
-
-
-
-
-
-extractOutput(out)
-plot(out.u[end])
-
-plot(out.diagnostics[3].data)
 ## ----------------------------------- Plot ------------------------------------------------
+
+plot(domain.y, u0, xlabel=L"y", ylabel=L"u",label="", title="Gaussian initial condition")
+savefig("output/Gaussian intial condition.pdf")
 
 #Add analytical solution here
 deepcopy(prob)
@@ -91,48 +81,3 @@ testTimestepConvergence(mSS3Solve, prob, HeatEquationAnalyticalSolution, [0.1, 0
 
 prob.dt = 0.001
 testResolutionConvergence(mSS3Solve, prob, gaussianBlob, HeatEquationAnalyticalSolution, [16, 32, 64, 128, 256, 512, 1024])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# ------------------------------------- Junk code ------------------------------------------
-
-#updateDomain!(prob, domain)
