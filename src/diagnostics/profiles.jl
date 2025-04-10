@@ -11,7 +11,8 @@ function poloidal_density_profile(u::U, prob::P, t::T; quadrature=nothing) where
     sum(u[:,:,1], dims=2) ./ prob.domain.Lx
 end
 
-function radial_vorticity_profile(u::AbstractArray{<:Number}, domain::Domain; quadrature=nothing)
+function radial_vorticity_profile(u::U, prob::P, t::T; quadrature=nothing) where {U<:AbstractArray,
+    P<:SpectralODEProblem,T<:Number}
     sum(u[:,:,2], dims=1)' ./ prob.domain.Ly
 end
 
