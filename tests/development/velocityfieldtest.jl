@@ -109,13 +109,20 @@ data2[1]
 
 
 ##
+fid = h5open("output/Hasagawa-Wakatani C=5.h5", "r")
+keys(fid)
+simulation = fid["2025-03-06T18:15:40.319"]
+domain = Domain(read_attribute(simulation, "N_x"),read_attribute(simulation, "N_y"),read_attribute(simulation, "L_x"),read_attribute(simulation, "L_y"))
 
-E_approx = zeros(100)
-E_proper = zeros(100)
+E_approx = zeros(201)
+E_proper = zeros(201)
+E_integr = zeros(201)
 
-for i in 1:100
-    data = copy(sol.simulation["fields"][:,:,:,i]) 
-    #copy(read(sol.simulation["cache_backup/u"]))
+simulation["t"][end]
+
+for i in 1:201
+    data = copy(simulation["fields"][:,:,:,i]) 
+    data_hat = spectral_transform(data, domain.transform.FT)
 
     n_hat = domain.transform.FT*data[:,:,1]
     Ω_hat = domain.transform.FT*data[:,:,2]
@@ -138,6 +145,8 @@ for i in 1:100
 
     n = domain.transform.iFT*n_hat
     ϕ = domain.transform.iFT*ϕ_hat
+
+    display(heatmap(n))
 
     ν = 1e-4
     D_Ω_hat = ν*hyper_diffusion(Ω_hat,domain)
@@ -173,19 +182,27 @@ for i in 1:100
     domain.transform.iFT*quadraticTerm(dϕdy_hat, dϕdy_hat, domain) + 
     domain.transform.iFT*quadraticTerm(n_hat, n_hat, domain))
 
-    E_approx[i] = (-sum(n.*dϕdy) - C*sum((ϕ-n).^2) -sum(ϕ.*D_Ω .- n.*D_n))/E_total
-    E_proper[i] = (-sum(Γ) -C*sum(ϕ_n.^2) -sum(ϕD_Ω-nD_n))/E_total
+    E_approx[i] = (-sum(n.*dϕdy) - C*sum((ϕ-n).^2) -sum(ϕ.*D_Ω .- n.*D_n))/(domain.Lx*domain.Ly)#E_total
+    E_proper[i] = (-sum(Γ) -C*sum(ϕ_n.^2) -sum(ϕD_Ω-nD_n))/(domain.Lx*domain.Ly)#E_total
+    E_integr[i] = energy_evolution_integral(data_hat, prob, 0.0)
 
     1/2*sum(domain.transform.iFT*quadraticTerm(dϕdx_hat, dϕdx_hat, domain) + 
     domain.transform.iFT*quadraticTerm(dϕdy_hat, dϕdy_hat, domain)) - 
     (sum(E_kin_hat[1:end,:]) - 0.5*sum(E_kin_hat[1,:]))/(domain.Nx*domain.Ny)
 end
 
+
 plot(E_proper, label="Aliased")
-plot!(E_approx, ylim=[-0.1,0.2], xlabel=L"t", ylabel=L"(\partial E/\partial t)/E", title="Energy functional "*L"(C=0.1, \nu=0.0001)", label="Anti-aliased")
-savefig("figures/Energy integral C=0.1, nu=0.0001.pdf")
+plot!(E_approx, ylim=[-0.003,0.001], xlabel=L"t", ylabel=L"(\partial E/\partial t)/E", title="Energy functional "*L"(C=0.1, \nu=0.0001)", label="Anti-aliased")
+#savefig("figures/Energy integral C=$(read_attribute(simulation, "C")), nu=$(read_attribute(simulation, "D_n")).pdf")
 
 #plot(E_proper./E_approx)
+
+plot(E_proper, label="Anti-aliased")
+plot!(E_approx, label="Aliased")
+plot!(E_integr, label="Integral")
+
+plot(E_approx-E_integr)
 
 ##
 
@@ -299,8 +316,6 @@ using Base.Threads
 
 task_n = Threads.@spawn prob.domain.transform.iFT*n_hat
 
-task_n
-
 function flux(u::U, domain::D, vy::V, n::V) where {U<:AbstractArray, D<:Domain, V<:AbstractArray}
     n_hat = @view u[:,:,1]
     Ω_hat = @view u[:,:,2]
@@ -321,15 +336,6 @@ data2_hat == data_hat
 
 sum(Γ)/(domain.Lx*domain.Ly)
 radial_flux(data_hat, prob, 0.0)
-
-
-
-
-
-
-
-
-
 
 
 
