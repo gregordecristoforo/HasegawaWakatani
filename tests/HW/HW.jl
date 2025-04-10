@@ -66,8 +66,6 @@ FFTW.set_num_threads(16)
 # Solve and plot
 sol = spectral_solve(prob, MSS3(), output; resume=true)
 
-#plot(sol.diagnostics[end-3].t, sol.diagnostics[end-3].data)
-
 ## Parameter scan
 #C_values = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0]
 
