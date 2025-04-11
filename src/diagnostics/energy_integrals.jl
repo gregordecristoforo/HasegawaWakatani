@@ -125,7 +125,7 @@ end
 # dE/dt(t) = - Γ_c - D^E 
 function energy_evolution_integral(u::U, prob::P, t::T; quadrature=nothing) where 
     {U<:AbstractArray,P<:SpectralODEProblem,T<:Number} 
-    - radial_flux(u, prob, t) - resistive_dissipation_integral(u, prob, t) .- viscous_dissipation_integral(u, prob, t)
+    radial_flux(u, prob, t) - resistive_dissipation_integral(u, prob, t) .- viscous_dissipation_integral(u, prob, t)
 end
 
 function EnergyEvolutionDiagnostic(N::Int = 10)
