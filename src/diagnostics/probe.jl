@@ -76,14 +76,31 @@ function ProbeVorticityDiagnostic(positions::P; interpolation::I=nothing, N::Int
     return Diagnostic("Vorticity probe", probe_vorticity, N, label, args, kwargs)
 end
 
-# TODO implement remaining probes 
+function probe_potential(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
+    U<:AbstractArray,SOP<:SpectralODEProblem,N<:Number,P<:Union{AbstractArray,Tuple,Number},
+    I<:Union{Nothing,Function}}
+    ϕ_hat = @views solvePhi(u[:, :, 2], domain)
+    ϕ = prob.domain.transform.iFT*ϕ_hat
+    probe_field(ϕ, prob.domain, positions; interpolation)
+end
 
-# function ProbePhiDiagnostic(x::Union{AbstractArray,Number}, y::Union{AbstractArray,Number};
-#     interpolation=nothing, N=100)::Diagnostic
-#     args = (x, y)
-#     kwargs = (interpolation = interpolation)
-#     return Diagnostic(probe_field, N, "probe", args, kwargs)
-# end
+function ProbePotentialDiagnostic(positions::P; interpolation::I=nothing, N::Int=100) where {
+    P<:Union{AbstractArray,Tuple,Number},I<:Union{Nothing,Function}}
+    # Check if the user sent in tuple of points or single point
+    if isa(positions, Tuple) && isa(positions[1], Number)
+        positions = [positions]
+    end
+
+    #Create the diagnostic label
+    label = ["Probe " * string(position) for position in positions]
+
+    args = (positions,)
+    kwargs = (interpolation=interpolation,)
+
+    return Diagnostic("Phi probe", probe_potential, N, label, args, kwargs, assumesSpectralField=true)
+end
+
+# TODO implement remaining probes 
 
 # function ProbeVelocityDiagnostic(x::Union{AbstractArray,Number}, y::Union{AbstractArray,Number};
 #     interpolation=nothing, N=100)::Diagnostic
