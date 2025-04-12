@@ -81,7 +81,7 @@ function get_cache(prob::SpectralODEProblem, alg::MSS2)
     dt = prob.dt
     u = copy(prob.u0_hat)
     D = prob.L(ones(size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
-    c = @. (tab.g0 - D * dt)^-1
+    c = @. (3 / 2 - D * dt)^-1
     u0 = copy(prob.u0_hat)
     u1 = zero(u)
     k0 = zero(u)
@@ -103,17 +103,17 @@ end
         # Perform step using MSS1
         cache1 = get_cache(prob, MSS1())
         perform_step!(cache1, prob, t)
-        cache.k0 = f(u0, d, p, t)
-        cache.u1 = cache1.u
-        cache.u = cache.u1
+        cache.k0 .= f(u0, d, p, t)
+        cache.u1 .= cache1.u
+        cache.u .= cache.u1
     else
         k1 = f(u1, d, p, t)
         # Step
         @. cache.u = c * (a0 * u0 + a1 * u1 + dt * (b0 * k0 + b1 * k1))
         # Shifting values downwards    
-        cache.k0 = k1
-        cache.u0 = u1
-        cache.u1 = cache.u
+        cache.k0 .= k1
+        cache.u0 .= u1
+        cache.u1 .= cache.u
     end
 end
 
@@ -133,7 +133,7 @@ struct MSS3Tableau{T} <: AbstractTableau
 end
 
 function MSS3Tableau()
-    g0 = 11 / 6 #1.833333352
+    g0 = 11 / 6
     a0 = 1 / 3
     a1 = -3 / 2
     a2 = 3.0
@@ -184,9 +184,9 @@ end
         cache.step += 1
         # Perform step using MSS1
         cache1 = get_cache(prob, MSS1())
-        perform_step!(cache1, prob, t)
-        cache.k0 = f(u0, d, p, t)
-        cache.u1 = cache1.u
+        perform_step!(cache1, prob, t) 
+        cache.k0 .= f(u0, d, p, t)
+        cache.u1 .= cache1.u
         #TODO remove testing
         #cache.u1 = u0*exp.(p["lambda"]*dt)#Exact
         
@@ -201,30 +201,31 @@ end
         # end
         # cache.u1 = cache1.u
 
-        cache.u = cache.u1 # For output handling
+        cache.u .= cache.u1 # For output handling
     elseif cache.step == 2
         cache.step += 1
         # Set up cache for stepping with MSS2
         cache2 = get_cache(prob, MSS2())
         cache2.step = 2
-        cache2.k0 = cache.k0
-        cache2.u1 = cache.u1
+        cache2.k0 .= cache.k0
+        cache2.u1 .= cache.u1
         # Perform step using MSS2
         perform_step!(cache2, prob, t)
-        cache.k1 = cache2.k0
-        cache.u2 = cache2.u
-        cache.u = cache.u2 # For output handling
+        cache.k1 .= cache2.k0
+        cache.u2 .= cache2.u
+        cache.u .= cache.u2 # For output handling
     else
         k2 = f(u2, d, p, t)
         # Step
         @. cache.u = c * (a0 * u0 + a1 * u1 + a2 * u2 + dt * (b0 * k0 + b1 * k1 + b2 * k2))
         # Shifting values downwards    
-        cache.k1 = k2
-        cache.k0 = k1
-        cache.u1 = u2
-        cache.u0 = u1
-        cache.u2 = cache.u
+        cache.k0 .= k1
+        cache.k1 .= k2
+        cache.u0 .= u1
+        cache.u1 .= u2
+        cache.u2 .= cache.u
     end
 end
 
 # TODO investigate if possible to remove u1 for MSS2 and similarly u2 for MSS3
+# This is possible, but makes the code less comprehensible
