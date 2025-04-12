@@ -112,8 +112,8 @@ mutable struct Output{DV<:AbstractArray,U<:AbstractArray,UB<:AbstractArray,T<:Ab
         # Store "locally" as in memory
         if store_locally
             # Allocate local data for fields
-            u = Vector{typeof(prob.u0)}(undef, N_data)
-            u[1] = U
+            u = [zero(prob.u0) for _ in 1:N_data]
+            u[1] .= U
             t = zeros(N_data)
             t[1] = first(prob.tspan)
         else
@@ -147,7 +147,7 @@ function handle_output!(output::O, step::Int, u::T, prob::SOP, t::N) where {O<:O
 
     # Auxilary name
     U = output.U_buffer
-
+    
     # Check wether or not to output 
     if step % output.stride == 0
         # Transform data
@@ -166,7 +166,7 @@ function handle_output!(output::O, step::Int, u::T, prob::SOP, t::N) where {O<:O
 
         # TODO perhaps a error should be thrown somewhere if there is no output?
         if output.store_locally
-            output.u[idx] = U
+            output.u[idx] .= U
             output.t[idx] = t
         end
     end
