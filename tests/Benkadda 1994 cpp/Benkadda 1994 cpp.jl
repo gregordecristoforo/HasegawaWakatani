@@ -35,22 +35,24 @@ parameters = Dict(
     "ν" => 1e-2,
     "g" => 1e-1,
     "σ" => 1e-3,
-    "kappa" => 1.0 #? Not used
+    "kappa" => 1.0, #? Not used
 )
 
-t_span = [0, 1000]
+t_span = [0, 10000]
 
-prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=2e-3)
+prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-3)
 
 # Diagnostics
 diagnostics = [
     ProgressDiagnostic(1000),
     ProbeDensityDiagnostic((0, 0), N=100),
+    ProbeVorticityDiagnostic((0, 0), N=100),
+    ProbePotentialDiagnostic((0, 0), N=100),
     #PlotDensityDiagnostic(1000),
-    RadialFluxDiagnostic(50),
-    KineticEnergyDiagnostic(50),
-    PotentialEnergyDiagnostic(50),
-    EnstropyEnergyDiagnostic(50),
+    RadialFluxDiagnostic(600),
+    KineticEnergyDiagnostic(1000),
+    PotentialEnergyDiagnostic(1000),
+    EnstropyEnergyDiagnostic(750),
     #GetLogModeDiagnostic(50, :ky),
     #CFLDiagnostic(50),
     #RadialPotentialEnergySpectraDiagnostic(50),
@@ -61,7 +63,7 @@ diagnostics = [
 
 # Output
 cd("tests/Benkadda 1994 cpp")
-output = Output(prob, 1001, diagnostics, "output/benkadda april tenth corrected.h5", simulation_name=:parameters)
+output = Output(prob, 1001, diagnostics, "output/benkadda april twelth long.h5", simulation_name=:parameters)
 
 FFTW.set_num_threads(16)
 
@@ -74,7 +76,35 @@ default(legend=false)
 anim = @animate for i in axes(data, 4)
     heatmap(data[:, :, 1, i], aspect_ratio=:equal, xaxis=L"x", yaxis=L"y", title=L"n(t=" * "$(round(t[i], digits=0)))")
 end
-gif(anim, "benkadda.gif", fps=20)
+gif(anim, "benkadda long.gif", fps=20)
 
-send_mail("Corrected benkadda simulation finnished!", attachment="benkadda.gif")
+send_mail("Long benkadda simulation finnished!")#, attachment="benkadda.gif")
 close(output.file)
+
+##--------------------------------- Data analysis ------------------------------------------
+# cd("tests/Benkadda 1994 cpp")
+# fid = h5open("output/benkadda april tenth corrected.h5", "r")
+# simulation = fid[keys(fid)[2]]
+
+# probe_data = read(simulation["Density probe/data"])
+# t = read(simulation["Density probe/t"])
+
+# plot(probe_data, marker=".")
+
+# using Statistics
+# using StatsPlots
+# n = (probe_data .- mean(probe_data)) / std(probe_data)
+# plot(n)
+
+# density(n, minorticks=0.1, xlabel=L"(\tilde{n}-\langle \tilde{n}\rangle)/\tilde{n}_{rms}",
+#     ylabel=L"P(n)", guidefontsize=13, titlefontsize=13, title="Histogram Benkadda", label="")
+
+# Γ = -read(simulation["Radial flux/data"])[3000:end]
+# plot(Γ, label="", xaxis=L"t", yaxis=L"Γ")
+
+# Γ_n = (Γ .- mean(Γ)) / std(Γ)
+# plot(Γ_n, label="", xaxis=L"t", yaxis=L"(\tilde{\Gamma}-\langle\tilde{\Gamma}\rangle)/\tilde{\Gamma}_rms",
+#     minorticks=true, guidefontsize=13)
+
+# P = read(simulation["Enstropy energy integral/data"])#[3000:end]
+# plot(P[4000:15:5001], marker=".")
