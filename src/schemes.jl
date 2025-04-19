@@ -187,6 +187,7 @@ end
         perform_step!(cache1, prob, t) 
         cache.k0 .= f(u0, d, p, t)
         cache.u1 .= cache1.u
+        #cache.u1 .= u0.*exp.(prob.L(ones(size(prob.domain.transform.iFT)), d, p, 0)*dt)
         cache.u .= cache.u1 # For output handling
     elseif cache.step == 2
         cache.step += 1
