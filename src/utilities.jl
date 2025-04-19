@@ -111,7 +111,7 @@ function test_timestep_convergence(prob, analyticalSolution, timesteps, scheme=M
         # Create new spectralODEProblem with new dt
         newProb = SpectralODEProblem(prob.L, prob.N, prob.domain, prob.u0, prob.tspan, p=prob.p, dt=dt)
 
-        output = Output(newProb, 2, [])
+        output = Output(newProb, 2, [], store_hdf=false)
 
         #Calculate approximate solution
         sol = spectral_solve(newProb, scheme, output)
@@ -149,7 +149,7 @@ function test_resolution_convergence(prob, initialField, analyticalSolution, res
 
         # Create new spectralODEProblem but with updated resolution
         newProb = SpectralODEProblem(prob.L, prob.N, domain, u0, prob.tspan, p=prob.p, dt=prob.dt)
-        output = Output(newProb, 2, [])
+        output = Output(newProb, 2, [], store_hdf=false)
 
         # Calculate solutions
         sol = spectral_solve(newProb, scheme, output)
@@ -251,11 +251,90 @@ function send_mail(subject; attachment="")
     mime_msg = get_mime_msg(message)
     attachments = [attachment]
     if attachment != ""
-        body = get_body(to, from, subject, mime_msg; attachments) 
+        body = get_body(to, from, subject, mime_msg; attachments)
     else
         body = get_body(to, from, subject, mime_msg)
-    end    
+    end
     opt = SendOptions(isSSL=true, username=ENV["MAIL_USERNAME"], passwd=ENV["MAIL_PASSWORD"])
     args = (url, rcpt, from, body, opt) # Have to wrap the args to remove "problem"
     resp = send(args...)
+end
+
+# -------------------------------- Cosmoplot related ---------------------------------------
+
+using InverseFunctions
+# base = :(Base.Fix1(log,3))
+# inverse(Base.Fix1(log,3))(1)
+
+function cosmo_log_formatter(x, base::Symbol=:log10)
+    println(x)
+    log_val = eval(base)(x)
+    if log_val in [0, 1]
+        return "\$$(round(Int, x))\$"
+    else
+        return "\$$(round(Int,inverse(eval(base))(1)))^{$(round(Int, log_val))}\$"
+    end
+end
+
+# TODO implement properly to extend the loglog functionality
+function get_base(scale::Symbol)
+    if scale == :log
+        return :e
+        #What about log1p
+    elseif string(scale)[1:3] == "log"
+        return tryparse(Int, string(scale)[4:end])
+    else
+
+    end
+end
+
+#println(cosmo_log_formatter(100,:log10))
+
+# Your typical matlab implementation
+function loglog(x, args...; base::Symbol=:log10, kwargs...)
+    plot(x, args...; xscale=base, yscale=base, xformatter=x -> cosmo_log_formatter(x, base),
+        yformatter=x -> cosmo_log_formatter(x, base), kwargs...)
+end
+
+# semilogx([0.1,1],base=:log2)
+function semilogx(x, args...; base::Symbol=:log10, kwargs...)
+    plot(x, args...; xscale=base, xformatter=x -> cosmo_log_formatter(x, base), kwargs...)
+end
+
+function semilogy(x, args...; base::Symbol=:log10, kwargs...)
+    plot(x, args...; yscale=base, yformatter=x -> cosmo_log_formatter(x, base), kwargs...)
+end
+
+# Default plot style (follows cosmoplots https://github.com/uit-cosmo/cosmoplots/blob/main/cosmoplots/default.mplstyle)
+default(frame=:box, dpi=300, size=(100 * 3.37, 100 * 2.08277), fontfamily="Computer Modern",
+    titlefontsize=8, guidefontsize=8, tickfontsize=8, legendfontsize=8, legendfontcolor=:black,
+    legendtitlefontcolor=:black, legendtitlefontsize=8, linewidth=0.75, grid=false,
+    minorticks=true, markersize=2.25, widen=1.1)
+
+# TODO add support for log plots, yikes
+import PythonPlot
+macro pythonticks(expr)
+    # Ensure the macro is hygienic
+    @assert expr.head == :call "The macro only works with function calls."
+    @assert expr.args[1] == :plot || expr.args[1] == :(Plots.plot) "The macro only works with `plot` or `Plots.plot`."
+    # Create figure and give it right font size for the right tick spacing
+    PythonPlot.figure(figsize=(3.37, 2.08277), dpi=300, num="__temporary__")
+    PythonPlot.matplotlib.rcParams["font.size"] = 8
+    # Remove keyword arguments from the python plot call
+    args = [arg for arg in expr.args[2:end] if !(arg isa Expr && arg.head == :kw)]
+    func = Expr(:call, :(PythonPlot.plot), args...)
+    eval(func)
+    # Add xticks and yticks based on native matplotlib ticks
+    xticks = PythonPlot.PyArray(PythonPlot.gca().get_xticks())
+    yticks = PythonPlot.PyArray(PythonPlot.gca().get_yticks())
+    new_args = copy(expr.args)
+    push!(new_args, Expr(:kw, :xticks, xticks))
+    push!(new_args, Expr(:kw, :yticks, yticks))
+
+    # Close the python figure
+    PythonPlot.plotclose()
+
+    # Construct a new call to `plot` with the injected ticks
+    new_expr = Expr(:call, new_args...)
+    return esc(new_expr)  # Return the modified expression
 end
