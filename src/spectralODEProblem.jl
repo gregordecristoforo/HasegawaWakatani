@@ -20,7 +20,7 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Ty
     remove_modes::RM
     kwargs::kwargsType
 
-    function SpectralODEProblem(N::Function, domain::Domain, u0, tspan; 
+    function SpectralODEProblem(N::Function, domain::Domain, u0, tspan;
         p=Dict(), dt=0.01, kwargs...)
 
         # If no linear operator given, assume there is non
@@ -36,8 +36,11 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Ty
     function SpectralODEProblem(L::Function, N::Function, domain::Domain, u0, tspan;
         p=Dict(), dt=0.01, remove_modes=remove_nothing, kwargs...)
 
-        u0_hat = zeros(eltype(domain.transform.iFT), size(domain.transform.iFT)..., 2)
+        sz = size(domain.transform.iFT)
+        allocation_size = (sz..., size(u0)[length(sz)+1:end]...)
+        u0_hat = zeros(eltype(domain.transform.iFT), allocation_size...)
         spectral_transform!(u0_hat, u0, domain.transform.FT)
+        u0_hat = domain.transform.FT * u0
         remove_modes(u0_hat, domain)
 
         if length(tspan) != 2
@@ -45,8 +48,8 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Ty
         end
 
         new{typeof(L),typeof(N),typeof(domain),typeof(u0),typeof(u0_hat),typeof(tspan),
-        typeof(p),typeof(dt),typeof(remove_modes),typeof(kwargs)}(L, N, domain, u0, u0_hat, 
-        tspan, p, dt, remove_modes, kwargs)
+            typeof(p),typeof(dt),typeof(remove_modes),typeof(kwargs)}(L, N, domain, u0, u0_hat,
+            tspan, p, dt, remove_modes, kwargs)
     end
 end
 
@@ -55,5 +58,3 @@ end
 function Base.display(prob::SpectralODEProblem)
     println(typeof(prob))
 end
-
-#prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=0.1)
