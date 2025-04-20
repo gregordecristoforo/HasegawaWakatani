@@ -98,6 +98,6 @@ end
 ## ----------------------------------- Plot ------------------------------------------------
 
 plot(domain.y, u0, xlabel=L"y", ylabel=L"u(y)", label="", title="Quadratic initial condition")
-savefig("output/Quadratic intial condition.pdf")
+savefig("figures/Quadratic intial condition.pdf")
 
-send_mail("Quadratic burger equation test finished!", attachment="output/Quadratic intial condition.pdf")
+send_mail("Quadratic burger equation test finished!", attachment="figures/burgers steepning quadritic.pdf")

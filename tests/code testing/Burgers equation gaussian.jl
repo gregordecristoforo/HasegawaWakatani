@@ -91,4 +91,4 @@ end
 ## ----------------------------------- Plot ------------------------------------------------
 
 plot(domain.y, u0, xlabel=L"y", ylabel=L"u(y)", label="", title="Gaussian initial condition")
-savefig("output/Gaussian intial condition.pdf")
+savefig("figures/Gaussian intial condition.pdf")
