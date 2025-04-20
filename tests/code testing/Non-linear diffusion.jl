@@ -3,7 +3,7 @@ include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run scheme test
 domain = Domain(256, 256, 50, 50, anti_aliased=true)
-u0 = log.(initial_condition(gaussian, domain; B=1))
+u0 = initial_condition(log_gaussian, domain)
 
 # Diffusion 
 function L(u, d, p, t)
@@ -60,10 +60,6 @@ jldopen("output/non-linear diffusion test.jld", "w") do file
 end
 
 ## Resolution convergence test
-function log_gaussian(x, y)
-    log(exp(-(x^2 + y^2) / 2) + 1)
-end
-
 resolutions = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]
 _, convergence1 = test_resolution_convergence(prob, log_gaussian, HeatEquationAnalyticalSolution2,
     resolutions, MSS1(), physical_transform=inverse_transform!)
