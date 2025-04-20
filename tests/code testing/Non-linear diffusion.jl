@@ -47,7 +47,7 @@ plot!(timesteps, convergence3, xaxis=:log, yaxis=:log, label="MSS3", color="oran
 plot!(timesteps, 0.5 * timesteps .^ 3, linestyle=:dash, label=L"\frac{1}{2}dt^3")
 plot!(timesteps, 0.5 * timesteps .^ 2, linestyle=:dash, label=L"\frac{1}{2}dt^2", xlabel="dt",
     ylabel=L"||U-u_a||", title="Timestep convergence, Nonlin-Diffusion (N =$(domain.Nx))", xticks=timesteps)
-savefig("figure/Timestep convergence, Nonlin-Diffusion (N =$(domain.Nx)).pdf")
+savefig("figures/Timestep convergence, Nonlin-Diffusion (N =$(domain.Nx)).pdf")
 
 using JLD
 jldopen("output/non-linear diffusion test.jld", "w") do file
@@ -74,7 +74,7 @@ plot!(resolutions, convergence3, xaxis=:log2, yaxis=:log, label="MSS3", color="o
 plot!(resolutions[1:end-4], 0.5 * exp.(-0.5 * resolutions)[1:end-4], label=L"\frac{1}{2}\exp\left(-\frac{N}{2}\right)", linestyle=:dash,
     xaxis=:log2, yaxis=:log, xticks=resolutions, xlabel=L"N_x \wedge N_y",
     ylabel=L"||U-u_a||/N_xN_y", title="Resolution convergence, Nonlin-Diffusion (dt=$(prob.dt))")
-savefig("figure/Resolution convergence, Nonlin-Diffusion (dt=$(prob.dt)).pdf")
+savefig("figures/Resolution convergence, Nonlin-Diffusion (dt=$(prob.dt)).pdf")
 
 jldopen("output/non-linear diffusion resolution test.jld", "w") do file
     g = create_group(file, "data")
