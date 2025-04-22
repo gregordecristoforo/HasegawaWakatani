@@ -40,7 +40,6 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Ty
         allocation_size = (sz..., size(u0)[length(sz)+1:end]...)
         u0_hat = zeros(eltype(domain.transform.iFT), allocation_size...)
         spectral_transform!(u0_hat, u0, domain.transform.FT)
-        u0_hat = domain.transform.FT * u0
         remove_modes(u0_hat, domain)
 
         if length(tspan) != 2
