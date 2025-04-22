@@ -80,10 +80,10 @@ function initialize_diagnostic!(diagnostic::D, U::T, prob::SOP, simulation::S, h
 
                 # Create dataset for fields and time
                 ## Datatype and shape is not so trivial here..., will have to think about it tomorrow
-                dset = create_dataset(simulation[diagnostic.name], "data", datatype(Float64), (size(id)..., typemax(Int64)),
+                dset = create_dataset(simulation[diagnostic.name], "data", datatype(eltype(id)), (size(id)..., typemax(Int64)),
                     chunk=(size(id)..., 1); h5_kwargs...)
                 HDF5.set_extent_dims(dset, (size(id)..., N))
-                dset = create_dataset(simulation[diagnostic.name], "t", datatype(Float64), (typemax(Int64),),
+                dset = create_dataset(simulation[diagnostic.name], "t", datatype(eltype(id)), (typemax(Int64),),
                     chunk=(1,); h5_kwargs...)
                 HDF5.set_extent_dims(dset, (N,))
 
