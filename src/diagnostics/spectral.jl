@@ -5,7 +5,7 @@ function get_modes(u::U, prob::P, t::N) where {U<:AbstractArray,P<:SpectralODEPr
 end
 
 function GetModeDiagnostic(N::Int=100)
-    Diagnostic("Mode diagnstic", get_modes, N, "Display density", assumesSpectralField=true)
+    Diagnostic("Mode diagnostic", get_modes, N, "Modes (Complex)", assumesSpectralField=true)
 end
 
 function get_log_modes(u::U, prob::P, t::N; kx::K=:ky) where {U<:AbstractArray,
