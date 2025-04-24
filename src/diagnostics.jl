@@ -103,11 +103,15 @@ function initialize_diagnostic!(diagnostic::D, U::T, prob::SOP, simulation::S, h
 
         if store_locally
             # Allocate arrays
-            diagnostic.data = Vector{typeof(id)}(undef, N)
+            diagnostic.data = [zero(id) for _ in 1:N] #Vector{typeof(id)}(undef, N)
             diagnostic.t = zeros(N)
 
             # Store intial diagnostic
-            diagnostic.data[1] = id
+            if isa(id, AbstractArray)
+                diagnostic.data[1] .= id  
+            else
+                diagnostic.data[1] = copy(id)
+            end
             diagnostic.t[1] = first(prob.tspan)
         end
     end
@@ -132,7 +136,11 @@ function perform_diagnostic!(diagnostic::D, step::Int, u::U, prob::SOP, t::N;
         end
 
         if store_locally
-            diagnostic.data[idx] = data
+            if isa(data, AbstractArray)
+                diagnostic.data[idx] .= data  
+            else
+                diagnostic.data[idx] = copy(data)
+            end
             diagnostic.t[idx] = t
         end
     else
