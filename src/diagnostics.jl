@@ -70,8 +70,7 @@ function initialize_diagnostic!(diagnostic::D, U::T, prob::SOP, simulation::S, h
         N = floor(Int, N_steps / diagnostic.sampleStep) + 1
 
         if N_steps % diagnostic.sampleStep != 0
-            @warn "($(diagnostic.name)) Note, there is a $(diagnostic.sampleStep + N_steps%diagnostic.sampleStep) 
-                    sample step at the end"
+            @warn "($(diagnostic.name)) Note, there is a $(diagnostic.sampleStep + N_steps%diagnostic.sampleStep) sample step at the end"
         end
         if store_hdf
             if !haskey(simulation, diagnostic.name)
