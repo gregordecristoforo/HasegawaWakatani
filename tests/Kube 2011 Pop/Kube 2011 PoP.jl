@@ -44,20 +44,17 @@ function inverse_transformation(u)
 end
 
 # The problem
-prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=1e-3, 
-                            inverse_transformation = inverse_transformation)
+prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=1e-3)
 
 # Array of diagnostics want
 diagnostics = [
-    #ProbeDensityDiagnostic([(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], N=10),
     RadialCOMDiagnostic(10),
     ProgressDiagnostic(100),
-    #CFLDiagnostic(),
     PlotDensityDiagnostic(1000)
 ]
 
 # The output
-output = Output(prob, 21, diagnostics, "Kube 2011 Pop test.h5")
+output = Output(prob, 201, diagnostics, "Kube 2011 Pop test2.h5", physical_transform=inverse_transformation)
 
 ## Solve and plot
 sol = spectral_solve(prob, MSS3(), output)
@@ -65,7 +62,7 @@ sol = spectral_solve(prob, MSS3(), output)
 plot(output.simulation["RadialCOMDiagnostic/t"][1:200], output.simulation["RadialCOMDiagnostic/data"][2,1:200])
 
 # Folder path
-cd("tests/Kube 2011 Pop/")
+cd(relpath(@__DIR__, pwd()))
 
 ## Recreate max velocity plot Kube 2011
 tends = logspace(2, 0.30, 22)
