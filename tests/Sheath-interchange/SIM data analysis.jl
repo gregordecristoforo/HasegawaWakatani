@@ -5,7 +5,7 @@ cd(relpath(@__DIR__, pwd()))
 domain = Domain(128, 128, 100, 100, anti_aliased=true)
 using Statistics
 # Open data file
-fid = h5open("output/sheath-interchange demo.h5", "r")
+fid = h5open("output/sheath-interchange long time series.h5", "r")
 
 ## Open solution
 S = 1
@@ -73,3 +73,9 @@ default(legend=true, tickfont=font(12))
 x = -6:0.1:6
 plots = map(f -> plot(x, f.(x), title=string(f), tickfont=font(12)), [sin, cos, sinh, cosh])
 plotgrid = plot(plots..., layout=grid(2,2), link=:both)
+
+
+
+
+using JLD
+save("density probe.jld", "probe data", n)
