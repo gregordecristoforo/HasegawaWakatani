@@ -21,7 +21,7 @@ function N(u, d, p, t)
 
     dn = -poissonBracket(ϕ, n, d)
     dn .-= diffY(ϕ, d)
-    dn .+= p["σ"] * n
+    dn .-= p["σ"] * n
 
     dΩ = -poissonBracket(ϕ, Ω, d)
     dΩ .-= p["g"] * diffY(n, d)
@@ -35,58 +35,57 @@ parameters = Dict(
     "ν" => 1e-2,
     "g" => 1e-1,
     "σ" => 1e-3,
-    "kappa" => 1.0, #? Not used
 )
 
 t_span = [0, 10000]
 
-prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-3)
+prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=2e-3)
 
 # Diagnostics
 diagnostics = [
-    ProgressDiagnostic(1000),
-    ProbeDensityDiagnostic((0, 0), N=100),
-    ProbeVorticityDiagnostic((0, 0), N=100),
-    ProbePotentialDiagnostic((0, 0), N=100),
-    #PlotDensityDiagnostic(1000),
+    ProgressDiagnostic(500),
+    ProbeAllDiagnostic((0, 0), N=50),
+    PlotDensityDiagnostic(1000),
     RadialFluxDiagnostic(600),
     KineticEnergyDiagnostic(1000),
     PotentialEnergyDiagnostic(1000),
     EnstropyEnergyDiagnostic(750),
-    #GetLogModeDiagnostic(50, :ky),
-    #CFLDiagnostic(50),
-    #RadialPotentialEnergySpectraDiagnostic(50),
-    #PoloidalPotentialEnergySpectraDiagnostic(50),
-    #RadialKineticEnergySpectraDiagnostic(50),
-    #PoloidalKineticEnergySpectraDiagnostic(50),
+    GetLogModeDiagnostic(50, :ky),
+    CFLDiagnostic(50),
+    RadialPotentialEnergySpectraDiagnostic(50),
+    PoloidalPotentialEnergySpectraDiagnostic(50),
+    RadialKineticEnergySpectraDiagnostic(50),
+    PoloidalKineticEnergySpectraDiagnostic(50),
 ]
 
 # Output
-cd("tests/Benkadda 1994 cpp")
-output = Output(prob, 1001, diagnostics, "output/benkadda april twelth long.h5", simulation_name=:parameters)
+cd(relpath(@__DIR__, pwd()))
+output = Output(prob, 1001, diagnostics, "output/benkadda april tewnthy fourth.h5", 
+simulation_name=:parameters, store_locally=false)
 
 FFTW.set_num_threads(16)
 
 ## Solve and plot
 sol = spectral_solve(prob, MSS3(), output, resume=true)
 
-data = sol.simulation["fields"][:, :, :, :]
-t = sol.simulation["t"][:]
-default(legend=false)
-anim = @animate for i in axes(data, 4)
-    heatmap(data[:, :, 1, i], aspect_ratio=:equal, xaxis=L"x", yaxis=L"y", title=L"n(t=" * "$(round(t[i], digits=0)))")
-end
-gif(anim, "benkadda long.gif", fps=20)
+# data = sol.simulation["fields"][:, :, :, :]
+# t = sol.simulation["t"][:]
+# default(legend=false)
+# anim = @animate for i in axes(data, 4)
+#     heatmap(data[:, :, 1, i], aspect_ratio=:equal, xaxis=L"x", yaxis=L"y", title=L"n(t=" * "$(round(t[i], digits=0)))")
+# end
+# gif(anim, "benkadda long.gif", fps=20)
 
 send_mail("Long benkadda simulation finnished!")#, attachment="benkadda.gif")
 close(output.file)
 
 ##--------------------------------- Data analysis ------------------------------------------
-# cd("tests/Benkadda 1994 cpp")
-# fid = h5open("output/benkadda april tenth corrected.h5", "r")
-# simulation = fid[keys(fid)[2]]
+cd(relpath(@__DIR__, pwd()))
+fid = h5open("output/benkadda april twelth long.h5", "r")
+simulation = fid[keys(fid)[1]]
 
-# probe_data = read(simulation["Density probe/data"])
+probe_data = read(simulation["Density probe/data"])
+save("density probe benkadda.jld", "probe data", probe_data)
 # t = read(simulation["Density probe/t"])
 
 # plot(probe_data, marker=".")
