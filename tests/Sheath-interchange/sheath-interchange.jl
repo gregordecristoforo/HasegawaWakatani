@@ -80,7 +80,7 @@ diagnostics = [
 ]
 
 # Output
-cd("tests/Sheath-interchange")
+cd(relpath(@__DIR__, pwd()))
 output = Output(prob, 1001, diagnostics, "output/sheath-interchange long time series.h5",
     simulation_name=:parameters, store_locally=false)
 

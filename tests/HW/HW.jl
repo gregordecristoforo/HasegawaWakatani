@@ -57,7 +57,7 @@ diagnostics = [
 ]
 
 # Output
-cd("tests/HW")
+cd(relpath(@__DIR__, pwd()))
 output = Output(prob, 201, diagnostics, "output/Hasegawa-Wakatini camargo test.h5",
     simulation_name=:parameters, store_locally=true)
 

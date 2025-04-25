@@ -84,7 +84,7 @@ plot(domain.x, n0[1, :] + 1e4 * sol.u[end][1, :, 1])
 
 plot(log.(abs.(data_hat[14, 14, 1, :])))
 
-cd("tests/code testing")
+cd(relpath(@__DIR__, pwd()))
 fid = h5open("output/linear-stability test.h5", "r")
 simulation = fid[keys(fid)[1]]
 

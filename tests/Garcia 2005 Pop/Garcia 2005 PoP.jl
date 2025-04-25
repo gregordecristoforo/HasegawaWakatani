@@ -52,7 +52,7 @@ diagnostics = [
 ]
 
 # Folder path
-cd("tests/Garcia 2005 Pop/")
+cd(relpath(@__DIR__, pwd()))
 
 # The output
 output = Output(prob, 21, diagnostics, "Garcia 2005 PoP.h5")
