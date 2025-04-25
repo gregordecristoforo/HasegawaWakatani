@@ -7,9 +7,9 @@ $$\frac{\partial\Omega}{\partial t} + \\{\phi,\Omega\\} = \alpha(\phi-n) + D_\Om
 
 where $D_n$ and $D_\Omega$ may include higher order damping operators,while sheat-interchange instabilities are described by the following equations
 
-$$\frac{\partial n}{\partial t} + \\{\phi, n\\} - gn\frac{\partial\phi}{\partial y} + g\frac{\partial n}{\partial y} = D_n\nabla^2_\perp n - \sigma_nn\exp(\phi)$$
+$$\frac{\partial n}{\partial t} + \\{\phi, n\\} - gn\frac{\partial\phi}{\partial y} + g\frac{\partial n}{\partial y} = D_n\nabla^2_\perp n - \sigma_nn\exp(\Lambda-\phi)$$
 
-$$\frac{\partial\Omega}{\partial t} + \\{\phi,\Omega\\} + g\frac{\partial\ln(n)}{\partial y} = D_\Omega\nabla^2_\perp\Omega + \sigma_\Omega[1-\exp(\phi)]$$
+$$\frac{\partial\Omega}{\partial t} + \\{\phi,\Omega\\} + g\frac{\partial\ln(n)}{\partial y} = D_\Omega\nabla^2_\perp\Omega + \sigma_\Omega[1-\exp(\Lambda-\phi)]$$
 
 with $\Omega = \nabla^2\phi$. The code features:
 * Biperiodic domain (perpendicular to $\textbf{B}$)
