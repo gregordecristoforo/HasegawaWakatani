@@ -1,13 +1,15 @@
 ## Run all (alt+enter)
-include(relpath(pwd(), @__DIR__)*"/src/HasegawaWakatini.jl")
+include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run scheme test for Burgers equation
 domain = Domain(128, 128, 100, 100, anti_aliased=true)
-ic = initial_condition_linear_stability(domain,1e-1)
+ic = initial_condition_linear_stability(domain, 1e-3)
+
+plot(ic[:,:,1])
 
 # Linear operator
 function L(u, d, p, t)
-    D_n = p["D_n"] .* diffusion(u, d) 
+    D_n = p["D_n"] .* diffusion(u, d)
     D_Ω = p["D_Ω"] .* diffusion(u, d)
     [D_n;;; D_Ω]
 end
@@ -17,10 +19,9 @@ function N(u, d, p, t)
     n = @view u[:, :, 1]
     Ω = @view u[:, :, 2]
     ϕ = solvePhi(Ω, d)
-    
+
     dn = -poissonBracket(ϕ, n, d)
     dn .-= (p["kappa"] - p["g"]) * diffY(ϕ, d)
-    dn .+= p["g"] * diffY(ϕ, d)
     dn .-= p["g"] * diffY(n, d)
     dn .-= p["sigma_n"] * n
 
@@ -59,41 +60,42 @@ parameters = Dict(
 
 t_span = [0, 5000000]
 
-prob = SpectralODEProblem(L,N, domain, ic, t_span, p=parameters, dt=1e-1)
+prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-1)
 
 # Diagnostics
 diagnostics = [
     ProgressDiagnostic(1000),
     ProbeDensityDiagnostic((0, 0), N=100),
-    PlotDensityDiagnostic(50),
+    #PlotDensityDiagnostic(50),
     RadialFluxDiagnostic(50),
     KineticEnergyDiagnostic(50),
     PotentialEnergyDiagnostic(50),
     EnstropyEnergyDiagnostic(50),
     GetLogModeDiagnostic(50, :ky),
     CFLDiagnostic(50),
-    RadialPotentialEnergySpectraDiagnostic(50),
-    PoloidalPotentialEnergySpectraDiagnostic(50),
-    RadialKineticEnergySpectraDiagnostic(50),
-    PoloidalKineticEnergySpectraDiagnostic(50),
+    #RadialPotentialEnergySpectraDiagnostic(50),
+    #PoloidalPotentialEnergySpectraDiagnostic(50),
+    #RadialKineticEnergySpectraDiagnostic(50),
+    #PoloidalKineticEnergySpectraDiagnostic(50),
 ]
 
 # Output
 cd("tests/Sheath-interchange")
-output = Output(prob, 1001, diagnostics, "output/sheath-interchange april forth.h5")
+output = Output(prob, 1001, diagnostics, "output/sheath-interchange long time series.h5",
+    simulation_name=:parameters, store_locally=false)
 
 FFTW.set_num_threads(16)
 
 ## Solve and plot
 sol = spectral_solve(prob, MSS3(), output)
-ic = sol.u[end]
 
-# data = sol.simulation["fields"][:,:,:,:]
-# t = sol.simulation["t"][:]
-# default(legend=false)
-# anim = @animate for i in axes(data, 4)
-#     heatmap(data[:, :, 1, i], aspect_ratio=:equal, xaxis=L"x", yaxis=L"y", title=L"n(t="*"$(round(t[i], digits=0)))")
-# end
-# gif(anim, "σ=10e-3.gif", fps = 20)
+data = sol.simulation["fields"][:, :, :, :]
+t = sol.simulation["t"][:]
+default(legend=false)
+anim = @animate for i in axes(data, 4)
+    heatmap(data[:, :, 1, i], aspect_ratio=:equal, xaxis=L"x", yaxis=L"y", title=L"n(t=" * "$(round(t[i], digits=0)))")
+end
+gif(anim, "long timeseries.gif", fps=20)
 
+send_mail("Long time series simulation finnished!", attachment="benkadda.gif")
 close(output.file)
