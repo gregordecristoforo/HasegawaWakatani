@@ -32,7 +32,7 @@ prob = SpectralODEProblem(L, N, domain, u0, t_span, p=parameters, dt=0.0001)
 
 # Initialize output
 cd(relpath(@__DIR__, pwd()))
-output = Output(prob, 1000, [BurgerCFLDiagnostic(10), ProgressDiagnostic(10)],
+output = Output(prob, 1000, [ProgressDiagnostic(10), BurgerCFLDiagnostic(10)],
     "output/burgers equation gaussian.h5", simulation_name=:parameters)
 
 ## Solve problem
@@ -67,9 +67,9 @@ end
 
 ## Resolution convergence test
 resolutions = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
-_, convergence1 = test_resolution_convergence(prob, gaussian, burgers_equation_analytical_solution, resolutions, MSS1(), oneDimensional=true)
-_, convergence2 = test_resolution_convergence(prob, gaussian, burgers_equation_analytical_solution, resolutions, MSS2(), oneDimensional=true)
-_, convergence3 = test_resolution_convergence(prob, gaussian, burgers_equation_analytical_solution, resolutions, MSS3(), oneDimensional=true)
+_, convergence1 = test_resolution_convergence(prob, gaussianWallY, burgers_equation_analytical_solution, resolutions, MSS1(), oneDimensional=true)
+_, convergence2 = test_resolution_convergence(prob, gaussianWallY, burgers_equation_analytical_solution, resolutions, MSS2(), oneDimensional=true)
+_, convergence3 = test_resolution_convergence(prob, gaussianWallY, burgers_equation_analytical_solution, resolutions, MSS3(), oneDimensional=true)
 
 plot(resolutions, convergence1, xaxis=:log2, yaxis=:log, label="MSS1")
 plot!(resolutions, convergence2, xaxis=:log2, yaxis=:log, label="MSS2", color="dark green")
@@ -92,3 +92,4 @@ end
 
 plot(domain.y, u0, xlabel=L"y", ylabel=L"u(y)", label="", title="Gaussian initial condition")
 savefig("figures/Gaussian intial condition.pdf")
+send_mail("Burgers test (dt=1e-4) finished!")
