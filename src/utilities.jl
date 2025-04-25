@@ -270,19 +270,19 @@ end
 
 # -------------------------------- Cosmoplot related ---------------------------------------
 
-using InverseFunctions
+#using InverseFunctions
 # base = :(Base.Fix1(log,3))
 # inverse(Base.Fix1(log,3))(1)
 
-function cosmo_log_formatter(x, base::Symbol=:log10)
-    println(x)
-    log_val = eval(base)(x)
-    if log_val in [0, 1]
-        return "\$$(round(Int, x))\$"
-    else
-        return "\$$(round(Int,inverse(eval(base))(1)))^{$(round(Int, log_val))}\$"
-    end
-end
+# function cosmo_log_formatter(x, base::Symbol=:log10)
+#     println(x)
+#     log_val = eval(base)(x)
+#     if log_val in [0, 1]
+#         return "\$$(round(Int, x))\$"
+#     else
+#         return "\$$(round(Int,inverse(eval(base))(1)))^{$(round(Int, log_val))}\$"
+#     end
+# end
 
 # TODO implement properly to extend the loglog functionality
 function get_base(scale::Symbol)
