@@ -14,7 +14,7 @@ export MMS1, MSS2, MSS3, perform_step!, get_cache, unpack_cache
 
 # ----------------------------------------- MSS1 -------------------------------------------
 
-mutable struct MSS1Cache{U, C} <: AbstractCache
+mutable struct MSS1Cache{U,C} <: AbstractCache
     #Coefficents are all 1
     u::U
     c::C
@@ -65,7 +65,7 @@ function MSS2Tableau()
     MSS2Tableau(g0, a0, a1, b0, b1)
 end
 
-mutable struct MSS2Cache{U, C, K} <: AbstractCache
+mutable struct MSS2Cache{U,C,K} <: AbstractCache
     #Coefficents
     u::U
     c::C
@@ -184,10 +184,21 @@ end
         cache.step += 1
         # Perform step using MSS1
         cache1 = get_cache(prob, MSS1())
-        perform_step!(cache1, prob, t) 
+        perform_step!(cache1, prob, t)
         cache.k0 .= f(u0, d, p, t)
         cache.u1 .= cache1.u
         #cache.u1 .= u0.*exp.(prob.L(ones(size(prob.domain.transform.iFT)), d, p, 0)*dt)
+
+        # Perform 10000 steps with MSS1
+        # N = 10000
+        # cprob = deepcopy(prob)
+        # cprob.dt = prob.dt / N
+        # cache1 = get_cache(cprob, MSS1())
+        # for n in 1:N
+        #     perform_step!(cache1, cprob, t + (n - 1) * cprob.dt)
+        # end
+        # cache.u1 .= cache1.u
+
         cache.u .= cache.u1 # For output handling
     elseif cache.step == 2
         cache.step += 1
