@@ -1,9 +1,9 @@
 ## Run all (alt+enter)
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
-## Run scheme test for Burgers equation
+# High resolution domain for frontpage matter
 domain = Domain(1024, 1024, 100, 100, anti_aliased=true)
-ic = initial_condition_linear_stability(domain, 1e-6)
+ic = initial_condition_linear_stability(domain, 1e-3)
 
 # Linear operator
 function L(u, d, p, t)
@@ -44,16 +44,19 @@ t_span = [0, 5_000]
 prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-2)
 
 # Diagnostics
-diagnostics = [PlotDensityDiagnostic(5000)]
+diagnostics = [PlotDensityDiagnostic(5000), ProgressDiagnostic(100)]
 
 # Output
 cd(relpath(@__DIR__, pwd()))
-output = Output(prob, 1001, diagnostics, "../output/sheath-interchange debug.h5")
+output = Output(prob, 1001, diagnostics, "frontpage matter.h5", simulation_name="2025-04-26T15:26:28.052",
+store_locally = false)
 
 FFTW.set_num_threads(16)
 
-## Solve and plot
+# Solve and plot
 sol = spectral_solve(prob, MSS3(), output, resume=true)
+
+##
 
 # data = sol.simulation["fields"][:, :, :, :]
 # t = sol.simulation["t"][:]
