@@ -42,6 +42,16 @@ plot!(domain.y, burgers_equation_analytical_solution(u0, domain, parameters, las
     linestyle=:dash, label=L"u_a(" * "\$$(round(last(t_span),digits=2))\$" * L")", c=:yellow)
 plot!(xlabel=L"y", ylabel=L"u(y)", labelfontsize=10)
 savefig("figures/burgers steepning gaussian.pdf")
+
+using JLD
+jldopen("output/burgers steepning gaussian.jld", "w") do file
+    g = create_group(file, "data")
+    g["analytical"] = burgers_equation_analytical_solution(u0, domain, parameters, last(t_span))
+    g["approximate"] = sol.u[end]
+    g["t"] = last(t_span)
+    #g["colors"] = "#".*hex.(getindex.(p.series_list[1:end], :seriescolor))
+end
+
 #plot(sol.u[end] - burgers_equation_analytical_solution(u0, domain, parameters, last(t_span)))
 
 ## Time convergence test
