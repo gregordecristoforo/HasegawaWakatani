@@ -68,12 +68,16 @@ sol = spectral_solve(prob, MSS3(), output, resume=true)
 
 colors = ["#003f5d", "#125770", "#b3c4cc", "#0e3b51", "#01223d"]
 colors = ["#003f5d", "#125770", "#01223d", "#0e3b51", "#b3c4cc"]
+colors = ["#00203b", "#0e3b52" ,"#0e556e", "#b3c4cc","#003e5d"]
 
 cgrad(colors)
 
 u0_hat = sol.simulation["cache_backup/u"][:, :, :]
 n = domain.transform.iFT * u0_hat[:, :, 1]
-heatmap(log.(n .- minimum(n) .+ 2), colormap=cgrad(colors), axis=nothing, aspect_ratio=:equal,
+
+n = sol.simulation["fields"][:,:,1,231]
+
+heatmap(sol.simulation["fields"][:,:,1,239], colormap=cgrad(colors), axis=nothing, aspect_ratio=:equal,
     framestyle=:none, colorbar=false, size=(1024 / 3, 1024 / 3), widen=false, dpi=300,
     margin=-10Plots.mm)
 savefig("frontpage.pdf")
