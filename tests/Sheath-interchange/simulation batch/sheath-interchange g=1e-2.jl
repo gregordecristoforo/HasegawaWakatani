@@ -36,35 +36,36 @@ parameters = Dict(
     "g" => 1e-2,
     "sigma_Ω" => 1e-3,
     "sigma_n" => 1e-3,
-    "kappa" => sqrt(1e-1)
+    "kappa" => sqrt(1e-1),
+    "N" => 1.0
 )
 
-t_span = [0, 5_000_000]
+t_span = [0, 500_000]
 
 prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-2)
 
 # Diagnostics
 diagnostics = [
     ProgressDiagnostic(10000),
-    ProbeAllDiagnostic((0, 0), N=1000),
+    ProbeAllDiagnostic((0, 0), N=1),
     #PlotDensityDiagnostic(5000),
-    RadialFluxDiagnostic(500),
-    KineticEnergyDiagnostic(500),
-    PotentialEnergyDiagnostic(500),
-    EnstropyEnergyDiagnostic(500),
+    RadialFluxDiagnostic(1),
+    KineticEnergyDiagnostic(1),
+    PotentialEnergyDiagnostic(1),
+    EnstropyEnergyDiagnostic(1),
     GetLogModeDiagnostic(500, :ky),
     CFLDiagnostic(500),
-    RadialPotentialEnergySpectraDiagnostic(500),
-    PoloidalPotentialEnergySpectraDiagnostic(500),
-    RadialKineticEnergySpectraDiagnostic(500),
-    PoloidalKineticEnergySpectraDiagnostic(500),
+    RadialPotentialEnergySpectraDiagnostic(50),
+    PoloidalPotentialEnergySpectraDiagnostic(50),
+    RadialKineticEnergySpectraDiagnostic(50),
+    PoloidalKineticEnergySpectraDiagnostic(50),
 ]
 
 # Output
 cd(relpath(@__DIR__, pwd()))
 output = Output(prob, 1001, diagnostics, "../output/sheath-interchange g=1e-2.h5",
-simulation_name=:parameters)
-    
+    simulation_name=:parameters, store_locally=false)
+
 FFTW.set_num_threads(16)
 
 ## Solve and plot
