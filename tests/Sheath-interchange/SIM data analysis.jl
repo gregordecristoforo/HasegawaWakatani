@@ -80,20 +80,22 @@ save("density probe.jld", "probe data", n)
 
 
 # Extract data to do local python analysis
-fid = h5open("output/sheath-interchange g=2e-3.h5", "r")
+fid = h5open("output/sheath-interchange g=5e-3.h5", "r")
 
 data = fid[keys(fid)[1]]["All probe/data"][:,:,:]
 t = fid[keys(fid)[1]]["All probe/t"][:]
 
+
+
 using JLD
-jldopen("output/all probes g=2e-3.jld", "w") do file
+jldopen("output/all probes g=5e-3.jld", "w") do file
     g = create_group(file, "data")
-    g["n"] = data[1,1,:]
-    g["Omega"] = data[1,2,:]
-    g["phi"] = data[1,3,:]
-    g["vx"] = data[1,4,:]
-    g["Gamma"] = data[1,5,:]
-    g["t"] = t
+    g["n"] = data[1,1,1:argmax(t)]
+    g["Omega"] = data[1,2,1:argmax(t)]
+    g["phi"] = data[1,3,1:argmax(t)]
+    g["vx"] = data[1,4,1:argmax(t)]
+    g["Gamma"] = data[1,5,1:argmax(t)]
+    g["t"] = t[1:argmax(t)]
 end
 
 fields = fid[keys(fid)[1]]["fields"][:,:,:,:]
