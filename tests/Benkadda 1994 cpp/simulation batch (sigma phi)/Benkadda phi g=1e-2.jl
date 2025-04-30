@@ -20,7 +20,7 @@ function N(u, d, p, t)
 
     dn = -poissonBracket(ϕ, n, d)
     dn .-= diffY(ϕ, d)
-    dn .-= p["σ"] * n
+    dn .+= p["σ"] * ϕ
 
     dΩ = -poissonBracket(ϕ, Ω, d)
     dΩ .-= p["g"] * diffY(n, d)
@@ -59,7 +59,7 @@ diagnostics = [
 
 # Output
 cd(relpath(@__DIR__, pwd()))
-output = Output(prob, 1001, diagnostics, "../output/benkadda g=1e-2.h5", simulation_name=:parameters,
+output = Output(prob, 1001, diagnostics, "../output/benkadda phi g=1e-2.h5", simulation_name=:parameters,
 store_locally=false)
 
 FFTW.set_num_threads(16)
@@ -67,5 +67,5 @@ FFTW.set_num_threads(16)
 ## Solve and plot
 sol = spectral_solve(prob, MSS3(), output, resume=true)
 
-send_mail("Benkadda g=1e-2 simulation finnished!")
+send_mail("Benkadda (sigma phi) g=1e-2 simulation finnished!")
 close(output.file)
