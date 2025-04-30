@@ -74,8 +74,27 @@ x = -6:0.1:6
 plots = map(f -> plot(x, f.(x), title=string(f), tickfont=font(12)), [sin, cos, sinh, cosh])
 plotgrid = plot(plots..., layout=grid(2,2), link=:both)
 
-
-
-
+#
 using JLD
 save("density probe.jld", "probe data", n)
+
+
+# Extract data to do local python analysis
+fid = h5open("output/sheath-interchange g=2e-3.h5", "r")
+
+data = fid[keys(fid)[1]]["All probe/data"][:,:,:]
+t = fid[keys(fid)[1]]["All probe/t"][:]
+
+using JLD
+jldopen("output/all probes g=2e-3.jld", "w") do file
+    g = create_group(file, "data")
+    g["n"] = data[1,1,:]
+    g["Omega"] = data[1,2,:]
+    g["phi"] = data[1,3,:]
+    g["vx"] = data[1,4,:]
+    g["Gamma"] = data[1,5,:]
+    g["t"] = t
+end
+
+fields = fid[keys(fid)[1]]["fields"][:,:,:,:]
+heatmap(fields[:,:,1,25], aspect_ratio=:equal)

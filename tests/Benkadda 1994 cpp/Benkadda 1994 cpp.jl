@@ -107,3 +107,20 @@ save("density probe benkadda.jld", "probe data", probe_data)
 
 # P = read(simulation["Enstropy energy integral/data"])#[3000:end]
 # plot(P[4000:15:5001], marker=".")
+
+## Extract data from simulation batch to do local python analysis
+fid = h5open("output/benkadda g=2e-2.h5", "r")
+
+data = fid[keys(fid)[1]]["All probe/data"][:,:,:]
+t = fid[keys(fid)[1]]["All probe/t"][:]
+
+using JLD
+jldopen("processed/all probes benkadda g=2e-2.jld", "w") do file
+    g = create_group(file, "data")
+    g["n"] = data[1,1,:]
+    g["Omega"] = data[1,2,:]
+    g["phi"] = data[1,3,:]
+    g["vx"] = data[1,4,:]
+    g["Gamma"] = data[1,5,:]
+    g["t"] = t
+end
