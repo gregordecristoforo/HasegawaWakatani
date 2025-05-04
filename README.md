@@ -16,7 +16,7 @@ with $\Omega = \nabla^2\phi$. The code features:
 * Fast Fourier transform for spatial derivatives (FFTW)
 * Third order stiffly stable time integrator
 * HDF data output for binary format storage with blosc compression
-* 2/3 Antialiasing on quadratic terms
+* 2/3 Antialiasing on quadratic terms and non-linear functions
 * Diagnostic modules
 
 ![Alt Text](vorticity.gif)
