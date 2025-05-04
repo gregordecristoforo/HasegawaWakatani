@@ -135,7 +135,7 @@ function pad!(up::DU, u::U, plan::FFTPlans) where {T,DU<:AbstractArray{T},U<:Abs
     Nxl = div(Nx, 2, RoundUp)
     Nxu = div(Nx, 2, RoundDown)
     Nyl = div(Nx, 2, RoundUp)
-    Nxu = div(Nx, 2, RoundDown)
+    Nyu = div(Nx, 2, RoundDown)
 
     @views @inbounds up[1:Nyl, 1:Nxl] .= u[1:Nyl, 1:Nxl] # Lower left
     @views @inbounds up[1:Nyl, end-Nxu+1:end] .= u[1:Nyl, end-Nxu+1:end] # Lower right
@@ -219,6 +219,16 @@ end
 function poissonBracket(A::U, B::V, SC::SOC) where {U<:AbstractArray,V<:AbstractArray,
     SOC<:SpectralOperatorCache}
     spectral_conv!(SC.qtl, diffX(A, SC), diffY(B, SC), SC) .-= spectral_conv!(SC.qtr, diffY(A, SC), diffX(B, SC), SC)
+end
+
+#---------------------------------- Other non-linearities ---------------------------------- 
+function spectral_function(f::F, u::U, SC::SOC) where {F<:Function,U<:AbstractArray,SOC<:SpectralOperatorCache}
+    plans = SC.QTPlans
+    mul!(SC.U, plans.iFT, SC.padded ? pad!(SC.up, u, plans) : u) 
+    # Assumes function is broadcastable and only 1 argument TODO expand upon this
+    SC.V .= f.(SC.C*SC.U)
+    mul!(SC.padded ? SC.up : SC.qtl, plans.FT, SC.V) 
+    SC.padded ? unpad!(SC.qtl, SC.up, plans)/SC.C : SC.qtl
 end
 
 end

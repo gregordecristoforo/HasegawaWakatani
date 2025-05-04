@@ -123,18 +123,19 @@ function solvePhi(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
 end
 
 function reciprocal(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
-    U = domain.transform.iFT * field
-    domain.transform.FT * (U .^ (-1))
+    SpectralOperators.spectral_function(u->div(1,u), field, domain.SC)
 end
 
 function spectral_exp(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
-    U = domain.transform.iFT * field
-    domain.transform.FT * (exp.(U))
+    SpectralOperators.spectral_function(exp, field, domain.SC)
+end
+
+function spectral_exp1m(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+    SpectralOperators.spectral_function(exp1m, field, domain.SC)
 end
 
 function spectral_log(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
-    U = domain.transform.iFT * field
-    domain.transform.FT * (log.(U))
+    SpectralOperators.spectral_function(log, field, domain.SC)
 end
 
 export Domain, diffX, diffXX, diffY, diffYY, poissonBracket, solvePhi, quadraticTerm,
