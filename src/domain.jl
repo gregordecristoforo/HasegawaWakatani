@@ -130,8 +130,8 @@ function spectral_exp(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
     SpectralOperators.spectral_function(exp, field, domain.SC)
 end
 
-function spectral_exp1m(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
-    SpectralOperators.spectral_function(exp1m, field, domain.SC)
+function spectral_expm1(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+    SpectralOperators.spectral_function(expm1, field, domain.SC)
 end
 
 function spectral_log(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
