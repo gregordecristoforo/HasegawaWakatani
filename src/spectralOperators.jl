@@ -77,13 +77,13 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
         new{typeof(DiffX),typeof(DiffY),typeof(DiffXX),typeof(DiffYY),typeof(Laplacian),
             typeof(up),typeof(U),typeof(qtr),typeof(QT_plans),typeof(phi)
         }(DiffX, DiffY, DiffXX, DiffYY, Laplacian, invLaplacian, HyperLaplacian,
-            anti_aliased, up, vp, U, V, qtl, qtr, C, QT_plans,phi)
+            anti_aliased, up, vp, U, V, qtl, qtr, C, QT_plans, phi)
     end
 end
 
 #------------------------- Quadratic terms interface ---------------------------------------
-# TODO check if performance loss when doing u::U, v::V
-function quadraticTerm(u::F, v::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
+function quadraticTerm(u::U, v::V, SC::SOC) where {U<:AbstractArray,V<:AbstractArray,
+    SOC<:SpectralOperatorCache}
     spectral_conv!(SC.qtl, u, v, SC)
 end
 
@@ -93,8 +93,8 @@ function quadraticTerm!(out::DF, u::F, v::F, SC::SOC) where {DF<:AbstractArray,
     spectral_conv!(out, u, v, SC)
 end
 
-function spectral_conv!(out::DF, u::F, v::F, SC::SOC) where {DF<:AbstractArray,
-    F<:AbstractArray,SOC<:SpectralOperatorCache}
+function spectral_conv!(out::DU, u::U, v::V, SC::SOC) where {DU<:AbstractArray,
+    U<:AbstractArray,V<:AbstractArray,SOC<:SpectralOperatorCache}
     plans = SC.QTPlans
     # Spawn threads to perform mul! in parallel
     task_U = Threads.@spawn mul!(SC.U, plans.iFT, SC.padded ? pad!(SC.up, u, plans) : u)
@@ -224,11 +224,11 @@ end
 #---------------------------------- Other non-linearities ---------------------------------- 
 function spectral_function(f::F, u::U, SC::SOC) where {F<:Function,U<:AbstractArray,SOC<:SpectralOperatorCache}
     plans = SC.QTPlans
-    mul!(SC.U, plans.iFT, SC.padded ? pad!(SC.up, u, plans) : u) 
+    mul!(SC.U, plans.iFT, SC.padded ? pad!(SC.up, u, plans) : u)
     # Assumes function is broadcastable and only 1 argument TODO expand upon this
-    SC.V .= f.(SC.C*SC.U)
-    mul!(SC.padded ? SC.up : SC.qtl, plans.FT, SC.V) 
-    SC.padded ? unpad!(SC.qtl, SC.up, plans)/SC.C : SC.qtl
+    SC.V .= f.(SC.C * SC.U)
+    mul!(SC.padded ? SC.up : SC.qtl, plans.FT, SC.V)
+    SC.padded ? unpad!(SC.qtl, SC.up, plans) / SC.C : SC.qtl
 end
 
 end
