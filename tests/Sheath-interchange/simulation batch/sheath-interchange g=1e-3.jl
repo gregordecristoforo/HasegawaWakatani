@@ -3,7 +3,7 @@ include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run scheme test for Burgers equation
 domain = Domain(128, 128, 100, 100, anti_aliased=true)
-ic = initial_condition_linear_stability(domain, 1e-6)
+ic = initial_condition_linear_stability(domain, 1e-3)
 
 # Linear operator
 function L(u, d, p, t)
@@ -46,24 +46,24 @@ prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-1)
 # Diagnostics
 diagnostics = [
     ProgressDiagnostic(1000),
-    ProbeAllDiagnostic((0, 0), N=100),
+    ProbeAllDiagnostic([(x, 0) for x in LinRange(-40, 50, 10)], N=10),
     #PlotDensityDiagnostic(5000),
     RadialFluxDiagnostic(50),
-    KineticEnergyDiagnostic(50),
+    KineticEnergyDiagnostic(10),
     PotentialEnergyDiagnostic(50),
     EnstropyEnergyDiagnostic(50),
     GetLogModeDiagnostic(50, :ky),
-    CFLDiagnostic(50),
-    RadialPotentialEnergySpectraDiagnostic(50),
-    PoloidalPotentialEnergySpectraDiagnostic(50),
-    RadialKineticEnergySpectraDiagnostic(50),
-    PoloidalKineticEnergySpectraDiagnostic(50),
+    CFLDiagnostic(500),
+    RadialPotentialEnergySpectraDiagnostic(500),
+    PoloidalPotentialEnergySpectraDiagnostic(500),
+    RadialKineticEnergySpectraDiagnostic(500),
+    PoloidalKineticEnergySpectraDiagnostic(500),
 ]
 
 # Output
 cd(relpath(@__DIR__, pwd()))
 output = Output(prob, 1001, diagnostics, "../output/sheath-interchange g=1e-3.h5",
-simulation_name=:parameters)
+simulation_name="10 probes")
     
 FFTW.set_num_threads(16)
 
