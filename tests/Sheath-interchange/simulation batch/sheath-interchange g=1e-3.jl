@@ -63,7 +63,7 @@ diagnostics = [
 # Output
 cd(relpath(@__DIR__, pwd()))
 output = Output(prob, 1001, diagnostics, "../output/sheath-interchange g=1e-3.h5",
-simulation_name="10 probes")
+simulation_name="10 probes",store_locally=false)
     
 FFTW.set_num_threads(16)
 
