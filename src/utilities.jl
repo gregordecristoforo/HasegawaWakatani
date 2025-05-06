@@ -314,7 +314,7 @@ function semilogy(x, args...; base::Symbol=:log10, kwargs...)
 end
 
 # Default plot style (follows cosmoplots https://github.com/uit-cosmo/cosmoplots/blob/main/cosmoplots/default.mplstyle)
-default(frame=:box, dpi=300, size=(100 * 3.37, 100 * 2.08277), fontfamily="Computer Modern",
+default(frame=:box, dpi=300, size=(300 * 3.37, 300 * 2.08277), fontfamily="Computer Modern",
     titlefontsize=8, guidefontsize=8, tickfontsize=8, legendfontsize=8, legendfontcolor=:black,
     legendtitlefontcolor=:black, legendtitlefontsize=8, linewidth=0.75, grid=false,
     minorticks=true, markersize=2.25, widen=1.1, aspect_ratio=:equal)
