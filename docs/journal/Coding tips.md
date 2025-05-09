@@ -20,5 +20,14 @@ Shift + Delete - Delete all plots
 * @view gives a subArray which is a lazy copy, hence changes made are reflected in the array subarrayed
 * display(plot)
 * @edit function(var) to read the source code for a given type! Very nice for debugging
+* @. will broadcast all function calls, add $ infront of function call to not broadcast
 
 * Build documentation using julia --project=. docs/make.jl
+
+# Array tips
+* stack(vector) to create one big array from vector of matricies, eachslice(array) reverses this
+
+# Linux tips
+* Use screen -S <sessionname> to create a screen, which can run a process while disconnected from
+server. Use ctrl+A followed by D to detach from the session before logging off. Use sreen -r <sessionname> 
+to reconnect to the session and continue where left off. Usefull for overnight simulations

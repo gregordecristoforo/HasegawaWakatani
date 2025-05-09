@@ -23,42 +23,48 @@ Square Domain can be constructed using:\\
 Rectangular Domain can be constructed using:\\
 ``Domain(Nx,Ny,Lx,Ly)``
 """
-struct Domain
-    Nx::Int64
-    Ny::Int64
+struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractArray,
+    SOC<:SpectralOperatorCache,TP<:TransformPlans}
+
+    Nx::Int
+    Ny::Int
     Lx::Float64
     Ly::Float64
     dx::Float64
     dy::Float64
-    x::LinRange
-    y::LinRange
-    kx::Frequencies
-    ky::Frequencies
-    SC::SpectralOperatorCache
-    transform::TransformPlans
+    x::X
+    y::Y
+    kx::KX
+    ky::KY
+    SC::SOC
+    transform::TP
     realTransform::Bool
     anti_aliased::Bool
+    nfields::Int
+
     Domain(N) = Domain(N, 1)
     Domain(N, L) = Domain(N, N, L, L)
-    function Domain(Nx, Ny, Lx, Ly; realTransform=true, anti_aliased=false, x0=-Lx / 2, y0=-Ly / 2)
+    function Domain(Nx, Ny, Lx, Ly; realTransform=true, anti_aliased=false, x0=-Lx / 2, y0=-Ly / 2, nfields=3)
         dx = Lx / Nx
         dy = Ly / Ny
-        # dx and dy is subtracted at the end, because periodic boundary conditions
+        # dx and dy is subtracted at the end, because of periodic boundary conditions
         x = LinRange(x0, x0 + Lx - dx, Nx)
         y = LinRange(y0, y0 + Ly - dy, Ny)
+
         # ------------------ If x-direction favored in rfft -------------------
-        #kx = real ? 2 * π * rfftfreq(Nx, 1 / dx) : 2 * π * fftfreq(Nx, 1 / dx)
-        #ky = 2 * π * fftfreq(Ny, 1 / dy)
-        # TODO make them CUDA
+        #if Nx > Ny
+        #    kx = realTransform ? 2 * π * rfftfreq(Nx, 1 / dx) : 2 * π * fftfreq(Nx, 1 / dx)
+        #    ky = 2 * π * fftfreq(Ny, 1 / dy)
+        #else
         kx = 2 * π * fftfreq(Nx, 1 / dx)
         ky = realTransform ? 2 * π * rfftfreq(Ny, 1 / dy) : 2 * π * fftfreq(Ny, 1 / dy)
 
         if CUDA.functional()
-            utmp = zeros(Ny, Nx)
+            utmp = zeros(Float64, Ny, Nx)
         else
-            utmp = zeros(Ny, Nx)
+            utmp = zeros(Float64, Ny, Nx)
         end
-
+        
         if realTransform
             FT = plan_rfft(utmp)
             iFT = plan_irfft(FT * utmp, Ny)
@@ -70,67 +76,74 @@ struct Domain
         SC = SpectralOperatorCache(kx, ky, Nx, Ny, realTransform=realTransform,
             anti_aliased=anti_aliased)
 
-        new(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC, transform_plans, realTransform, anti_aliased)
+        new{typeof(x),typeof(y),typeof(kx),typeof(ky),typeof(SC),
+            typeof(transform_plans)}(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC,
+            transform_plans, realTransform, anti_aliased, nfields)
     end
 end
 
 # Allow spectralOperators to be called using the domains
 
 # TODO add snake_case
-function diffX(field, domain::Domain)
+function diffX(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
     SpectralOperators.diffX(field, domain.SC)
 end
 
-function diffY(field, domain::Domain)
+function diffY(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
     SpectralOperators.diffY(field, domain.SC)
 end
 
-function diffXX(field, domain::Domain)
+function diffXX(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
     SpectralOperators.diffXX(field, domain.SC)
 end
 
-function diffYY(field, domain::Domain)
+function diffYY(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
     SpectralOperators.diffYY(field, domain.SC)
 end
 
-function laplacian(field, domain::Domain)
+function laplacian(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
     SpectralOperators.laplacian(field, domain.SC)
 end
 
 const Δ = laplacian
 const diffusion = laplacian
 
-function quadraticTerm(u, v, domain::Domain)
+function hyper_diffusion(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+    SpectralOperators.hyper_diffusion(field, domain.SC)
+end
+
+function quadraticTerm(u::U, v::V, domain::D) where {U<:AbstractArray,V<:AbstractArray,D<:Domain}
     if size(u) != size(v)
         error("u and v must have the same size")
     end
     SpectralOperators.quadraticTerm(u, v, domain.SC)
 end
 
-function poissonBracket(A, B, domain::Domain)
+function poissonBracket(A::U, B::V, domain::D) where {U<:AbstractArray,V<:AbstractArray,D<:Domain}
     SpectralOperators.poissonBracket(A, B, domain.SC)
 end
 
-function solvePhi(field, domain::Domain)
+function solvePhi(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
     SpectralOperators.solvePhi(field, domain.SC)
 end
 
-function reciprocal(field, domain::Domain)
-    F = domain.transform.iFT * field
-    domain.transform.FT * (F .^ (-1))
+function reciprocal(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+    SpectralOperators.spectral_function(u -> div(1, u), field, domain.SC)
 end
 
-function spectral_exp(field, domain::Domain)
-    F = domain.transform.iFT * field
-    domain.transform.FT * (exp.(F))
+function spectral_exp(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+    SpectralOperators.spectral_function(exp, field, domain.SC)
 end
 
-function spectral_log(field, domain::Domain)
-    F = domain.transform.iFT * field
-    domain.transform.FT * (log.(F))
+function spectral_expm1(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+    SpectralOperators.spectral_function(expm1, field, domain.SC)
+end
+
+function spectral_log(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+    SpectralOperators.spectral_function(log, field, domain.SC)
 end
 
 export Domain, diffX, diffXX, diffY, diffYY, poissonBracket, solvePhi, quadraticTerm,
-    diffusion, laplacian, Δ, SpectralOperatorCache, reciprocal, spectral_exp, spectral_log
-
+    diffusion, laplacian, Δ, SpectralOperatorCache, reciprocal, spectral_exp, spectral_expm1,
+    spectral_log, hyper_diffusion
 end
