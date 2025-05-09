@@ -55,6 +55,8 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Ty
             throw("tspan should have exactly two elements tsart and tend")
         end
 
+        dt = Float32(dt)
+
         new{typeof(L),typeof(N),typeof(domain),typeof(u0),typeof(u0_hat),typeof(tspan),
             typeof(p),typeof(dt),typeof(remove_modes),typeof(kwargs)}(L, N, domain, u0, u0_hat,
             tspan, p, dt, remove_modes, kwargs)
