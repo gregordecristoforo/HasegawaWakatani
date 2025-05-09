@@ -80,15 +80,15 @@ save("density probe.jld", "probe data", n)
 
 
 # Extract data to do local python analysis
-fid = h5open("output/sheath-interchange g=5e-3.h5", "r")
+include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
+cd(relpath(@__DIR__, pwd()))
+fid = h5open("output/sheath-interchange g=1e-3.h5", "r")
 
-data = fid[keys(fid)[1]]["All probe/data"][:,:,:]
-t = fid[keys(fid)[1]]["All probe/t"][:]
-
-
+data = fid[keys(fid)[1]]["All probe/data"][:,:,1:1:end]
+t = fid[keys(fid)[1]]["All probe/t"][1:10:end]
 
 using JLD
-jldopen("output/all probes g=5e-3.jld", "w") do file
+jldopen("output/all probes g=5e-3 dense.jld", "w") do file
     g = create_group(file, "data")
     g["n"] = data[1,1,1:argmax(t)]
     g["Omega"] = data[1,2,1:argmax(t)]
@@ -100,3 +100,56 @@ end
 
 fields = fid[keys(fid)[1]]["fields"][:,:,:,:]
 heatmap(fields[:,:,1,25], aspect_ratio=:equal)
+
+@views n = data[1,1,:]
+
+plot(n[500:10:end], marker=".")
+
+data = fid[keys(fid)[1]]["Radial flux/data"][:,:,:]
+data = fid[keys(fid)[1]]["Enstropy energy integral/data"][:]
+data = fid[keys(fid)[1]]["Potential energy integral/data"][:]
+data = fid[keys(fid)[1]]["All probe/data"][:,:,1:10:end]
+
+"Radial flux"
+"Kinetic energy integral"
+
+#data = fid[keys(fid)[1]]["Radial flux/data"][1:10:5000001]
+data = fid[keys(fid)[1]]["Enstropy energy integral/data"][:]
+
+plot(data[end-100:1:end], marker=".")
+fid[keys(fid)[1]]
+
+data = fid[keys(fid)[1]]["fields"][:,:,:,:]
+heatmap(data[:,:,1,end])#,aspect_ratio=:equal)
+
+
+
+
+include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
+cd(relpath(@__DIR__, pwd()))
+fid = h5open("output/debug.h5", "r")
+N = read(fid["10 probes too/cache_backup/last_step"])
+data = fid["10 probes too/All probe/data"][:,:,1:N÷10]
+t = fid["10 probes too/All probe/t"][1:N÷10]
+
+using JLD
+jldopen("output/all probes g=1e-2 10 probes.jld", "w") do file
+    g = create_group(file, "data")
+    g["n"] = data[:,1,1:argmax(t)]
+    g["Omega"] = data[:,2,1:argmax(t)]
+    g["phi"] = data[:,3,1:argmax(t)]
+    g["vx"] = data[:,4,1:argmax(t)]
+    g["Gamma"] = data[:,5,1:argmax(t)]
+    g["t"] = t[1:argmax(t)]
+end
+
+
+
+data[1,1,:]
+
+data = sim["fields"][:,:,:,:]
+
+heatmap(data[:,:,1,25])
+
+fid = h5open("output/sheath-interchange g=1e-2.h5", "r")
+sim = fid["D_n=0.01, D_Ω=0.01, N=1.0, g=0.01, kappa=0.31622776601683794, sigma_n=0.001, sigma_Ω=0.001"]
