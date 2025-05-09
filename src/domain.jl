@@ -60,7 +60,7 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
         ky = realTransform ? 2 * π * rfftfreq(Ny, 1 / dy) : 2 * π * fftfreq(Ny, 1 / dy)
 
         if CUDA.functional()
-            utmp = zeros(Float64, Ny, Nx)
+            utmp = CUDA.zeros(Float32, Ny, Nx) # This controls the precision of standard transform
         else
             utmp = zeros(Float64, Ny, Nx)
         end
@@ -75,6 +75,12 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
 
         SC = SpectralOperatorCache(kx, ky, Nx, Ny, realTransform=realTransform,
             anti_aliased=anti_aliased)
+        
+        # Transform frequencies to CuArrays
+        if CUDA.functional()
+            kx = CuArray(kx)
+            ky = CuArray(ky)
+        end
 
         new{typeof(x),typeof(y),typeof(kx),typeof(ky),typeof(SC),
             typeof(transform_plans)}(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC,
