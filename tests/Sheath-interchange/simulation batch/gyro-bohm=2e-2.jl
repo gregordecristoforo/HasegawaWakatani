@@ -45,7 +45,7 @@ prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=2e-3)
 diagnostics = [
     ProgressDiagnostic(10000),
     ProbeAllDiagnostic([(x, 0) for x in LinRange(-40, 50, 10)], N=10),
-    PlotDensityDiagnostic(500),
+    #PlotDensityDiagnostic(500),
     RadialFluxDiagnostic(100),
     KineticEnergyDiagnostic(100),
     PotentialEnergyDiagnostic(100),
@@ -66,7 +66,7 @@ output = Output(prob, 1001, diagnostics, "../output/gyro-bohm=2e-2.h5",
 FFTW.set_num_threads(16)
 
 ## Solve and plot
-sol = spectral_solve(prob, MSS3(), output, resume=false)
+sol = spectral_solve(prob, MSS3(), output, resume=true)
 
 send_mail("sigma=2e-2 finnished, go analyse the data!")
 close(output.file)

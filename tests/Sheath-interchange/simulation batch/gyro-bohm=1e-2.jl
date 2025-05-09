@@ -39,13 +39,13 @@ parameters = Dict(
 
 t_span = [0, 500_000]
 
-prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=2e-3)
+prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-3)
 
 # Diagnostics
 diagnostics = [
     ProgressDiagnostic(10000),
     ProbeAllDiagnostic([(x, 0) for x in LinRange(-40, 50, 10)], N=10),
-    PlotDensityDiagnostic(500),
+    #PlotDensityDiagnostic(500),
     RadialFluxDiagnostic(100),
     KineticEnergyDiagnostic(100),
     PotentialEnergyDiagnostic(100),
@@ -61,12 +61,12 @@ diagnostics = [
 # Output
 cd(relpath(@__DIR__, pwd()))
 output = Output(prob, 1001, diagnostics, "../output/gyro-bohm=1e-2.h5",
-    simulation_name=:parameters, store_locally=false)
+    simulation_name=:timestamp, store_locally=false)
 
 FFTW.set_num_threads(16)
 
 ## Solve and plot
-sol = spectral_solve(prob, MSS3(), output, resume=false)
+sol = spectral_solve(prob, MSS3(), output, resume=true)
 
 send_mail("sigma=1e-2 finnished, go analyse the data!")
 close(output.file)
