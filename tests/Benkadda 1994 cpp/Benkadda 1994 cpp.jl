@@ -4,13 +4,13 @@ include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 ## Run Benkadda simulations
 domain = Domain(256, 256, 128, 128, anti_aliased=true)
 # TODO find initial condition
-ic = initial_condition_linear_stability(domain, 1e-3)
+ic = cu(initial_condition_linear_stability(domain, 1e-3))
 
 # Linear operator
 function L(u, d, p, t)
     D_n = p["D"] .* diffusion(u, d)
     D_Ω = p["ν"] .* diffusion(u, d)
-    [D_n;;; D_Ω]
+    cat(D_n, D_Ω, dims=3) #[D_n;;; D_Ω]
 end
 
 # Non-linear operator, linearized
@@ -26,7 +26,7 @@ function N(u, d, p, t)
     dΩ = -poissonBracket(ϕ, Ω, d)
     dΩ .-= p["g"] * diffY(n, d)
     dΩ .+= p["σ"] * ϕ
-    return [dn;;; dΩ]
+    return cat(dn, dΩ, dims=3) #return [dn;;; dΩ]
 end
 
 # Parameters
@@ -37,9 +37,9 @@ parameters = Dict(
     "σ" => 1e-3,
 )
 
-t_span = [0, 10000]
+t_span = [0, 100]
 
-prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=2e-3)
+prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-3)
 
 # Diagnostics
 diagnostics = [
@@ -60,13 +60,15 @@ diagnostics = [
 
 # Output
 cd(relpath(@__DIR__, pwd()))
-output = Output(prob, 1001, diagnostics, "output/benkadda april tewnthy fourth.h5", 
-simulation_name=:parameters, store_locally=false)
+output = Output(prob, 1001, [], "output/CUDA debug.h5", 
+simulation_name=:parameters, store_locally=false, store_hdf=false)
 
 FFTW.set_num_threads(16)
 
 ## Solve and plot
-sol = spectral_solve(prob, MSS3(), output, resume=true)
+using BenchmarkTools
+@time sol = spectral_solve(prob, MSS3(), output)
+# 173 seconds
 
 # data = sol.simulation["fields"][:, :, :, :]
 # t = sol.simulation["t"][:]
@@ -123,4 +125,111 @@ jldopen("processed/all probes benkadda g=2e-2.jld", "w") do file
     g["vx"] = data[1,4,:]
     g["Gamma"] = data[1,5,:]
     g["t"] = t
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+domain = Domain(256, 256, 128, 128, anti_aliased=true)
+
+domain.kx
+domain.ky
+domain.x 
+domain.y
+
+domain.SC.Laplacian
+domain.SC.invLaplacian
+domain.SC.HyperLaplacian
+domain.SC.DiffX
+domain.SC.DiffY
+domain.SC.DiffXX
+domain.SC.DiffYY
+
+FT = domain.transform.FT
+u = ic[:,:,1]
+u_hat = FT*u
+
+diffX(u_hat, domain)           # ✓
+diffY(u_hat, domain)           # ✓
+diffXX(u_hat, domain)          # ✓
+diffYY(u_hat, domain)          # ✓
+diffusion(u_hat, domain)       # ✓
+hyper_diffusion(u_hat, domain) # ✓
+solvePhi(u_hat, domain)        # ✓
+
+spectral_transform!(u_hat, u, domain.transform.FT) # ✓
+
+# QuadraticTerms cache
+domain.SC.up                  # ✓
+domain.SC.vp                  # ✓
+domain.SC.U                   # ✓
+domain.SC.V                   # ✓
+domain.SC.qtl                 # ✓
+domain.SC.qtr                 # ✓
+domain.SC.phi                 # ✓
+domain.SC.QTPlans.FT          # ✓
+domain.SC.QTPlans.iFT         # ✓
+
+# More complex methods
+spectral_exp(u_hat, domain)   # ✓
+spectral_expm1(u_hat, domain) # ✓
+spectral_log(u_hat, domain)   # ✓
+
+# Methods utilizing threading
+quadraticTerm(diffXX(u_hat, domain), diffYY(u_hat, domain), domain) # ✓
+poissonBracket(u_hat, u_hat, domain)                                # ✓
+
+p = Dict(
+    "D" => Float32(1e-2),
+    "ν" => Float32(1e-2),
+    "g" => Float32(1e-1),
+    "σ" => Float32(1e-3),
+)
+
+L(u_hat, domain, p , 0)
+
+uu_hat = cat(u_hat, u_hat, dims=3)
+N(uu_hat, domain, p , 0)
+
+prob = SpectralODEProblem(L, N, domain, ic, t_span, p=p, dt=2e-3)
+cache = get_cache(prob, MSS3())
+cache.c
+
+if isnan.(u_hat)
+    println("hi")
 end
