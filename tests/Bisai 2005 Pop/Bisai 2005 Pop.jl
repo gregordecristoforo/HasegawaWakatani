@@ -4,7 +4,7 @@ include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 ## Run scheme test for Burgers equation
 domain = Domain(128, 128, 160, 160, anti_aliased=true)
 ic = initial_condition_linear_stability(domain, 1e-3)
-ic[:,:,1] .+= 1
+ic[:,:,1] .+= 0.5
 
 heatmap(ic[:,:,1])
 
@@ -50,14 +50,14 @@ parameters = Dict(
     "λ_s" => 5.0,
 )
 
-t_span = [0, 5000000]
+t_span = [0, 10000]
 
 prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1)#1e-1)
 
 # Diagnostics
 diagnostics = [
     ProgressDiagnostic(1000),
-    ProbeDensityDiagnostic((0, 0), N=100),
+    ProbeAllDiagnostic([(x,0) for x in LinRange(-40,50, 10)], N=10),
     PlotDensityDiagnostic(50),
     RadialFluxDiagnostic(50),
     KineticEnergyDiagnostic(50),
