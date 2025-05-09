@@ -1,5 +1,6 @@
 module SpectralOperators
 using Base.Threads
+using CUDA
 include("fftutilities.jl")
 
 export SpectralOperatorCache, FFTPlans, diffX, diffY, diffXX, diffYY, diffusion, solvePhi,
@@ -26,7 +27,7 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
     V::P
     qtl::DU
     qtr::DU
-    C::Float64                    # Coefficient used for correct anti-aliasing normalization
+    C::Float32                    # Coefficient used for correct anti-aliasing normalization # TODO undo
     QTPlans::T                                               # QT stands for quadratic terms
 
     # Other cache
@@ -43,7 +44,7 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
         HyperLaplacian = Laplacian .^ 3
         invLaplacian[1] = 0 # First entry will always be NaN or Inf
         # CUDA
-        qtl = im * zeros(length(ky), length(kx)) # TODO This has to be CUDA
+        qtl = im * zeros(length(ky), length(kx))
         qtr = zero(qtl)
         phi = zero(qtl)
 
@@ -57,12 +58,12 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
         # TODO make these CUDA
         if realTransform
             m = M % 2 == 0 ? M ÷ 2 + 1 : (M - 1) ÷ 2 + 1
-            spectral_pad = im * zeros(m, N) # TODO This has to be CUDA
+            spectral_pad = CUDA.functional() ? im * CUDA.zeros(Float32, m, N) : im * zeros(m, N)  
             iFT = plan_irfft(im * spectral_pad, M)
             FT = plan_rfft(iFT * spectral_pad)
             QT_plans = rFFTPlans(FT, iFT)
         else
-            spectral_pad = im * zeros(M, N)
+            spectral_pad = CUDA.functional() ? im * CUDA.zeros(Float32, M, N) : im * zeros(M, N)
             FT = plan_fft(spectral_pad)
             iFT = plan_ifft(spectral_pad)
             QT_plans = FFTPlans(FT, iFT)
@@ -75,6 +76,24 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
         C = M * N / (Nx * Ny)
         U = iFT * up
         V = iFT * vp
+        
+        if CUDA.functional()
+            DiffX = cu(ComplexF32.(DiffX))
+            DiffY = cu(ComplexF32.(DiffY))
+            DiffXX = cu(DiffXX)
+            DiffYY = cu(DiffYY)
+            Laplacian = cu(Laplacian)
+            invLaplacian = cu(invLaplacian)
+            HyperLaplacian = cu(HyperLaplacian)
+            up = cu(up)
+            vp = cu(vp)
+            U = cu(U)
+            V = cu(V)
+            qtl = cu(qtl)
+            qtr = cu(qtr)
+            phi = cu(phi)
+            C = Float32(C) # TODO make less forced
+        end
 
         new{typeof(DiffX),typeof(DiffY),typeof(DiffXX),typeof(DiffYY),typeof(Laplacian),
             typeof(up),typeof(U),typeof(qtr),typeof(QT_plans),typeof(phi)
@@ -120,16 +139,20 @@ function spectral_conv(u_hat, v_hat, plans)
 end
 
 # TODO add in a future push
-# function spectral_conv!(qt::DF, u::F, v::F, U::RF, V::RF, up::FP, vp::FP, plans::T) where {
-#     DF<:CuArray,F<:CuArray,RF<:CuArray,FP<:CuArray,T<:TransformPlans}
-#     mul!(U, plans.iFT, padded ? p!(up, u, plans) : u)
-#     mul!(V, plans.iFT, padded ? p!(vp, v, plans) : v)
-#     @. U = U * V
-#     mul!(padded ? up : qt, plans.FT, U)
-#     if padded unpad!(qt, up, plans) end
-# end
+function spectral_conv!(out::DU, u::U, v::V, SC::SOC) where {DU<:CuArray,U<:CuArray,
+    V<:CuArray,SOC<:SpectralOperatorCache}
+    
+    plans = SC.QTPlans
+    mul!(SC.U, plans.iFT, SC.padded ? pad!(SC.up, u, plans) : u)
+    mul!(SC.V, plans.iFT, SC.padded ? pad!(SC.vp, v, plans) : v)
+    @. SC.U *= SC.V
+    mul!(SC.padded ? SC.up : out, plans.FT, SC.U)
+    #if padded unpad!(qt, up, plans) end
+    SC.padded ? SC.C * unpad!(out, SC.up, plans) : out
+end
 
 # Specialized for 2D arrays
+# TODO optimize for GPU
 function pad!(up::DU, u::U, plan::FFTPlans) where {T,DU<:AbstractArray{T},U<:AbstractArray{T}}
     up .= zero.(up)
     Ny, Nx = size(u)
@@ -146,6 +169,7 @@ function pad!(up::DU, u::U, plan::FFTPlans) where {T,DU<:AbstractArray{T},U<:Abs
     return up
 end
 
+# TODO optimize for GPU
 function pad!(up::DU, u::U, plan::rFFTPlans) where {T,DU<:AbstractArray{T},U<:AbstractArray{T}}
     up .= zero.(up)
     Ny, Nx = size(u)
@@ -158,6 +182,7 @@ function pad!(up::DU, u::U, plan::rFFTPlans) where {T,DU<:AbstractArray{T},U<:Ab
     return up
 end
 
+# TODO optimize for GPU
 function unpad!(u::DU, up::U, plan::FFTPlans) where {T,DU<:AbstractArray{T},U<:AbstractArray{T}}
     Ny, Nx = size(u)
 
@@ -173,6 +198,7 @@ function unpad!(u::DU, up::U, plan::FFTPlans) where {T,DU<:AbstractArray{T},U<:A
     return u
 end
 
+# TODO optimize for GPU
 function unpad!(u::DU, up::U, plan::rFFTPlans) where {T,DU<:AbstractArray{T},U<:AbstractArray{T}}
     Ny, Nx = size(u)
 
