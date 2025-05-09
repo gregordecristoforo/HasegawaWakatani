@@ -199,7 +199,7 @@ function handle_output!(output::O, step::Int, u::T, prob::SOP, t::N) where {O<:O
     end
 
     # Check if last value is NaN, if the matrix has one NaN the whole array will turn NaN after fft
-    if isnan(u[end])
+    if isnan(Array(u)[end])
         error("Breakdown occured at t=$t")
     end
 end
