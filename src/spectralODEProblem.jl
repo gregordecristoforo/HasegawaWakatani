@@ -39,10 +39,15 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Ty
             u0 = CuArray(u0)
         end
 
-        # TODO make transform CUDA
         sz = size(domain.transform.iFT)
         allocation_size = (sz..., size(u0)[length(sz)+1:end]...)
         u0_hat = zeros(eltype(domain.transform.iFT), allocation_size...)
+        
+        # Transform to CUDA
+        if CUDA.functional()
+            u0_hat = cu(u0_hat)
+        end
+
         spectral_transform!(u0_hat, u0, domain.transform.FT)
         remove_modes(u0_hat, domain)
 
