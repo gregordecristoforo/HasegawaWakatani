@@ -43,7 +43,7 @@ prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-3)
 # Diagnostics
 diagnostics = [
     ProgressDiagnostic(1000),
-    ProbeAllDiagnostic((0, 0), N=100),
+    ProbeAllDiagnostic([(x,0) for x in LinRange(-40,50, 10)], N=100),
     #PlotDensityDiagnostic(1000),
     RadialFluxDiagnostic(600),
     KineticEnergyDiagnostic(1000),
