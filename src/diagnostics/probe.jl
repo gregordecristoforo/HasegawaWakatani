@@ -12,6 +12,11 @@ function probe_field(u::U, domain::D, positions::P; interpolation::I=nothing) wh
     # Initilize vectors
     data = zeros(length(positions))
 
+    # Check for CUDA
+    if CUDA.functional()
+        u = Array(u)
+    end
+
     if isnothing(interpolation)
         for n in eachindex(positions)
             i = argmin(abs.(domain.x .- positions[n][1]))
@@ -125,6 +130,7 @@ function ProbeRadialVelocityDiagnostic(positions::P; interpolation::I=nothing, N
     return Diagnostic("Radial velocity probe", probe_radial_velocity, N, label, args, kwargs, assumesSpectralField=true)
 end
 
+# TODO make this optimized for non GPU case
 function probe_all(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
     U<:AbstractArray,SOP<:SpectralODEProblem,N<:Number,P<:Union{AbstractArray,Tuple,Number},
     I<:Union{Nothing,Function}}
@@ -135,6 +141,10 @@ function probe_all(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing
     
     # Cache for transformation
     cache = zeros(size(prob.domain.transform.FT))
+
+    if CUDA.functional()
+        cache = CuArray(cache)
+    end
 
     # Transform to physical space and probe fields
     n = mul!(cache, prob.domain.transform.iFT, u[:,:,1])
