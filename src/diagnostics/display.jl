@@ -2,7 +2,7 @@
 
 function plot_density(u::U, prob::P, t::T) where {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
     digits = ceil(Int, -log10(prob.dt))
-    display(heatmap(prob.domain, u[:, :, 1], aspect_ratio=:equal, xlabel="x", ylabel="y",
+    display(heatmap(prob.domain, Array(u[:, :, 1]), aspect_ratio=:equal, xlabel="x", ylabel="y",
         title="n(x, t = $(round(t, digits=digits)))"))
 end
 
@@ -12,7 +12,7 @@ end
 
 function plot_vorticity(u::U, prob::P, t::T) where {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
     digits = ceil(Int, -log10(prob.dt))
-    display(heatmap(prob.domain, u[:, :, 2], aspect_ratio=:equal, xlabel="x", ylabel="y",
+    display(heatmap(prob.domain, Array(u[:, :, 2]), aspect_ratio=:equal, xlabel="x", ylabel="y",
         title=L"\Omega" * "(x, t = $(round(t, digits=digits)))", color=:jet))
 end
 
@@ -24,7 +24,7 @@ function plot_potential(u::U, prob::P, t::T) where {U<:AbstractArray,P<:Spectral
     d = prob.domain
     phi = d.transform.iFT * solvePhi(u[:, :, 2], d)
     digits = ceil(Int, -log10(prob.dt))
-    display(heatmap(prob.domain, phi, aspect_ratio=:equal, xlabel="x", ylabel="y",
+    display(heatmap(prob.domain, Array(phi), aspect_ratio=:equal, xlabel="x", ylabel="y",
         title=L"\Phi" * "(x, t = $(round(t, digits=digits)))"))
 end
 
