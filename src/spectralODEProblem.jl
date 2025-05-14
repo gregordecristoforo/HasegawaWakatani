@@ -42,6 +42,11 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Ty
         sz = size(domain.transform.iFT)
         allocation_size = (sz..., size(u0)[length(sz)+1:end]...)
         u0_hat = zeros(eltype(domain.transform.iFT), allocation_size...)
+        
+        # Used for normal Fourier transform
+        if eltype(u0_hat) <: Complex
+            u0 = complex(u0)
+        end
 
         # Transform to CUDA
         if domain.use_cuda
