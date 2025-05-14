@@ -7,7 +7,7 @@ using Base.Threads
 function radial_flux(u::U, prob::P, t::T; quadrature=nothing) where
 {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
 
-    n_hat = u[:, :, 1]
+    n_hat = @view u[:, :, 1]
     Ω_hat = @view u[:, :, 2]
     ϕ_hat = solvePhi(Ω_hat, prob.domain)
     dϕ_hat = diffY(ϕ_hat, prob.domain)
@@ -25,6 +25,22 @@ function radial_flux(u::U, prob::P, t::T; quadrature=nothing) where
     # Old code
     #v_x, v_y = vExB(u, prob.domain)
     #sum(u[:,:,1].*v_x)/(prob.domain.Lx*prob.domain.Ly)
+end
+
+# CuArray variant
+function radial_flux(u::U, prob::P, t::T; quadrature=nothing) where
+{U<:CuArray,P<:SpectralODEProblem,T<:Number}
+    n_hat = @view u[:, :, 1]
+    Ω_hat = @view u[:, :, 2]
+    ϕ_hat = solvePhi(Ω_hat, prob.domain)
+    dϕ_hat = diffY(ϕ_hat, prob.domain)
+    vx = zeros(size(prob.domain.transform.FT)) # TODO cache these perhaps?
+    vx = CUDA.functional() ? CuArray(vx) : vx
+    n = similar(vx)
+    mul!(vx, prob.domain.transform.iFT, dϕ_hat)
+    mul!(n, prob.domain.transform.iFT, n_hat)
+    vx .*= n
+    return -sum(vx) / (prob.domain.Lx * prob.domain.Ly) # This is the flux time density^^
 end
 
 function RadialFluxDiagnostic(N::Int=10)
