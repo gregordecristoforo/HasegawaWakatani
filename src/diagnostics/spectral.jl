@@ -17,9 +17,13 @@ function get_log_modes(u::U, prob::P, t::N; kx::K=:ky) where {U<:AbstractArray,
             data = zeros(prob.domain.Nx ÷ 2)
         end
 
-        for i in 1:prob.domain.Nx÷2
-            data[i, :] = log.(abs.(u[i, i, :]))
+        if CUDA.functional()
+            data = CuArray(data)
         end
+
+        data[:,1] = log.(abs.(diag(u[:,:,1])[1:prob.domain.Nx÷2]))
+        data[:,2] = log.(abs.(diag(u[:,:,2])[1:prob.domain.Nx÷2]))
+
         return data
     else
         return log.(abs.(u[:, kx, :]))
