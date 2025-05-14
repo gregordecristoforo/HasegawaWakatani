@@ -223,6 +223,10 @@ function output_cache!(output::O, cache::C, step::Int, t::N) where {O<:Output,
             val = getfield(cache, key)
             # Do not want to bother with storing Tableau, easy to recover
             if !isa(val, AbstractTableau)
+                if isa(val, CuArray)
+                    val = Array(val) # Download to CPU
+                end
+
                 if haskey(cache_group, string(key))
                     write(cache_group[string(key)], val)
                 else
