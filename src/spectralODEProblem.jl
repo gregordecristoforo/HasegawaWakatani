@@ -44,7 +44,7 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Ty
         u0_hat = zeros(eltype(domain.transform.iFT), allocation_size...)
         
         # Used for normal Fourier transform
-        if eltype(u0_hat) <: Complex
+        if eltype(domain.transform.FT) <: Complex
             u0 = complex(u0)
         end
 
