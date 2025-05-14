@@ -60,7 +60,7 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
         ky = realTransform ? 2 * π * rfftfreq(Ny, 1 / dy) : 2 * π * fftfreq(Ny, 1 / dy)
 
         if CUDA.functional()
-            utmp = CUDA.zeros(Float32, Ny, Nx) # This controls the precision of standard transform
+            utmp = CUDA.zeros(Float64, Ny, Nx) # This controls the precision of standard transform
         else
             utmp = zeros(Float64, Ny, Nx)
         end

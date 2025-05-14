@@ -27,7 +27,7 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
     V::P
     qtl::DU
     qtr::DU
-    C::Float32                    # Coefficient used for correct anti-aliasing normalization # TODO undo
+    C::Float64                    # Coefficient used for correct anti-aliasing normalization
     QTPlans::T                                               # QT stands for quadratic terms
 
     # Other cache
@@ -58,12 +58,12 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
         # TODO make these CUDA
         if realTransform
             m = M % 2 == 0 ? M ÷ 2 + 1 : (M - 1) ÷ 2 + 1
-            spectral_pad = CUDA.functional() ? im * CUDA.zeros(Float32, m, N) : im * zeros(m, N)  
+            spectral_pad = CUDA.functional() ? im * CUDA.zeros(Float64, m, N) : im * zeros(m, N)  #These control precision
             iFT = plan_irfft(im * spectral_pad, M)
             FT = plan_rfft(iFT * spectral_pad)
             QT_plans = rFFTPlans(FT, iFT)
         else
-            spectral_pad = CUDA.functional() ? im * CUDA.zeros(Float32, M, N) : im * zeros(M, N)
+            spectral_pad = CUDA.functional() ? im * CUDA.zeros(Float64, M, N) : im * zeros(M, N)
             FT = plan_fft(spectral_pad)
             iFT = plan_ifft(spectral_pad)
             QT_plans = FFTPlans(FT, iFT)
@@ -77,22 +77,22 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
         U = iFT * up
         V = iFT * vp
         
-        if CUDA.functional()
-            DiffX = cu(ComplexF32.(DiffX))
-            DiffY = cu(ComplexF32.(DiffY))
-            DiffXX = cu(DiffXX)
-            DiffYY = cu(DiffYY)
-            Laplacian = cu(Laplacian)
-            invLaplacian = cu(invLaplacian)
-            HyperLaplacian = cu(HyperLaplacian)
-            up = cu(up)
-            vp = cu(vp)
-            U = cu(U)
-            V = cu(V)
-            qtl = cu(qtl)
-            qtr = cu(qtr)
-            phi = cu(phi)
-            C = Float32(C) # TODO make less forced
+        if CUDA.functional() # cu to get 32, CuArray to get 64
+            DiffX =CuArray(DiffX)
+            DiffY = CuArray(DiffY)
+            DiffXX = CuArray(DiffXX)
+            DiffYY = CuArray(DiffYY)
+            Laplacian = CuArray(Laplacian)
+            invLaplacian = CuArray(invLaplacian)
+            HyperLaplacian = CuArray(HyperLaplacian)
+            up = CuArray(up)
+            vp = CuArray(vp)
+            U = CuArray(U)
+            V = CuArray(V)
+            qtl = CuArray(qtl)
+            qtr = CuArray(qtr)
+            phi = CuArray(phi)
+            #C = Float32(C) # TODO make less forced
         end
 
         new{typeof(DiffX),typeof(DiffY),typeof(DiffXX),typeof(DiffYY),typeof(Laplacian),

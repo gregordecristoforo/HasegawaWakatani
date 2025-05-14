@@ -27,7 +27,7 @@ function get_cache(prob::SpectralODEProblem, alg::MSS1)
     u = copy(prob.u0_hat)
     # Calculate linear differential operator coefficent once to cache it
     if CUDA.functional()
-        D = prob.L(CUDA.ones(size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
+        D = prob.L(CUDA.ones(Float64, size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
     else
         D = prob.L(ones(size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
     end
@@ -66,7 +66,7 @@ function MSS2Tableau()
     a1 = 2.0
     b0 = -1.0
     b1 = 2.0
-    MSS2Tableau{Float32}(g0, a0, a1, b0, b1)
+    MSS2Tableau(g0, a0, a1, b0, b1)
 end
 
 mutable struct MSS2Cache{U,C,K} <: AbstractCache
@@ -85,7 +85,7 @@ function get_cache(prob::SpectralODEProblem, alg::MSS2)
     dt = prob.dt
     u = copy(prob.u0_hat)
     if CUDA.functional()
-        D = prob.L(CUDA.ones(size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
+        D = prob.L(CUDA.ones(Float64, size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
     else
         D = prob.L(ones(size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
     end
@@ -148,7 +148,7 @@ function MSS3Tableau()
     b0 = 1.0
     b1 = -3.0
     b2 = 3.0
-    MSS3Tableau{Float32}(g0, a0, a1, a2, b0, b1, b2)
+    MSS3Tableau(g0, a0, a1, a2, b0, b1, b2) #This controls precision
 end
 
 mutable struct MSS3Cache{U,C,K} <: AbstractCache
@@ -169,7 +169,7 @@ function get_cache(prob::SpectralODEProblem, alg::MSS3)
     dt = prob.dt
     u = copy(prob.u0_hat)
     if CUDA.functional()
-        D = prob.L(CUDA.ones(size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
+        D = prob.L(CUDA.ones(Float64, size(prob.domain.transform.iFT)), prob.domain, prob.p, 0) #This controls precision
     else
         D = prob.L(ones(size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
     end

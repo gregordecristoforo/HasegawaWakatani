@@ -45,7 +45,7 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Ty
         
         # Transform to CUDA
         if CUDA.functional()
-            u0_hat = cu(u0_hat)
+            u0_hat = CuArray(u0_hat) # This controls precision
         end
 
         spectral_transform!(u0_hat, u0, domain.transform.FT)
