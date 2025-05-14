@@ -40,16 +40,22 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
     transform::TP
     realTransform::Bool
     anti_aliased::Bool
+    use_cuda::Bool
     nfields::Int
 
     Domain(N) = Domain(N, 1)
     Domain(N, L) = Domain(N, N, L, L)
-    function Domain(Nx, Ny, Lx, Ly; realTransform=true, anti_aliased=false, x0=-Lx / 2, y0=-Ly / 2, nfields=3)
+    function Domain(Nx, Ny, Lx, Ly; realTransform=true, anti_aliased=true, use_cuda=true, x0=-Lx / 2, y0=-Ly / 2, nfields=3)
         dx = Lx / Nx
         dy = Ly / Ny
         # dx and dy is subtracted at the end, because of periodic boundary conditions
         x = LinRange(x0, x0 + Lx - dx, Nx)
         y = LinRange(y0, y0 + Ly - dy, Ny)
+
+        if use_cuda && !CUDA.functional()
+            use_cuda = false
+            warn("CUDA is not functional")
+        end
 
         # ------------------ If x-direction favored in rfft -------------------
         #if Nx > Ny
@@ -59,12 +65,12 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
         kx = 2 * π * fftfreq(Nx, 1 / dx)
         ky = realTransform ? 2 * π * rfftfreq(Ny, 1 / dy) : 2 * π * fftfreq(Ny, 1 / dy)
 
-        if CUDA.functional()
+        if use_cuda
             utmp = CUDA.zeros(Float64, Ny, Nx) # This controls the precision of standard transform
         else
             utmp = zeros(Float64, Ny, Nx)
         end
-        
+
         if realTransform
             FT = plan_rfft(utmp)
             iFT = plan_irfft(FT * utmp, Ny)
@@ -74,17 +80,17 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
         end
 
         SC = SpectralOperatorCache(kx, ky, Nx, Ny, realTransform=realTransform,
-            anti_aliased=anti_aliased)
-        
+            anti_aliased=anti_aliased, use_cuda=use_cuda)
+
         # Transform frequencies to CuArrays
-        if CUDA.functional()
+        if use_cuda
             kx = CuArray(kx)
             ky = CuArray(ky)
         end
 
         new{typeof(x),typeof(y),typeof(kx),typeof(ky),typeof(SC),
             typeof(transform_plans)}(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC,
-            transform_plans, realTransform, anti_aliased, nfields)
+            transform_plans, realTransform, anti_aliased, use_cuda, nfields)
     end
 end
 

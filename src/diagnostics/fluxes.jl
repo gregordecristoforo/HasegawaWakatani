@@ -35,7 +35,7 @@ function radial_flux(u::U, prob::P, t::T; quadrature=nothing) where
     ϕ_hat = solvePhi(Ω_hat, prob.domain)
     dϕ_hat = diffY(ϕ_hat, prob.domain)
     vx = zeros(size(prob.domain.transform.FT)) # TODO cache these perhaps?
-    vx = CUDA.functional() ? CuArray(vx) : vx
+    vx = prob.domain.use_cuda ? CuArray(vx) : vx
     n = similar(vx)
     mul!(vx, prob.domain.transform.iFT, dϕ_hat)
     mul!(n, prob.domain.transform.iFT, n_hat)

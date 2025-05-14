@@ -35,16 +35,16 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Ty
     function SpectralODEProblem(L::Function, N::Function, domain::Domain, u0, tspan;
         p=Dict(), dt=0.01, remove_modes=remove_nothing, kwargs...)
         # TODO check if user want to use CUDA 
-        if CUDA.functional()
+        if domain.use_cuda
             u0 = CuArray(u0)
         end
 
         sz = size(domain.transform.iFT)
         allocation_size = (sz..., size(u0)[length(sz)+1:end]...)
         u0_hat = zeros(eltype(domain.transform.iFT), allocation_size...)
-        
+
         # Transform to CUDA
-        if CUDA.functional()
+        if domain.use_cuda
             u0_hat = CuArray(u0_hat) # This controls precision
         end
 

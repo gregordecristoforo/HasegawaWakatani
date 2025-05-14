@@ -33,7 +33,7 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
     # Other cache
     phi::PHI
 
-    function SpectralOperatorCache(kx, ky, Nx, Ny; realTransform=true, anti_aliased=true)
+    function SpectralOperatorCache(kx, ky, Nx, Ny; realTransform=true, anti_aliased=true, use_cuda=false)
         # Spectral coefficents (TODO All have to be CUDA)
         DiffX = transpose(im * kx)
         DiffY = im * ky
@@ -58,12 +58,12 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
         # TODO make these CUDA
         if realTransform
             m = M % 2 == 0 ? M ÷ 2 + 1 : (M - 1) ÷ 2 + 1
-            spectral_pad = CUDA.functional() ? im * CUDA.zeros(Float64, m, N) : im * zeros(m, N)  #These control precision
+            spectral_pad = use_cuda ? im * CUDA.zeros(Float64, m, N) : im * zeros(m, N)  #These control precision
             iFT = plan_irfft(im * spectral_pad, M)
             FT = plan_rfft(iFT * spectral_pad)
             QT_plans = rFFTPlans(FT, iFT)
         else
-            spectral_pad = CUDA.functional() ? im * CUDA.zeros(Float64, M, N) : im * zeros(M, N)
+            spectral_pad = use_cuda ? im * CUDA.zeros(Float64, M, N) : im * zeros(M, N)
             FT = plan_fft(spectral_pad)
             iFT = plan_ifft(spectral_pad)
             QT_plans = FFTPlans(FT, iFT)
@@ -76,9 +76,9 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
         C = M * N / (Nx * Ny)
         U = iFT * up
         V = iFT * vp
-        
-        if CUDA.functional() # cu to get 32, CuArray to get 64
-            DiffX =CuArray(DiffX)
+
+        if use_cuda # cu to get 32, CuArray to get 64
+            DiffX = CuArray(DiffX)
             DiffY = CuArray(DiffY)
             DiffXX = CuArray(DiffXX)
             DiffYY = CuArray(DiffYY)
@@ -141,7 +141,7 @@ end
 # TODO add in a future push
 function spectral_conv!(out::DU, u::U, v::V, SC::SOC) where {DU<:CuArray,U<:CuArray,
     V<:CuArray,SOC<:SpectralOperatorCache}
-    
+
     plans = SC.QTPlans
     mul!(SC.U, plans.iFT, SC.padded ? pad!(SC.up, u, plans) : u)
     mul!(SC.V, plans.iFT, SC.padded ? pad!(SC.vp, v, plans) : v)

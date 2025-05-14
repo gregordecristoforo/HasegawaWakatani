@@ -2,6 +2,7 @@
 
 # probe/high time resolution (fields, velocity etc...)
 
+# TODO improve 
 function probe_field(u::U, domain::D, positions::P; interpolation::I=nothing) where {
     U<:AbstractArray,D<:Domain,P<:Union{AbstractArray,Tuple,Number},I<:Union{Nothing,Function}}
     # Check if the user sent in tuple of points or single point
@@ -11,12 +12,13 @@ function probe_field(u::U, domain::D, positions::P; interpolation::I=nothing) wh
 
     # Initilize vectors
     data = zeros(length(positions))
+    #data = domain.use_cuda ? CUDA.zeros(length(positions)) : zeros(length(positions))
 
     # Check for CUDA
-    if CUDA.functional()
+    if domain.use_cuda
         u = Array(u)
     end
-
+    
     if isnothing(interpolation)
         for n in eachindex(positions)
             i = argmin(abs.(domain.x .- positions[n][1]))
@@ -85,7 +87,7 @@ function probe_potential(u::U, prob::SOP, t::N, positions::P; interpolation::I=n
     U<:AbstractArray,SOP<:SpectralODEProblem,N<:Number,P<:Union{AbstractArray,Tuple,Number},
     I<:Union{Nothing,Function}}
     ϕ_hat = @views solvePhi(u[:, :, 2], prob.domain)
-    ϕ = prob.domain.transform.iFT*ϕ_hat
+    ϕ = prob.domain.transform.iFT * ϕ_hat
     probe_field(ϕ, prob.domain, positions; interpolation)
 end
 
@@ -110,7 +112,7 @@ function probe_radial_velocity(u::U, prob::SOP, t::N, positions::P; interpolatio
     I<:Union{Nothing,Function}}
     ϕ_hat = @views solvePhi(u[:, :, 2], prob.domain)
     v_x_hat = -diffY(ϕ_hat, prob.domain)
-    v_x = prob.domain.transform.iFT*v_x_hat 
+    v_x = prob.domain.transform.iFT * v_x_hat
     probe_field(v_x, prob.domain, positions; interpolation)
 end
 
@@ -138,18 +140,18 @@ function probe_all(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing
     # Calculate spectral fields
     ϕ_hat = @views solvePhi(u[:, :, 2], prob.domain)
     v_x_hat = -diffY(ϕ_hat, prob.domain)
-    
+
     # Cache for transformation
     cache = zeros(size(prob.domain.transform.FT))
 
-    if CUDA.functional()
+    if prob.domain.use_cuda
         cache = CuArray(cache)
     end
 
     # Transform to physical space and probe fields
-    n = mul!(cache, prob.domain.transform.iFT, u[:,:,1])
+    n = mul!(cache, prob.domain.transform.iFT, u[:, :, 1])
     n_p = probe_field(n, prob.domain, positions; interpolation)
-    Ω = mul!(cache, prob.domain.transform.iFT, u[:,:,2])
+    Ω = mul!(cache, prob.domain.transform.iFT, u[:, :, 2])
     Ω_p = probe_field(Ω, prob.domain, positions; interpolation)
     ϕ = mul!(cache, prob.domain.transform.iFT, ϕ_hat)
     ϕ_p = probe_field(ϕ, prob.domain, positions; interpolation)
@@ -157,7 +159,7 @@ function probe_all(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing
     v_x_p = probe_field(v_x, prob.domain, positions; interpolation)
 
     #Combine fields for output (The last field is the flux Γ=nvₓ)
-    [n_p;; Ω_p;; ϕ_p;; v_x_p;; n_p.*v_x_p]
+    [n_p;; Ω_p;; ϕ_p;; v_x_p;; n_p .* v_x_p]
 end
 
 function ProbeAllDiagnostic(positions::P; interpolation::I=nothing, N::Int=100) where {
