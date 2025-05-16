@@ -2,7 +2,7 @@
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 cd(relpath(@__DIR__, pwd()))
 
-domain = Domain(128, 128, 100, 100, anti_aliased=true)
+domain = Domain(256, 256, 48, 48, anti_aliased=true)
 using Statistics
 # Open data file
 fid = h5open("output/sheath-interchange long time series.h5", "r")
@@ -153,3 +153,27 @@ heatmap(data[:,:,1,25])
 
 fid = h5open("output/sheath-interchange g=1e-2.h5", "r")
 sim = fid["D_n=0.01, D_Ω=0.01, N=1.0, g=0.01, kappa=0.31622776601683794, sigma_n=0.001, sigma_Ω=0.001"]
+
+
+## ------------------------------- Gyro Bohm -----------------------------------------------
+fid = h5open("output/gyro-bohm=5e-2.h5", "r")
+sim = fid["D=0.01, g=0.1, sigma=0.05"]
+t = sim["All probe/t"][1:3_079_300]
+data = sim["All probe/data"][:,:,1:3_079_300]
+
+sim["All probe/t"][3_079_300]
+
+
+argmax(t)
+heatmap(sim["fields"][:,:,1,argmax(sim["t"][:])], levels=17)#, cmap=:black)
+
+using JLD
+jldopen("output/all probes gyro-bohm=5e-2 10 probes.jld", "w") do file
+    g = create_group(file, "data")
+    g["n"] = data[:,1,1:argmax(t)]
+    g["Omega"] = data[:,2,1:argmax(t)]
+    g["phi"] = data[:,3,1:argmax(t)]
+    g["vx"] = data[:,4,1:argmax(t)]
+    g["Gamma"] = data[:,5,1:argmax(t)]
+    g["t"] = t[1:argmax(t)]
+end
