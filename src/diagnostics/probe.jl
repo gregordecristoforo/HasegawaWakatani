@@ -37,9 +37,29 @@ function probe_field(u::U, domain::D, positions::P; interpolation::I=nothing) wh
     length(data) == 1 ? data[1] : data
 end
 
+# Auxilary function
+function is_in_domain(positions, domain::Domain)
+    if isa(positions, Tuple) && isa(positions[1], Number)
+        positions = [positions]
+    end
+
+    if sum((first.(positions) .- first(domain.x)).*(first.(positions) .- last(domain.x)) .> 0) != 0 ||
+        sum((last.(positions) .- first(domain.y)).*(last.(positions) .- last(domain.y)) .> 0) != 0 
+        return false
+    else
+        return true
+    end
+end
+
+# TODO move to utilitise
 function probe_density(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
     U<:AbstractArray,SOP<:SpectralODEProblem,N<:Number,P<:Union{AbstractArray,Tuple,Number},
     I<:Union{Nothing,Function}}
+    # Check if all probes are in the domain
+    if t == first(prob.tspan)
+        is_in_domain(positions, domain) ? nothing : error("One or more probes are outside the domain")
+    end
+
     probe_field(u[:, :, 1], prob.domain, positions; interpolation)
 end
 
@@ -86,6 +106,11 @@ end
 function probe_potential(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
     U<:AbstractArray,SOP<:SpectralODEProblem,N<:Number,P<:Union{AbstractArray,Tuple,Number},
     I<:Union{Nothing,Function}}
+    # Check if all probes are in the domain
+    if t == first(prob.tspan)
+        is_in_domain(positions, domain) ? nothing : error("One or more probes are outside the domain")
+    end
+    
     ϕ_hat = @views solvePhi(u[:, :, 2], prob.domain)
     ϕ = prob.domain.transform.iFT * ϕ_hat
     probe_field(ϕ, prob.domain, positions; interpolation)
@@ -110,6 +135,11 @@ end
 function probe_radial_velocity(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
     U<:AbstractArray,SOP<:SpectralODEProblem,N<:Number,P<:Union{AbstractArray,Tuple,Number},
     I<:Union{Nothing,Function}}
+    # Check if all probes are in the domain
+    if t == first(prob.tspan)
+        is_in_domain(positions, domain) ? nothing : error("One or more probes are outside the domain")
+    end
+
     ϕ_hat = @views solvePhi(u[:, :, 2], prob.domain)
     v_x_hat = -diffY(ϕ_hat, prob.domain)
     v_x = prob.domain.transform.iFT * v_x_hat
@@ -136,6 +166,10 @@ end
 function probe_all(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
     U<:AbstractArray,SOP<:SpectralODEProblem,N<:Number,P<:Union{AbstractArray,Tuple,Number},
     I<:Union{Nothing,Function}}
+    # Check if all probes are in the domain
+    if t == first(prob.tspan)
+        is_in_domain(positions, domain) ? nothing : error("One or more probes are outside the domain")
+    end
 
     # Calculate spectral fields
     ϕ_hat = @views solvePhi(u[:, :, 2], prob.domain)
