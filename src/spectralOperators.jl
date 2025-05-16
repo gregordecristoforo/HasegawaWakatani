@@ -43,7 +43,7 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
         invLaplacian = Laplacian .^ -1
         HyperLaplacian = Laplacian .^ 3
         invLaplacian[1] = 0 # First entry will always be NaN or Inf
-        # CUDA
+
         qtl = im * zeros(length(ky), length(kx))
         qtr = zero(qtl)
         phi = zero(qtl)
@@ -118,8 +118,8 @@ function spectral_conv!(out::DU, u::U, v::V, SC::SOC) where {DU<:AbstractArray,
     U<:AbstractArray,V<:AbstractArray,SOC<:SpectralOperatorCache}
     plans = SC.QTPlans
     # Spawn threads to perform mul! in parallel
-    task_U = Threads.@spawn mul!(SC.U, plans.iFT, SC.padded ? pad!(SC.up, u, plans) : u)
-    task_V = Threads.@spawn mul!(SC.V, plans.iFT, SC.padded ? pad!(SC.vp, v, plans) : v)
+    task_U = Threads.@spawn mul!(SC.U, plans.iFT, SC.padded ? pad!(SC.up, u, plans) : copy(u))
+    task_V = Threads.@spawn mul!(SC.V, plans.iFT, SC.padded ? pad!(SC.vp, v, plans) : copy(v))
     # Wait for both tasks to finish
     wait(task_V)
     wait(task_U)
