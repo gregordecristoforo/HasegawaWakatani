@@ -12,14 +12,14 @@ heatmap(ic[:,:,1])
 function L(u, d, p, t)
     D_n = p["D_n"] .* diffusion(u, d)
     D_Ω = p["D_Ω"] .* diffusion(u, d)
-    [D_n;;; D_Ω]
+    cat(D_n, D_Ω, dims=3)
 end
 
 function source(x, y, S_0, λ_s)
     @. S_0*exp(-(x/λ_s)^2) + 0*y
 end
 
-S = domain.transform.FT*source(domain.x', domain.y, 5e-4, 5)
+S = domain.transform.FT*CuArray(source(domain.x', domain.y, 5e-4, 5))
 
 # Non-linear operator, fully non-linear
 function N(u, d, p, t)
@@ -37,7 +37,7 @@ function N(u, d, p, t)
     dΩ = -poissonBracket(ϕ, Ω, d)
     dΩ .-= p["g"] * diffY(spectral_log(n, d), d)
     dΩ .-= p["σ_0"] * spectral_expm1(-ϕ,d)
-    return [dn;;; dΩ]
+    return cat(dn, dΩ, dims=3)
 end
 
 # Parameters
@@ -50,14 +50,14 @@ parameters = Dict(
     "λ_s" => 5.0,
 )
 
-t_span = [0, 10000]
+t_span = [0, 50_000_000]
 
-prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1)#1e-1)
+prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1)
 
 # Diagnostics
 diagnostics = [
     ProgressDiagnostic(1000),
-    ProbeAllDiagnostic([(x,0) for x in LinRange(-40,50, 10)], N=10),
+    ProbeAllDiagnostic([(x,0) for x in LinRange(-128,160, 10)], N=10),
     PlotDensityDiagnostic(50),
     RadialFluxDiagnostic(50),
     KineticEnergyDiagnostic(50),
@@ -65,29 +65,34 @@ diagnostics = [
     EnstropyEnergyDiagnostic(50),
     GetLogModeDiagnostic(50, :ky),
     CFLDiagnostic(50),
-    #RadialPotentialEnergySpectraDiagnostic(50),
-    #PoloidalPotentialEnergySpectraDiagnostic(50),
-    #RadialKineticEnergySpectraDiagnostic(50),
-    #PoloidalKineticEnergySpectraDiagnostic(50),
+    RadialPotentialEnergySpectraDiagnostic(50),
+    PoloidalPotentialEnergySpectraDiagnostic(50),
+    RadialKineticEnergySpectraDiagnostic(50),
+    PoloidalKineticEnergySpectraDiagnostic(50),
 ]
 
 # Output
 cd(relpath(@__DIR__, pwd()))
-output = Output(prob, 1001, diagnostics, "output/Bisai debug.h5",
-    simulation_name=:parameters, store_locally=true)
+output = Output(prob, 1001, diagnostics, "output/Bisai.h5",
+    simulation_name=:parameters, store_locally=false)
 
 FFTW.set_num_threads(16)
 
 ## Solve and plot
-sol = spectral_solve(prob, MSS3(), output)
+sol = spectral_solve(prob, MSS3(), output, resume=true)
 
-data = sol.simulation["fields"][:, :, :, :]
-t = sol.simulation["t"][:]
-default(legend=false)
-anim = @animate for i in axes(data, 4)
-    heatmap(data[:, :, 1, i], aspect_ratio=:equal, xaxis=L"x", yaxis=L"y", title=L"n(t=" * "$(round(t[i], digits=0)))")
-end
-gif(anim, "long timeseries.gif", fps=20)
+# data = sol.simulation["fields"][:, :, :, :]
+# t = sol.simulation["t"][:]
+# default(legend=false)
+# anim = @animate for i in axes(data, 4)
+#     heatmap(data[:, :, 1, i], aspect_ratio=:equal, xaxis=L"x", yaxis=L"y", title=L"n(t=" * "$(round(t[i], digits=0)))")
+# end
+# gif(anim, "long timeseries.gif", fps=20)
 
-send_mail("Long time series simulation finnished!", attachment="benkadda.gif")
+send_mail("Bisai simulation finnished!")
 close(output.file)
+
+# bisai_php_19_052509 gives Lₓ = L_y = 160ρₛ, g = 1e-3, 128-modes
+# bisai_php_12_072520 gives dt = \omega_c^{-1}, g = 8e-4
+
+CUDA.pool_status()
