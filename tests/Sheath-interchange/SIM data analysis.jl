@@ -127,13 +127,13 @@ heatmap(data[:,:,1,end])#,aspect_ratio=:equal)
 
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 cd(relpath(@__DIR__, pwd()))
-fid = h5open("output/debug.h5", "r")
-N = read(fid["10 probes too/cache_backup/last_step"])
-data = fid["10 probes too/All probe/data"][:,:,1:N÷10]
-t = fid["10 probes too/All probe/t"][1:N÷10]
+fid = h5open("output/gyro-bohm=5e-2 CUDA.h5", "r")
+sim = fid[keys(fid)[1]]
+data = sim["All probe/data"][:,:,1:argmax(t)]
+t = sim["All probe/t"][1:argmax(t)]#+1_000_000]
 
 using JLD
-jldopen("output/all probes g=1e-2 10 probes.jld", "w") do file
+jldopen("output/all probes sigma=5e-2 10 probes CUDA.jld", "w") do file
     g = create_group(file, "data")
     g["n"] = data[:,1,1:argmax(t)]
     g["Omega"] = data[:,2,1:argmax(t)]
