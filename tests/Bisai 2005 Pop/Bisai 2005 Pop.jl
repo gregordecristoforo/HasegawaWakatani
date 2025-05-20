@@ -4,9 +4,9 @@ include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 ## Run scheme test for Burgers equation
 domain = Domain(128, 128, 160, 160, anti_aliased=true)
 ic = initial_condition_linear_stability(domain, 1e-3)
-ic[:,:,1] .+= 0.5
+ic[:, :, 1] .+= 0.5
 
-heatmap(ic[:,:,1])
+heatmap(ic[:, :, 1])
 
 # Linear operator
 function L(u, d, p, t)
@@ -16,10 +16,10 @@ function L(u, d, p, t)
 end
 
 function source(x, y, S_0, λ_s)
-    @. S_0*exp(-(x/λ_s)^2) + 0*y
+    @. S_0 * exp(-(x / λ_s)^2) + 0 * y
 end
 
-S = domain.transform.FT*CuArray(source(domain.x', domain.y, 5e-4, 5))
+S = domain.transform.FT * CuArray(source(domain.x', domain.y, 5e-4, 5))
 
 # Non-linear operator, fully non-linear
 function N(u, d, p, t)
@@ -36,7 +36,7 @@ function N(u, d, p, t)
 
     dΩ = -poissonBracket(ϕ, Ω, d)
     dΩ .-= p["g"] * diffY(spectral_log(n, d), d)
-    dΩ .-= p["σ_0"] * spectral_expm1(-ϕ,d)
+    dΩ .-= p["σ_0"] * spectral_expm1(-ϕ, d)
     return cat(dn, dΩ, dims=3)
 end
 
@@ -57,7 +57,7 @@ prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1)
 # Diagnostics
 diagnostics = [
     ProgressDiagnostic(1000),
-    ProbeAllDiagnostic([(x,0) for x in LinRange(-128,160, 10)], N=10),
+    ProbeAllDiagnostic([(x, 0) for x in LinRange(-80, 64, 10)], N=10),
     PlotDensityDiagnostic(50),
     RadialFluxDiagnostic(50),
     KineticEnergyDiagnostic(50),
@@ -94,5 +94,3 @@ close(output.file)
 
 # bisai_php_19_052509 gives Lₓ = L_y = 160ρₛ, g = 1e-3, 128-modes
 # bisai_php_12_072520 gives dt = \omega_c^{-1}, g = 8e-4
-
-CUDA.pool_status()
