@@ -94,9 +94,12 @@ function initialize_diagnostic!(diagnostic::D, U::T, prob::SOP, simulation::S, h
                 diagnostic.h5group["t"][1] = first(prob.tspan)
             else
                 diagnostic.h5group = open_group(simulation, diagnostic.name)
-                # TODO extend size of array
+                # Extend size of arrays
                 # Open dataset
-                # HDF5.set_extent_dims(dset, (size(id)..., N))
+                dset = open_dataset(simulation[diagnostic.name], "data")
+                HDF5.set_extent_dims(dset, (size(id)..., N))
+                dset = open_dataset(simulation[diagnostic.name], "t")
+                HDF5.set_extent_dims(dset, (N,))
             end
         end
 
@@ -107,7 +110,7 @@ function initialize_diagnostic!(diagnostic::D, U::T, prob::SOP, simulation::S, h
 
             # Store intial diagnostic
             if isa(id, AbstractArray)
-                diagnostic.data[1] .= id  
+                diagnostic.data[1] .= id
             else
                 diagnostic.data[1] = copy(id)
             end
@@ -136,7 +139,7 @@ function perform_diagnostic!(diagnostic::D, step::Int, u::U, prob::SOP, t::N;
 
         if store_locally
             if isa(data, AbstractArray)
-                diagnostic.data[idx] .= data  
+                diagnostic.data[idx] .= data
             else
                 diagnostic.data[idx] = copy(data)
             end
