@@ -29,7 +29,7 @@ function spectral_solve(prob::SOP, scheme::SA=MSS3(), output::O=Output(prob, 100
         while step < total_steps
             perform_step!(cache, prob, t)
 
-            # Increment step and time 
+            # Increment step and time #TODO fix time tracking
             step += 1
             t += dt
 
