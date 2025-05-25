@@ -96,9 +96,9 @@ function initialize_diagnostic!(diagnostic::D, U::T, prob::SOP, simulation::S, h
                 diagnostic.h5group = open_group(simulation, diagnostic.name)
                 # Extend size of arrays
                 # Open dataset
-                dset = open_dataset(simulation[diagnostic.name], "data")
+                dset = open_dataset(diagnostic.h5group, "data")
                 HDF5.set_extent_dims(dset, (size(id)..., N))
-                dset = open_dataset(simulation[diagnostic.name], "t")
+                dset = open_dataset(diagnostic.h5group, "t")
                 HDF5.set_extent_dims(dset, (N,))
             end
         end
