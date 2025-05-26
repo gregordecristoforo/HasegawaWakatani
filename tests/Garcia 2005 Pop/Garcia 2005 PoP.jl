@@ -1,5 +1,5 @@
 ## Run all (alt+enter)
-include(relpath(pwd(), @__DIR__)*"/src/HasegawaWakatini.jl")
+include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run scheme test for Burgers equation
 domain = Domain(1024, 1024, 50, 50, anti_aliased=false)
@@ -10,7 +10,7 @@ u0 = gaussian.(domain.x', domain.y, A=1, B=0, l=1)
 function L(u, d, p, t)
     D_θ = p["kappa"] * diffusion(u, d)
     D_Ω = p["nu"] * diffusion(u, d)
-    [D_θ;;; D_Ω]
+    cat(D_θ, D_Ω, dims=3)
 end
 
 # Non-linear operator
@@ -21,7 +21,7 @@ function N(u, d, p, t)
     dθ = -poissonBracket(ϕ, θ, d)
     dΩ = -poissonBracket(ϕ, Ω, d)
     dΩ .-= diffY(θ, d)
-    return [dθ;;; dΩ]
+    return cat(dθ, dΩ, dims=3)
 end
 
 # Parameters
@@ -55,32 +55,33 @@ diagnostics = [
 cd(relpath(@__DIR__, pwd()))
 
 # The output
-output = Output(prob, 21, diagnostics, "Garcia 2005 PoP.h5")
+output = Output(prob, 21, diagnostics, "output/Garcia 2005 PoP.h5",
+    store_locally=false, simulation_name="test")
 
 ## Solve and plot
 sol = spectral_solve(prob, MSS3(), output)
 
 ## Recreate Garcia et al. plots Figure 1.
-savefig(heatmap(domain, sol.u[6][:, :, 1], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600,280),
+savefig(heatmap(domain, sol.u[6][:, :, 1], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600, 280),
         ylabel=L"y", title=L"n(x, t = " * "$(round(sol.t[6], digits=2)))"), "blob density t=5.pdf")
-savefig(heatmap(domain, sol.u[11][:, :, 1], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600,280),
+savefig(heatmap(domain, sol.u[11][:, :, 1], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600, 280),
         ylabel=L"y", title=L"n(x, t = " * "$(round(sol.t[11], digits=2)))"), "blob density t=10.pdf")
-savefig(heatmap(domain, sol.u[16][:, :, 1], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600,280),
+savefig(heatmap(domain, sol.u[16][:, :, 1], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600, 280),
         ylabel=L"y", title=L"n(x, t = " * "$(round(sol.t[16], digits=2)))"), "blob density t=15.pdf")
-savefig(heatmap(domain, sol.u[end][:, :, 1], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600,280),
+savefig(heatmap(domain, sol.u[end][:, :, 1], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600, 280),
         ylabel=L"y", title=L"n(x, t = " * "$(round(sol.t[end], digits=2)))"), "blob density t=20.pdf")
-savefig(heatmap(domain, sol.u[6][:, :, 2], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600,280),
+savefig(heatmap(domain, sol.u[6][:, :, 2], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600, 280),
         ylabel=L"y", title=L"\Omega(x, t = " * "$(round(sol.t[6], digits=2)))", color=:jet), "blob vorticity t=5.pdf")
-savefig(heatmap(domain, sol.u[11][:, :, 2], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600,280),
+savefig(heatmap(domain, sol.u[11][:, :, 2], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600, 280),
         ylabel=L"y", title=L"\Omega(x, t = " * "$(round(sol.t[11], digits=2)))", color=:jet), "blob vorticity t=10.pdf")
-savefig(heatmap(domain, sol.u[16][:, :, 2], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600,280),
+savefig(heatmap(domain, sol.u[16][:, :, 2], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600, 280),
         ylabel=L"y", title=L"\Omega(x, t = " * "$(round(sol.t[16], digits=2)))", color=:jet), "blob vorticity t=15.pdf")
-savefig(heatmap(domain, sol.u[end][:, :, 2], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600,280),
+savefig(heatmap(domain, sol.u[end][:, :, 2], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600, 280),
         ylabel=L"y", title=L"\Omega(x, t = " * "$(round(sol.t[end], digits=2)))", color=:jet), "blob vorticity t=20.pdf")
 
-plot(layout=grid(4, 2), legend=:none, size=(380,400), dpi=400)
+plot(layout=grid(4, 2), legend=:none, size=(380, 400), dpi=400)
 for i in 1:4
-    heatmap!(domain.x, domain.y, sol.u[1+5i][:, :, 1], ylim=[-10, 10], aspect_ratio=:equal, subplot=2i-1)
+    heatmap!(domain.x, domain.y, sol.u[1+5i][:, :, 1], ylim=[-10, 10], aspect_ratio=:equal, subplot=2i - 1)
     heatmap!(domain.x, domain.y, sol.u[1+5i][:, :, 2], ylim=[-10, 10], aspect_ratio=:equal, subplot=2i, color=:jet)
 end
 savefig("blob evolution.png")
@@ -132,16 +133,26 @@ for (i, A) in enumerate(amplitudes)
     diagnostics = [RadialCOMDiagnostic(1), ProgressDiagnostic(100), PlotDensityDiagnostic(1000),]
     prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], [0, tends[i]], p=parameters, dt=dts[i])
     # Reset diagnostics
-    diagnostics = [RadialCOMDiagnostic(1), ProgressDiagnostic(100), PlotDensityDiagnostic(1000),]
+    diagnostics = [RadialCOMDiagnostic(1), ProgressDiagnostic(100)]#, PlotDensityDiagnostic(1000),]
     # Update output
-    output = Output(prob, 21, diagnostics)
+    output = Output(prob, 21, diagnostics, "output/Garcia 2005 PoP.h5", store_locally=false, simulation_name=string(A))
     # Solve 
-    sol = spectral_solve(prob, MSS3(), output)
+    sol = spectral_solve(prob, MSS3(), output, resume=true)
     # Extract velocity
-    velocities[i] = extract_diagnostic(sol.diagnostics[1].data)
+    velocities[i] = sol.simulation["RadialCOMDiagnostic/data"][:, :]
     # Determine max velocity
     max_velocities[i] = maximum(velocities[i][2, :])
 end
 
-plot(amplitudes, max_velocities, xaxis=:log, yaxis=:log, marker=:circle, xlabel=L"\Delta n/N", ylabel="max "*L"V", label="")
-savefig("blob velocity linear.pdf")
+plot(amplitudes, max_velocities, xaxis=:log, yaxis=:log, aspect_ratio=:auto, marker=:circle, xlabel=L"\Delta n/N", ylabel="max " * L"V", label="")
+savefig("figures/blob velocity linear.pdf")
+
+using JLD
+jldopen("output/blob velocity linear.jld", "w") do file
+    g = create_group(file, "data")
+    g["amplitudes"] = amplitudes
+    g["max_velocitites"] = max_velocities
+end
+
+send_mail("Multiple attachments test", attachment="figures/blob velocity linear.pdf")
+close(output.file)
