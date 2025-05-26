@@ -1,9 +1,7 @@
 ## Run all (alt+enter)
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
-## Run scheme test for Burgers equation
-domain = Domain(1024, 1024, 50, 50, anti_aliased=false)
-#domain = Domain(256, 256, 50, 50, anti_aliased=false)
+domain = Domain(1024, 1024, 50, 50, anti_aliased=true)
 u0 = gaussian.(domain.x', domain.y, A=1, B=0, l=1)
 
 # Linear operator
@@ -37,7 +35,7 @@ t_span = [0, 20]
 FFTW.set_num_threads(16)
 
 # The problem
-prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=1e-2)#3)
+prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=1e-3)
 
 # Array of diagnostics want
 diagnostics = [
