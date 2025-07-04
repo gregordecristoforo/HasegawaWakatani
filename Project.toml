@@ -24,6 +24,7 @@ PythonPlot = "274fc56d-3b97-40fa-a1cd-1b4a50311bf9"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 SMTPClient = "c35d69d1-b747-5018-a192-25bc5e63c83d"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [compat]
@@ -31,3 +32,4 @@ CUDA = "5.6.1"
 JLD = "0.13.5"
 Peaks = "0.5.3"
 Plots = "1.40.9"
+StatsPlots = "0.15.7"

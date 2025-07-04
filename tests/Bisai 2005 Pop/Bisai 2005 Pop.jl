@@ -74,7 +74,7 @@ diagnostics = [
 # Output
 cd(relpath(@__DIR__, pwd()))
 output = Output(prob, 1001, diagnostics, "output/Bisai.h5",
-    simulation_name=:parameters, store_locally=false)
+    simulation_name="last run", store_locally=false)
 
 FFTW.set_num_threads(16)
 
@@ -94,3 +94,9 @@ close(output.file)
 
 # bisai_php_19_052509 gives Lₓ = L_y = 160ρₛ, g = 1e-3, 128-modes
 # bisai_php_12_072520 gives dt = \omega_c^{-1}, g = 8e-4
+
+fid = h5open("output/Bisai.h5")
+sim = fid["last run"]
+
+heatmap(sim["fields"][:,:,1,1000])
+savefig("Bisai example.pdf")

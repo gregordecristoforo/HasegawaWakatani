@@ -29,7 +29,7 @@ parameters = Dict(
 )
 
 # Time interval
-t_span = [0, 20]
+t_span = [0, 50]
 
 # Speed up simulation
 FFTW.set_num_threads(16)
@@ -41,9 +41,9 @@ prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, 
 diagnostics = [
     #ProbeDensityDiagnostic([(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], N=10),
     #RadialCOMDiagnostic(1),
-    PlotDensityDiagnostic(5),
+    PlotDensityDiagnostic(1000),
     ProgressDiagnostic(100),
-    CFLDiagnostic(1),
+    #CFLDiagnostic(1),
     #PlotDensityDiagnostic(1000),
     #PlotVorticityDiagnostic(1000),
     #PlotPotentialDiagnostic(1000),
@@ -111,8 +111,8 @@ plot!(t, probe_data[4, :], label=L"x=" * "$(positions[4])")
 savefig("blob probe data.pdf")
 
 ## Recreate max velocity plot
-tends = logspace(2, -2, 22)
-dts = tends / 2000
+tends = 2*logspace(2, -2, 22)
+dts = 1/2 * tends / 2000
 amplitudes = logspace(-2, 5, 22)
 max_velocities = similar(amplitudes)
 velocities = Vector{Matrix}(undef, length(amplitudes))
@@ -121,7 +121,7 @@ parameters = Dict(
     "nu" => 1e-3,
     "kappa" => 1e-3
 )
-
+ 
 for (i, A) in enumerate(amplitudes)
     # Update initial initial_condition
     u0 = gaussian.(domain.x', domain.y, A=A, B=0, l=1)
@@ -135,11 +135,13 @@ for (i, A) in enumerate(amplitudes)
     # Update output
     output = Output(prob, 21, diagnostics, "output/Garcia 2005 PoP.h5", store_locally=false, simulation_name=string(A))
     # Solve 
-    sol = spectral_solve(prob, MSS3(), output, resume=true)
+    sol = spectral_solve(prob, MSS3(), output, resume=false)
     # Extract velocity
     velocities[i] = sol.simulation["RadialCOMDiagnostic/data"][:, :]
     # Determine max velocity
     max_velocities[i] = maximum(velocities[i][2, :])
+
+    CUDA.pool_status()
 end
 
 plot(amplitudes, max_velocities, xaxis=:log, yaxis=:log, aspect_ratio=:auto, marker=:circle, xlabel=L"\Delta n/N", ylabel="max " * L"V", label="")
@@ -154,3 +156,38 @@ end
 
 send_mail("Multiple attachments test", attachment="figures/blob velocity linear.pdf")
 close(output.file)
+
+##
+fid = h5open("output/Garcia 2005 PoP.h5")
+sim = fid[keys(fid)[end-1]]
+data = sim["RadialCOMDiagnostic/data"][1,:]
+
+idx = [10,7,4]
+key_strings = string.(amplitudes)[idx]
+for key in key_strings
+    #if sum(fid[key]["RadialCOMDiagnostic/data"][2,1:end].<0) != 0
+    #    println(minimum(fid[key]["RadialCOMDiagnostic/data"][2,1:end]))
+    #end
+    plot!(fid[key]["RadialCOMDiagnostic/t"][:], fid[key]["RadialCOMDiagnostic/data"][2,1:end], aspect_ratio=:auto)
+end
+display(plot())
+display(plot!(legend=false))
+
+sim = fid[keys(fid)[end]]
+
+(sum(sim["fields"][:,:,1,1])-sum(sim["fields"][:,:,1,9]))/sum(sim["fields"][:,:,1,1])
+
+t = fid[key_strings[2]]["RadialCOMDiagnostic/t"][:]
+
+using JLD
+jldopen("output/blob evolution linear.jld", "w") do file
+    g = create_group(file, "data")
+    g["10"] = fid[key_strings[1]]["RadialCOMDiagnostic/data"][2,1:end]
+    g["1.0"] = fid[key_strings[2]]["RadialCOMDiagnostic/data"][2,1:end]
+    g["0.1"] = fid[key_strings[3]]["RadialCOMDiagnostic/data"][2,1:end]
+    g["t1"] = fid[key_strings[1]]["RadialCOMDiagnostic/t"][:]
+    g["t2"] = fid[key_strings[2]]["RadialCOMDiagnostic/t"][:]
+    g["t3"] = fid[key_strings[3]]["RadialCOMDiagnostic/t"][:]
+end
+
+fid["0.1"]["RadialCOMDiagnostic/data"][2,1:end]

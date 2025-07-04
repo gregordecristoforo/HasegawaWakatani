@@ -127,13 +127,21 @@ heatmap(data[:,:,1,end])#,aspect_ratio=:equal)
 
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 cd(relpath(@__DIR__, pwd()))
-fid = h5open("output/gyro-bohm=5e-2 CUDA.h5", "r")
+fid = h5open("output/gyro-bohm=1e-2 CUDA.h5", "r")
 sim = fid[keys(fid)[1]]
-data = sim["All probe/data"][:,:,1:argmax(t)]
-t = sim["All probe/t"][1:argmax(t)]#+1_000_000]
+data = sim["All probe/data"][:,:,1:N]
+t = sim["All probe/t"][1:N]
+dt = 0.01
+t = LinRange(0.0, dt*N, N)
+
+sim["All probe/t"][N+12_987_702]
+N
+N = sim["t"][2]*argmax(sim["t"][:])/sim["All probe/t"][2]
+
+N = round(Int64,N)
 
 using JLD
-jldopen("output/all probes sigma=5e-2 10 probes CUDA.jld", "w") do file
+jldopen("output/all probes sigma=1e-2 10 probes CUDA.jld", "w") do file
     g = create_group(file, "data")
     g["n"] = data[:,1,1:argmax(t)]
     g["Omega"] = data[:,2,1:argmax(t)]
@@ -144,12 +152,109 @@ jldopen("output/all probes sigma=5e-2 10 probes CUDA.jld", "w") do file
 end
 
 
+## Thesis images
+fid = h5open("output/gyro-bohm=1e-1 CUDA.h5", "r")
+domain = Domain(256, 256, 48, 48, anti_aliased=true, use_cuda=false)
 
-data[1,1,:]
+points = [(x, 0) for x in range(-24, 19.2, 10)]
 
-data = sim["fields"][:,:,:,:]
+for N in 30
+    sim = fid[keys(fid)[1]]
+    sigma = read_attribute(sim, "sigma")
+    n = sim["fields"][:,:,1,N]
+    t = sim["t"][N] 
+    heatmap(domain, n ,title="Probe positions"#L"n(x,y,t=15000 \omega_c),\ [\ \sigma="*string(sigma)*L",\ g=0.1,\ D=0.01\ ]"
+    , xlabel=L"x\ [\rho_s]", 
+    ylabel=L"y\ [\rho_s]", size=[600,550], margin=0Plots.px, top_margin=-100Plots.px, bottom_margin=-40Plots.px, titlefontsize=12, labelfontsize=10)#, color="black")
+    #display(contour!(domain.x, domain.y, n, color=:black))
+    scatter!(points,label="", markersize=4.5)
+    display(plot!())
+    savefig("probe positions.pdf")
+end
 
-heatmap(data[:,:,1,25])
 
-fid = h5open("output/sheath-interchange g=1e-2.h5", "r")
-sim = fid["D_n=0.01, D_Ω=0.01, N=1.0, g=0.01, kappa=0.31622776601683794, sigma_n=0.001, sigma_Ω=0.001"]
+sim = fid[keys(fid)[1]]
+
+K = sim["Kinetic energy integral/data"][1:320_959]
+P = sim["Potential energy integral/data"][1:320_959]
+
+probe_data = sim["All probe/data"][:,:,1:320_959]
+n = probe_data[:,1,:]
+Ω = probe_data[:,2,:]
+ϕ = probe_data[:,3,:]
+vx = probe_data[:,4,:]
+Γ = probe_data[:,5,:]
+
+plot(K, aspect_ratio=:auto)
+plot!(P)
+
+using Statistics
+K_n = (K.-mean(K))./(std(K))
+P_n = (P.-mean(P))./std(P)
+n_n = (n.-mean(n,dims=1))./std(n,dims=1)
+ϕ_n = (ϕ.-mean(ϕ,dims=1))./std(ϕ,dims=1)
+Ω_n = (Ω.-mean(Ω,dims=1))./std(Ω,dims=1)
+vx_n = (vx.-mean(vx,dims=1))./std(vx,dims=1)
+Γ_n = (Γ.-mean(Γ,dims=1))./std(Γ,dims=1)
+
+plot(K_n, aspect_ratio=:auto)
+plot!(P_n, aspect_ratio=:auto)
+
+plot(K_n[1:10000], aspect_ratio=:auto)
+plot(P_n[1:10000], aspect_ratio=:auto)
+
+plot(n_n[:,1:7000]', aspect_ratio=:auto)
+plot(ϕ_n[:,1:10000]', aspect_ratio=:auto)
+plot(Ω_n[:,1:10000]', aspect_ratio=:auto)
+
+histogram(n_n', nbis=64, aspect_ratio=:auto, yaxis=:log10)
+histogram(ϕ_n', nbis=64, aspect_ratio=:auto, yaxis=:log10)
+histogram(Ω_n', nbis=64, aspect_ratio=:auto, yaxis=:log10)
+histogram(vx_n', nbis=64, aspect_ratio=:auto, yaxis=:log10)
+histogram(Γ_n', nbis=64, aspect_ratio=:auto)
+
+sim["All probe/t"][7000]
+
+
+
+
+
+spectra = sim["Radial potential energy spectra/data"][:,1,1:100_000]
+sim["Radial kinetic energy spectra/t"][10000]
+
+mean_spectra = mean(spectra,dims=2)
+
+plot(mean_spectra, xaxis=:log10, aspect_ratio=:auto,label="")
+
+heatmap(sim["fields"][:,:,1,100])
+modes = fft(sim["fields"][:,:,1,100])
+
+heatmap(sign.(imag.(modes)))
+
+sign(-2)
+
+plot(fftshift(domain.kx)[130:end], fftshift(mean_spectra)[130:end], aspect_ratio=:auto, xaxis=:log10)
+
+
+fftshift(domain.kx)[129]
+argmax(fftshift(mean_spectra))
+
+sim
+
+heatmap(fftshift(abs.(modes)))
+
+plot(abs.(modes)[:,1], aspect_ratio=:auto, yaxis=:log10)
+
+## Determine structure size
+using Statistics
+n = sim["fields"][:,:,1,:]
+n_x_2 = sum(n, dims=1)[1,:,:]/domain.Ny
+specter1 = mean([abs.(fft(n_x_1[:,i])) for i in 1:1001])
+specter2 = mean([abs.(fft(n_x_2[:,i])) for i in 1:1001])
+
+plot(fftshift(specter1)[129:end]/sum(fftshift(specter1)[129:end]), aspect_ratio=:auto)
+plot!(fftshift(specter2)[129:end]/sum(fftshift(specter2)[129:end]), aspect_ratio=:auto)
+
+heatmap()
+
+plot(abs.(fft(mean(n,dims=3)[:,:,1])), aspect_ratio=:auto,label="")

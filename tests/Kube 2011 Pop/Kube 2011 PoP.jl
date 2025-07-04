@@ -10,7 +10,7 @@ u0 = log.(gaussian.(domain.x', domain.y, A=1e5, B=1, l=1))
 function L(u, d, p, t)
     D_η = p["kappa"] * diffusion(u, d)
     D_Ω = p["nu"] * diffusion(u, d)
-    [D_η;;; D_Ω]
+    cat(D_η, D_Ω, dims=3)
 end
 
 # Non-linear operator
@@ -23,7 +23,7 @@ function N(u, d, p, t)
     dη += p["kappa"] * quadraticTerm(diffY(η, d), diffY(η, d), d)
     dΩ = -poissonBracket(ϕ, Ω, d)
     dΩ -= diffY(η, d)
-    return [dη;;; dΩ]
+    return cat(dη, dΩ, dims=3)
 end
 
 # Parameters
@@ -48,21 +48,21 @@ prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, 
 
 # Array of diagnostics want
 diagnostics = [
-    RadialCOMDiagnostic(10),
+    RadialCOMDiagnostic(1),
     ProgressDiagnostic(100),
     PlotDensityDiagnostic(1000)
 ]
 
+# Folder path
+cd(relpath(@__DIR__, pwd()))
+
 # The output
-output = Output(prob, 201, diagnostics, "Kube 2011 Pop test2.h5", physical_transform=inverse_transformation)
+output = Output(prob, 201, diagnostics, "Kube 2011 Pop.h5", physical_transform=inverse_transformation, store_locally=false)
 
 ## Solve and plot
 sol = spectral_solve(prob, MSS3(), output)
 
 plot(output.simulation["RadialCOMDiagnostic/t"][1:200], output.simulation["RadialCOMDiagnostic/data"][2,1:200])
-
-# Folder path
-cd(relpath(@__DIR__, pwd()))
 
 ## Recreate max velocity plot Kube 2011
 tends = logspace(2, 0.30, 22)
@@ -88,7 +88,7 @@ for (i, A) in enumerate(amplitudes[12:end])
     # Reset diagnostics
     diagnostics = [RadialCOMDiagnostic(10), ProgressDiagnostic(100), PlotDensityDiagnostic(1000),]
     # Update output
-    output = Output(prob, 21, diagnostics, "Kube 2011 Pop 1024x1024 max vel.h5")
+    output = Output(prob, 21, diagnostics, "output/Kube 2011 Pop 1024x1024 max vel.h5")
     # Solve 
     sol = spectral_solve(prob, MSS3(), output)
     # Extract velocity
@@ -112,3 +112,48 @@ max_velocities = [0.08144987557214223, 0.12116171785371747, 0.17908891760090645,
  5.277028416262867, 5.570952278649872]
 
 ## Can use one of the many .h5 files and groups to reproduce other plots from section 2 A
+
+tends = [30, 15, 7]
+dts = tends / 10_000
+amplitudes = [0.1, 1, 10]
+max_velocities = similar(amplitudes)
+velocities = Vector{Matrix}(undef, length(amplitudes))
+
+for (i, A) in enumerate(amplitudes)
+    # Update initial initial_condition
+    u0 = gaussian.(domain.x', domain.y, A=A, B=0, l=1)
+    # Update problem 
+    prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], [0, tends[i]], p=parameters, dt=dts[i])
+    # Reset diagnostics
+    diagnostics = [RadialCOMDiagnostic(1), ProgressDiagnostic(100), PlotDensityDiagnostic(1000),]    
+    # Update output
+    output = Output(prob, 21, diagnostics, "Kube finale.h5", store_locally=false, simulation_name=string(A))
+    # Solve 
+    sol = spectral_solve(prob, MSS3(), output, resume=false)
+    # Extract velocity
+    velocities[i] = sol.simulation["RadialCOMDiagnostic/data"][:, :]
+    # Determine max velocity
+    max_velocities[i] = maximum(velocities[i][2, :])
+
+    CUDA.pool_status()
+end
+
+data = sol.simulation["RadialCOMDiagnostic/data"][2,:]
+
+fid = h5open("Kube finale.h5")
+sim = fid["1"]
+data = sim["RadialCOMDiagnostic/data"][2,:]
+plot(sim["RadialCOMDiagnostic/t"][:], data, aspect_ratio=:auto)
+
+using JLD
+jldopen("blob evolution kube.jld", "w") do file
+    g = create_group(file, "data")
+    g["10"] = fid["10"]["RadialCOMDiagnostic/data"][2,1:end]
+    g["1"] = fid["1"]["RadialCOMDiagnostic/data"][2,1:end]
+    g["0.1"] = fid["0.1"]["RadialCOMDiagnostic/data"][2,1:end]
+    g["t1"] = fid["10"]["RadialCOMDiagnostic/t"][:]
+    g["t2"] = fid["1"]["RadialCOMDiagnostic/t"][:]
+    g["t3"] = fid["0.1"]["RadialCOMDiagnostic/t"][:]
+end
+
+heatmap(sim["fields"][:,:,1,end])

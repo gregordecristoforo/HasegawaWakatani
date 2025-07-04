@@ -62,8 +62,8 @@ end
 function initial_condition_linear_stability(domain::Domain, value=10^-6)
     θ = 2 * π * rand(domain.Ny, domain.Nx)
     phi_hat = value * ones(domain.Ny, domain.Nx) .* exp.(im * θ)
-    phi_hat[:, 1] .= 0
-    phi_hat[1, :] .= 0
+    #phi_hat[:, 1] .= 0
+    #phi_hat[1, :] .= 0
     n_hat = phi_hat .* exp(im * pi / 2)
     [real(ifft(n_hat));;; real(ifft(phi_hat))]
 end
