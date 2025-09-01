@@ -1,5 +1,4 @@
 using FFTW
-export SpectralODEProblem
 
 # TODO add get_velocity=vExB,
 

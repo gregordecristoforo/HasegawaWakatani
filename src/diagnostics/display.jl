@@ -39,3 +39,5 @@ function compareGraphs(x, numerical, analytical; kwargs...)
     plot(x, numerical; label="Numerical", kwargs...)
     plot!(x, analytical; label="Analytical", kwargs...)
 end
+
+export PlotDensityDiagnostic, PlotPotentialDiagnostic, PlotVorticityDiagnostic

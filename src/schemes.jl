@@ -10,7 +10,8 @@ abstract type AbstractTableau end
 # Equivalent to DECache in SciMLBase 
 abstract type AbstractCache end
 
-export MMS1, MSS2, MSS3, perform_step!, get_cache, unpack_cache
+# TODO fix API
+export MMS1, MSS2, MSS3#, perform_step!, get_cache, unpack_cache
 
 # ----------------------------------------- MSS1 -------------------------------------------
 

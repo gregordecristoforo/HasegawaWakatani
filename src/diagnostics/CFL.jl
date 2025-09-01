@@ -1,7 +1,7 @@
 #---------------------------------- CFL ----------------------------------------------------
 
 # Calculate velocity assuming U_ExB = ̂z×∇Φ   
-function vExB(u::U, domain::D) where {U<:AbstractArray, D<:Domain}
+function vExB(u::U, domain::D) where {U<:AbstractArray,D<:Domain}
     W = u[:, :, 2] #Assumption
     W_hat = domain.transform.FT * W
     phi_hat = solvePhi(W_hat, domain)
@@ -27,8 +27,8 @@ function CFLDiagnostic(N::Int=100)
     Diagnostic("ExB cfl", cfl_ExB, N, "max CFL x, max CFL y")
 end
 
-function radial_cfl_ExB(u::U, prob::P, t::T, v::V=vExB) where {U<:AbstractArray, 
-    P<:SpectralODEProblem, T<:Number, V<:Function}
+function radial_cfl_ExB(u::U, prob::P, t::T, v::V=vExB) where {U<:AbstractArray,
+    P<:SpectralODEProblem,T<:Number,V<:Function}
     v_x, v_y = v(u, prob.domain)
     [maximum(v_x) * prob.dt / domain.dx, argmax(v_x)]
 end
@@ -52,3 +52,5 @@ end
 function BurgerCFLDiagnostic(N::Int=100)
     Diagnostic("Burger CFL", burgerCFL, N, "CFL")
 end
+
+export CFLDiagnostic, RadialCFLDiagnostic, BurgerCFLDiagnostic

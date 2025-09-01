@@ -147,7 +147,7 @@ function handle_output!(output::O, step::Int, u::T, prob::SOP, t::N) where {O<:O
 
     # Auxilary name
     U = output.U_buffer
-    
+
     # Check wether or not to output 
     if step % output.stride == 0
         # Transform data
@@ -195,7 +195,7 @@ function handle_output!(output::O, step::Int, u::T, prob::SOP, t::N) where {O<:O
 
     # TODO remove?
     if step % 1000 == 0
-        output.store_hdf ? flush(output.file) : nothing 
+        output.store_hdf ? flush(output.file) : nothing
     end
 
     # Check if last value is NaN, if the matrix has one NaN the whole array will turn NaN after fft
@@ -323,3 +323,5 @@ end
 # function remove_zonal_modes!(u::U) where {U<:AbstractArray}
 #     @inbounds u[1, ntuple(_ -> :, ndims(u) - 1)...] .= 0
 # end
+
+export remove_zonal_modes, remove_streamer_modes, remove_asymmetric_modes!, remove_nothing

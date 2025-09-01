@@ -106,7 +106,7 @@ function expTransform(u::AbstractArray)
 end
 
 # ------------------------------- Convergence testing --------------------------------------
-function test_timestep_convergence(prob, analyticalSolution, timesteps, scheme=MSS3(); 
+function test_timestep_convergence(prob, analyticalSolution, timesteps, scheme=MSS3();
     physical_transform=identity, displayResults=true, kwargs...)
 
     #Initialize storage
@@ -150,9 +150,9 @@ function test_resolution_convergence(prob, initialField, analyticalSolution, res
 
         # Create higher resolution domain
         if oneDimensional
-            domain = Domain(1, N, od.Lx, od.Ly, realTransform=od.realTransform, anti_aliased = od.anti_aliased)
+            domain = Domain(1, N, od.Lx, od.Ly, realTransform=od.realTransform, anti_aliased=od.anti_aliased)
         else
-            domain = Domain(N, N, od.Lx, od.Ly, realTransform=od.realTransform, anti_aliased = od.anti_aliased)
+            domain = Domain(N, N, od.Lx, od.Ly, realTransform=od.realTransform, anti_aliased=od.anti_aliased)
         end
         u0 = initial_condition(initialField, domain) #TODO rethink initial condition 
 
@@ -236,7 +236,6 @@ import Plots.plot
 function plot(domain::Domain, args...; kwargs...)
     plot(domain.x, domain.y, args...; kwargs...)
 end
-
 # Extending PlotlyJS to easily plot surfaces when using Plots for academic figures
 function plotlyjsSurface(args...; kwargs...)
     i = findfirst(k -> k === :z, keys(kwargs))
@@ -246,7 +245,10 @@ function plotlyjsSurface(args...; kwargs...)
 end
 
 # --------------------------------------- Mailing ------------------------------------------
-using SMTPClient
+
+# TODO move outside of package
+
+#using SMTPClient
 
 function send_mail(subject; attachment="")
     # Dates.format(now(), RFC1123Format)

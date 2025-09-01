@@ -6,6 +6,9 @@ using .SpectralOperators
 
 # Assumed 1st direction uses rfft, while all others use fft
 """
+    Domain(N, L)
+    Domain(Nx, Ny, Lx, Ly)
+
 Box domain, that calculates spatial resolution under construction.
 
 # Contains

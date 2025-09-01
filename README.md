@@ -1,4 +1,8 @@
-﻿Code used for my master thesis to simulate sheath-interchange instability and resistive drift-wave turbulence in magnetized plasmas.
+﻿# HasegawaWakatani
+
+[![Build Status](https://github.com/JohannesMorkrid/HasegawaWakatani.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JohannesMorkrid/HasegawaWakatani.jl/actions/workflows/CI.yml?query=branch%3Amain)
+
+Code used for my master thesis to simulate sheath-interchange instability and resistive drift-wave turbulence in magnetized plasmas.
 The resisitve drift-wave turbulence is described by the Hasegawa-Wakatani model
 
 $$\frac{\partial n}{\partial t} + \\{\phi, n\\} + \kappa\frac{\partial\phi}{\partial y} = \alpha(\phi-n) + D_n\nabla^2_\perp n + D_n\nabla^2_\perp n$$

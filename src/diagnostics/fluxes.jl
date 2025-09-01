@@ -30,3 +30,5 @@ end
 function RadialFluxDiagnostic(N::Int=10)
     Diagnostic("Radial flux", radial_flux, N, "radial flux", assumesSpectralField=true)
 end
+
+export RadialFluxDiagnostic

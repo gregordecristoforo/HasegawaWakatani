@@ -30,7 +30,7 @@ function GetLogModeDiagnostic(N::Int=100, kx::K=:ky) where {K<:Union{Int,Symbol}
     Diagnostic("Log mode diagnostic", get_log_modes, N, "log(|u_k|)", assumesSpectralField=true, (), (kx=kx,))
 end
 
-function plotFrequencies(u::U) where {U<:AbstractArray}
+function plot_frequencies(u::U) where {U<:AbstractArray}
     heatmap(log10.(norm.(u)), title="Frequencies")
 end
 
@@ -76,7 +76,9 @@ function PoloidalKineticEnergySpectraDiagnostic(N::Int=100)
         "poloidal kinetic energy spectra", assumesSpectralField=true)
 end
 
-
+export GetModeDiagnostic, GetLogModeDiagnostic, RadialPotentialEnergySpectraDiagnostic,
+    PoloidalPotentialEnergySpectraDiagnostic, RadialKineticEnergySpectraDiagnostic,
+    PoloidalKineticEnergySpectraDiagnostic, plot_frequencies
 
 
 

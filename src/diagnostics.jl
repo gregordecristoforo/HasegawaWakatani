@@ -107,7 +107,7 @@ function initialize_diagnostic!(diagnostic::D, U::T, prob::SOP, simulation::S, h
 
             # Store intial diagnostic
             if isa(id, AbstractArray)
-                diagnostic.data[1] .= id  
+                diagnostic.data[1] .= id
             else
                 diagnostic.data[1] = copy(id)
             end
@@ -136,7 +136,7 @@ function perform_diagnostic!(diagnostic::D, step::Int, u::U, prob::SOP, t::N;
 
         if store_locally
             if isa(data, AbstractArray)
-                diagnostic.data[idx] .= data  
+                diagnostic.data[idx] .= data
             else
                 diagnostic.data[idx] = copy(data)
             end
