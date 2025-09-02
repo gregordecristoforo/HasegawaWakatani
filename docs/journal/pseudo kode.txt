@@ -1,9 +1,0 @@
-Input fil
-Lese inn fil
-Sette parametere
-Sende inn likning
-Integrere
-Lagre data etter N antall simuleringer
-Diagnotisering
-
-Domain = []

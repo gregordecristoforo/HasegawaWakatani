@@ -1,43 +1,58 @@
-#include("domain.jl")
 using FFTW
-export SpectralODEProblem
 
-# TODO add transform method, which is applied in handle_output! to recover function
-mutable struct SpectralODEProblem
-    L::Function
-    N::Function
-    domain::Domain
-    u0::AbstractArray
-    u0_hat::AbstractArray
-    tspan::AbstractArray
-    p::Dict
-    dt::Number
-    function SpectralODEProblem(N::Function, domain::Domain, u0, tspan; p=Dict(), dt=0.01)
-        u0_hat = transform(u0, domain.transform.FT)
-        # Remove the uneven modes
-        #u0_hat[:, domain.Nx÷2+1] .= 0
-        #u0_hat[domain.Ny÷2+1, :] .= 0
+# TODO add get_velocity=vExB,
+
+mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Type<:AbstractArray,
+    u0_hatType<:AbstractArray,tType<:AbstractArray,pType<:Dict,N<:Number,RM<:Function,kwargsType}
+
+    L::LType
+    N::NType
+    domain::D
+    u0::u0Type
+    u0_hat::u0_hatType
+
+    tspan::tType
+    p::pType
+
+    # Passed onto something # TODO find out what this something is
+    dt::N
+    remove_modes::RM
+    kwargs::kwargsType
+
+    function SpectralODEProblem(N::Function, domain::Domain, u0, tspan;
+        p=Dict(), dt=0.01, kwargs...)
 
         # If no linear operator given, assume there is non
         function L(u, d, p, t)
             zero(u)
         end
 
+        SpectralODEProblem(L, N, domain, u0, tspan, p=p, dt=dt, kwargs...)
+    end
+
+    # function SpectralODEProblem(L::F, N::F, domain::D, u0, tspan; p=Dict(),
+    #     dt=0.01, inverse_transformation::F=identity) where {F<:Function, D}
+    function SpectralODEProblem(L::Function, N::Function, domain::Domain, u0, tspan;
+        p=Dict(), dt=0.01, remove_modes=remove_nothing, kwargs...)
+
+        sz = size(domain.transform.iFT)
+        allocation_size = (sz..., size(u0)[length(sz)+1:end]...)
+        u0_hat = zeros(eltype(domain.transform.iFT), allocation_size...)
+        spectral_transform!(u0_hat, u0, domain.transform.FT)
+        remove_modes(u0_hat, domain)
+
         if length(tspan) != 2
             throw("tspan should have exactly two elements tsart and tend")
         end
 
-        new(L, N, domain, u0, u0_hat, tspan, p, dt)
+        new{typeof(L),typeof(N),typeof(domain),typeof(u0),typeof(u0_hat),typeof(tspan),
+            typeof(p),typeof(dt),typeof(remove_modes),typeof(kwargs)}(L, N, domain, u0, u0_hat,
+            tspan, p, dt, remove_modes, kwargs)
     end
+end
 
-    function SpectralODEProblem(L::Function, N::Function, domain::Domain, u0, tspan; p=Dict(), dt=0.01)
-        u0_hat = transform(u0, domain.transform.FT)
-        #u0_hat[:, domain.Nx÷2+1] .= 0
-        #u0_hat[domain.Ny÷2+1, :] .= 0
+#Need to handle kwargs like dt = 0.01, inverse_transformation::F=identity somewhere!
 
-        if length(tspan) != 2
-            throw("tspan should have exactly two elements tsart and tend")
-        end
-        new(L, N, domain, u0, u0_hat, tspan, p, dt)
-    end
+function Base.display(prob::SpectralODEProblem)
+    println(typeof(prob))
 end

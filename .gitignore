@@ -3,3 +3,10 @@
 *.pdf
 *.svg
 *.png
+*.h5
+*.jlprof
+.env.*
+*.env
+.env
+*.gif
+/Manifest*.toml

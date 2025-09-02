@@ -1,19 +1,47 @@
 using FFTW
-export TransformPlans, FFTPlans, rFFTPlans, multi_fft, multi_ifft
-
-# Collection of plans for a transform and its inverse
+using LinearAlgebra
+export TransformPlans, FFTPlans, rFFTPlans, spectral_transform, spectral_transform!,
+    multi_fft, multi_ifft
 
 abstract type TransformPlans end
 
-struct FFTPlans <: TransformPlans
-    FT::FFTW.Plan
-    iFT::FFTW.Plan
+struct FFTPlans{F,B} <: TransformPlans where {F<:FFTW.Plan,B<:FFTW.Plan}
+    FT::F
+    iFT::B
 end
 
-struct rFFTPlans <: TransformPlans
-    FT::FFTW.Plan
-    iFT::FFTW.Plan
+struct rFFTPlans{F,B} <: TransformPlans where {F<:FFTW.Plan,B<:FFTW.Plan}
+    FT::F
+    iFT::B
 end
+
+# General transform plans
+function spectral_transform(U::T, p::P) where {T<:AbstractArray,P<:FFTW.Plan}
+    mapslices(u -> p * u, U, dims=(1, 2))
+end
+
+function spectral_transform(U::T, p::P) where {T<:Union{Tuple,Vector},P<:FFTW.Plan}
+    map(u -> p * u, U)
+end
+
+function spectral_transform!(du::DU, u::U, p::P) where {DU<:AbstractArray,U<:AbstractArray,P<:FFTW.Plan}
+    @assert ndims(du) == ndims(u)
+    idx = ntuple(_ -> :, ndims(p))
+    for i in axes(u, ndims(p) + 1)
+        mul!(view(du, idx..., i), p, u[idx..., i])
+    end
+end
+
+function spectral_transform!(du::DU, u::U, p::P) where {DU<:Union{Tuple,Vector},
+    U<:Union{Tuple,Vector},P<:FFTW.Plan}
+    for i in eachindex(u)
+        mul!(du[i], p, u[i])
+    end
+end
+
+# ------------------------------------- Old ------------------------------------------------
+# TODO make these typed or remove
+# Collection of plans for a transform and its inverse
 
 # Fourier transform applied to "stacked" fields
 function multi_fft(U::AbstractArray, plans::TransformPlans)
@@ -32,14 +60,4 @@ end
 
 function multi_ifft(U::Union{Tuple,Vector}, plans::TransformPlans)
     map(u -> plans.iFT * u, U)
-end
-
-# TODO possibly rename to spectral_transform
-# General transform plan
-function transform(U::AbstractArray, p::FFTW.Plan)
-    mapslices(u -> p * u, U, dims=(1, 2))
-end
-
-function transform(U::Union{Tuple,Vector}, p::FFTW.Plan)
-    map(u -> p * u, U)
 end
