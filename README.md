@@ -1,6 +1,6 @@
 ﻿# HasegawaWakatani
 
-[![Build Status](https://github.com/JohannesMorkrid/HasegawaWakatani.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JohannesMorkrid/HasegawaWakatani.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Build Status](https://github.com/JohannesMorkrid/HasegawaWakatani/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JohannesMorkrid/HasegawaWakatani/actions/workflows/CI.yml?query=branch%3Amain)
 
 Code used for my master thesis to simulate sheath-interchange instability and resistive drift-wave turbulence in magnetized plasmas.
 The resisitve drift-wave turbulence is described by the Hasegawa-Wakatani model
@@ -33,3 +33,4 @@ Things want to add in future versions:
 * In-place all the way
 * Rosenbrock-Euler method for first step
 * CUDA support
+
