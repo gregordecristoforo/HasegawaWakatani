@@ -322,7 +322,7 @@ default(frame=:box, dpi=300, size=(300 * 3.37, 300 * 2.08277), fontfamily="Compu
     minorticks=true, markersize=2.25, widen=1.1, aspect_ratio=:equal)
 
 # TODO add support for log plots, yikes
-import PythonPlot
+#= import PythonPlot
 macro pythonticks(expr)
     # Ensure the macro is hygienic
     @assert expr.head == :call "The macro only works with function calls."
@@ -347,4 +347,4 @@ macro pythonticks(expr)
     # Construct a new call to `plot` with the injected ticks
     new_expr = Expr(:call, new_args...)
     return esc(new_expr)  # Return the modified expression
-end
+end =#
