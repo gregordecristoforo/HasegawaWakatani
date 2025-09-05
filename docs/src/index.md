@@ -1,4 +1,4 @@
-# Hasegawa Wakatini Project Documentation
+# Hasegawa Wakatani Project Documentation
 
 Welcome to the documentation page. 
 
@@ -6,12 +6,11 @@ Welcome to the documentation page.
     This tutorial just offered a quick glimpse on Julia's built-in documentation system, make sure to read the docs for more.
 
 ```@docs
-    HasagawaWakatini
-    HasagawaWakatini.Helperfunctions.ifftPlot
-    Domain
+HasegawaWakatani.Domain
+HasegawaWakatani.ifftPlot
 ```
 
-```@autodocs
-    Modules = [Operators, Timestepper]
-    Pages = ["Operators.jl","Timestepper.jl"]
-```
+<!--```@autodocs
+    Modules = [Domain, SpectralOperators]
+    Pages = ["domain.jl", "spectralOperators.jl"]
+```-->
