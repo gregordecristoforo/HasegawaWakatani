@@ -4,6 +4,8 @@ using FFTW
 include("spectralOperators.jl")
 using .SpectralOperators
 
+abstract type AbstractDomain end
+
 # Assumed 1st direction uses rfft, while all others use fft
 """
     Domain(N, L)
@@ -26,7 +28,7 @@ Rectangular Domain can be constructed using:\\
 ``Domain(Nx,Ny,Lx,Ly)``
 """
 struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractArray,
-    SOC<:SpectralOperatorCache,TP<:TransformPlans}
+    SOC<:SpectralOperatorCache,TP<:TransformPlans} <: AbstractDomain
 
     Nx::Int
     Ny::Int
@@ -79,6 +81,8 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
             transform_plans, realTransform, anti_aliased, nfields)
     end
 end
+
+Base.showarg(io::IO, Ω::Domain, toplevel) = print(io, typeof(Ω))
 
 # Allow spectralOperators to be called using the domains
 

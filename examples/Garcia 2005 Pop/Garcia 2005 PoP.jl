@@ -32,6 +32,9 @@ parameters = Dict(
     "kappa" => 1e-2
 )
 
+# TODO add this!
+parameters = (ν=1e-2, κ=1e-2)
+
 # Time interval
 t_span = [0, 20]
 

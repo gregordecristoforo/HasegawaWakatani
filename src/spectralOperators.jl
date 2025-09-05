@@ -235,7 +235,7 @@ end
 
 # ----------------------- Testing out ------------------------------------------------------
 
-abstract type AbstractSpectralOperator end
+#= abstract type AbstractSpectralOperator end
 
 # Create two types of operators
 struct SpectralLinearOperator <: AbstractSpectralOperator 
@@ -269,4 +269,4 @@ end
 L = SpectralLinearOperator()
 u = zeros(12)
 
-L(u)
+L(u) =#
