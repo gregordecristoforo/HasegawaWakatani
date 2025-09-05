@@ -1,7 +1,3 @@
-#"""
-#Includes Domain, diagnostics, utilities, spectralSolve, spectralODEProblem and schemes
-#"""
-
 module HasegawaWakatani
 
 #using DotEnv                     # ✓
@@ -25,3 +21,6 @@ include("utilities.jl")          # ✓
 # Main API
 export Domain, SpectralODEProblem, spectral_solve, Output
 end
+
+# TODO remove
+#Includes Domain, diagnostics, utilities, spectralSolve, spectralODEProblem and schemes
