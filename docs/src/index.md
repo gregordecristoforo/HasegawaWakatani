@@ -13,4 +13,6 @@ HasegawaWakatani.ifftPlot
 <!--```@autodocs
     Modules = [Domain, SpectralOperators]
     Pages = ["domain.jl", "spectralOperators.jl"]
-```-->
+```
+Includes Domain, diagnostics, utilities, spectralSolve, spectralODEProblem and schemes
+-->

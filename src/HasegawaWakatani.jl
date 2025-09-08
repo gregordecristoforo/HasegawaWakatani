@@ -4,7 +4,7 @@ using FFTW, HDF5, H5Zblosc, LinearAlgebra, LaTeXStrings, MuladdMacro, UnPack, Ba
     Dates, Printf
 
 # TODO make ext
-using Plots, Interpolations
+using Plots
 
 include("domains/domain.jl")
 export Domain, diff_x, diff_xx, diff_y, diff_yy, poisson_bracket, solve_phi, quadratic_term,
