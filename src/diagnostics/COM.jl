@@ -2,7 +2,7 @@
 
 # TODO add argument for using quadratures
 function radial_COM(u::U, prob::SOP, t::T, p::P) where {U<:AbstractArray,SOP<:SpectralODEProblem,
-    T<:Number, P<:Dict}
+    T<:Number,P<:Dict}
     # 2:end is because the boundaries are periodic and thus should not contribute
     X_COM = @views sum(prob.domain.x[2:end]' .* u[2:end, 2:end, 1]) / sum(u[2:end, 2:end, 1])
 

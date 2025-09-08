@@ -1,11 +1,7 @@
-include("fftutilities.jl")
-
-export spectralSolve
-
 # Assuming for now that dt is fixed
 # If custom outputter is not provided, then resort to default
 # First step is stored during initilization of output
-function spectral_solve(prob::SOP, scheme::SA=MSS3(), output::O=Output(prob, 100); 
+function spectral_solve(prob::SOP, scheme::SA=MSS3(), output::O=Output(prob, 100);
     resume::Bool=false) where {SOP<:SpectralODEProblem,SA<:AbstractODEAlgorithm,O<:Output}
     # Initialize cache
     if resume && output.store_hdf && haskey(output.simulation, "cache_backup")
@@ -23,6 +19,9 @@ function spectral_solve(prob::SOP, scheme::SA=MSS3(), output::O=Output(prob, 100
 
     # Calculate number of steps
     total_steps = floor(Int, (last(prob.tspan) - first(prob.tspan)) / dt)
+
+    # Enable CTRL+C from terminal outside of interactive mode
+    Base.exit_on_sigint(false)
 
     try
         # This method assumes step number does not overflow!

@@ -1,6 +1,3 @@
-using MuladdMacro
-using UnPack
-
 # TODO inherit type from SciML 
 abstract type AbstractODEAlgorithm end
 
@@ -9,8 +6,6 @@ abstract type AbstractTableau end
 
 # Equivalent to DECache in SciMLBase 
 abstract type AbstractCache end
-
-export MMS1, MSS2, MSS3, perform_step!, get_cache, unpack_cache
 
 # ----------------------------------------- MSS1 -------------------------------------------
 

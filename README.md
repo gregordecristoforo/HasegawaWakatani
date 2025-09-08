@@ -1,4 +1,8 @@
-﻿Code used for my master thesis to simulate sheath-interchange instability and resistive drift-wave turbulence in magnetized plasmas.
+﻿# HasegawaWakatani
+
+[![Build Status](https://github.com/JohannesMorkrid/HasegawaWakatani/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JohannesMorkrid/HasegawaWakatani/actions/workflows/CI.yml?query=branch%3Amain)
+
+Code used for my master thesis to simulate sheath-interchange instability and resistive drift-wave turbulence in magnetized plasmas.
 The resisitve drift-wave turbulence is described by the Hasegawa-Wakatani model
 
 $$\frac{\partial n}{\partial t} + \\{\phi, n\\} + \kappa\frac{\partial\phi}{\partial y} = \alpha(\phi-n) + D_n\nabla^2_\perp n + D_n\nabla^2_\perp n$$
@@ -19,7 +23,7 @@ with $\Omega = \nabla^2\phi$. The code features:
 * 2/3 Antialiasing on quadratic terms and non-linear functions
 * Diagnostic modules
 
-![Alt Text](vorticity.gif)
+![Alt Text](assets/vorticity.gif)
 
 The code atempts to be modular and generalizable to be able to solve other spectral problems. 
 
@@ -29,3 +33,4 @@ Things want to add in future versions:
 * In-place all the way
 * Rosenbrock-Euler method for first step
 * CUDA support
+

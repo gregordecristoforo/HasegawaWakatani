@@ -22,7 +22,7 @@ end
 
 function plot_potential(u::U, prob::P, t::T) where {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
     d = prob.domain
-    phi = d.transform.iFT * solvePhi(u[:, :, 2], d)
+    phi = d.transform.iFT * solve_phi(u[:, :, 2], d)
     digits = ceil(Int, -log10(prob.dt))
     display(heatmap(prob.domain, Array(phi), aspect_ratio=:equal, xlabel="x", ylabel="y",
         title=L"\Phi" * "(x, t = $(round(t, digits=digits)))"))
@@ -30,12 +30,4 @@ end
 
 function PlotPotentialDiagnostic(N::Int=1000)
     Diagnostic("Plot potential", plot_potential, N, "Display potential", assumesSpectralField=true, storesData=false)
-end
-
-# TODO is this used?
-# ---------------------------------------- Plotting ----------------------------------------
-
-function compareGraphs(x, numerical, analytical; kwargs...)
-    plot(x, numerical; label="Numerical", kwargs...)
-    plot!(x, analytical; label="Analytical", kwargs...)
 end

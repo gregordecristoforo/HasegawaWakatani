@@ -9,3 +9,5 @@
 *.env
 .env
 *.gif
+/Manifest*.toml
+Manifest.toml

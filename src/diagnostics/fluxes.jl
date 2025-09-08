@@ -1,5 +1,4 @@
 # -------------------------------------- Fluxes  -------------------------------------------
-using Base.Threads
 
 #Γ_0(t) = 1/(L_xL_y)∫_0^L_x∫_0^L_y nv_x dydx
 # Does not take into account anti-aliasing
@@ -9,8 +8,8 @@ function radial_flux(u::U, prob::P, t::T; quadrature=nothing) where
 
     n_hat = @view u[:, :, 1]
     Ω_hat = @view u[:, :, 2]
-    ϕ_hat = solvePhi(Ω_hat, prob.domain)
-    dϕ_hat = diffY(ϕ_hat, prob.domain)
+    ϕ_hat = solve_phi(Ω_hat, prob.domain)
+    dϕ_hat = diff_y(ϕ_hat, prob.domain)
     vx = zeros(size(prob.domain.transform.FT)) # TODO cache these perhaps?
     n = similar(vx)
     task_vx = Threads.@spawn mul!(vx, prob.domain.transform.iFT, dϕ_hat)

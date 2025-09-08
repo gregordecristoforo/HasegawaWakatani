@@ -4,7 +4,7 @@
 
 # TODO improve 
 function probe_field(u::U, domain::D, positions::P; interpolation::I=nothing) where {
-    U<:AbstractArray,D<:Domain,P<:Union{AbstractArray,Tuple,Number},I<:Union{Nothing,Function}}
+    U<:AbstractArray,D<:AbstractDomain,P<:Union{AbstractArray,Tuple,Number},I<:Union{Nothing,Function}}
     # Check if the user sent in tuple of points or single point
     if isa(positions, Tuple) && isa(positions[1], Number)
         positions = [positions]
@@ -18,7 +18,7 @@ function probe_field(u::U, domain::D, positions::P; interpolation::I=nothing) wh
     if domain.use_cuda
         u = Array(u)
     end
-    
+
     if isnothing(interpolation)
         for n in eachindex(positions)
             i = argmin(abs.(domain.x .- positions[n][1]))
@@ -43,8 +43,8 @@ function is_in_domain(positions, domain::Domain)
         positions = [positions]
     end
 
-    if sum((first.(positions) .- first(domain.x)).*(first.(positions) .- last(domain.x)) .> 0) != 0 ||
-        sum((last.(positions) .- first(domain.y)).*(last.(positions) .- last(domain.y)) .> 0) != 0 
+    if sum((first.(positions) .- first(domain.x)) .* (first.(positions) .- last(domain.x)) .> 0) != 0 ||
+       sum((last.(positions) .- first(domain.y)) .* (last.(positions) .- last(domain.y)) .> 0) != 0
         return false
     else
         return true
@@ -110,7 +110,7 @@ function probe_potential(u::U, prob::SOP, t::N, positions::P; interpolation::I=n
     if t == first(prob.tspan)
         is_in_domain(positions, domain) ? nothing : error("One or more probes are outside the domain")
     end
-    
+
     ϕ_hat = @views solvePhi(u[:, :, 2], prob.domain)
     ϕ = prob.domain.transform.iFT * ϕ_hat
     probe_field(ϕ, prob.domain, positions; interpolation)
@@ -172,8 +172,8 @@ function probe_all(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing
     end
 
     # Calculate spectral fields
-    ϕ_hat = @views solvePhi(u[:, :, 2], prob.domain)
-    v_x_hat = -diffY(ϕ_hat, prob.domain)
+    ϕ_hat = @views solve_phi(u[:, :, 2], prob.domain)
+    v_x_hat = -diff_y(ϕ_hat, prob.domain)
 
     # Cache for transformation
     cache = zeros(size(prob.domain.transform.FT))

@@ -33,7 +33,7 @@ function project(x, y, u::Array; alongX=nothing, alongY=nothing, interpolation=n
 end
 
 # Extend functionality to domains
-function project(domain::D, u::U; kwargs...) where {D<:Domain, U<:AbstractArray}
+function project(domain::D, u::U; kwargs...) where {D<:AbstractDomain,U<:AbstractArray}
     project(domain.x, domain.y, u; kwargs...)
 end
 
@@ -44,3 +44,5 @@ end
 #y2 = range(extrema(y)..., length=200)
 # Interpolate
 #z2 = [itp(x, y) for y in y2, x in x2]
+
+export project
