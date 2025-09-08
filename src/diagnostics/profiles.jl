@@ -27,6 +27,3 @@ function radial_flux_profile(u::U, prob::P, t::T; quadrature=nothing) where {U<:
     v_x, v_y = vExB(u, prob.domain)
     sum(u[:, :, 1] .* v_x, dims=1)' / prob.domain.Ly
 end
-
-export radial_density_profile, poloidal_density_profile, radial_vorticity_profile, poloidal_vorticity_profile,
-    poloidal_vorticity_profile

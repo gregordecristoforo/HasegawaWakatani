@@ -1,5 +1,5 @@
 ## Run all (alt+enter)
-include(relpath(pwd(), @__DIR__)*"/src/HasegawaWakatini.jl")
+include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run alternative linear stability test
 domain = Domain(256, 256, 100, 100, anti_aliased=true)
@@ -7,7 +7,7 @@ ic = initial_condition_linear_stability(domain, 1e-6)
 
 # Linear operator (May not be static actually)
 function L(u, d, p, t)
-    D_η = p["D_n"] * diffusion(u, d) #.- p["g"]*diffY(u,d)
+    D_η = p["D_n"] * diffusion(u, d) #.- p["g"]*diff_y(u,d)
     D_Ω = p["D_Omega"] * diffusion(u, d)
     [D_η;;; D_Ω]
 end
@@ -16,13 +16,13 @@ end
 function N(u, d, p, t)
     η = u[:, :, 1]
     Ω = u[:, :, 2]
-    ϕ = solvePhi(Ω, d)
-    dη = -(1 - p["g"]) * diffY(ϕ, d)
-    dη -= p["g"] * diffY(η, d)
+    ϕ = solve_phi(Ω, d)
+    dη = -(1 - p["g"]) * diff_y(ϕ, d)
+    dη -= p["g"] * diff_y(η, d)
     #dη .+= p["D_n"] - p["sigma_n"]
     dη -= p["sigma_n"] * ϕ
-    dη -= 2 * p["D_n"] * p["kappa"] * diffX(η, d)
-    dΩ = -p["g"] * diffY(η, d)
+    dη -= 2 * p["D_n"] * p["kappa"] * diff_x(η, d)
+    dΩ = -p["g"] * diff_y(η, d)
     dΩ += p["sigma_Omega"] * ϕ
     return [dη;;; dΩ]
 end
@@ -88,5 +88,5 @@ cd(relpath(@__DIR__, pwd()))
 fid = h5open("output/linear-stability test.h5", "r")
 simulation = fid[keys(fid)[1]]
 
-simulation["Log mode diagnostic/data"][:,:,:]
+simulation["Log mode diagnostic/data"][:, :, :]
 simulation["Log mode diagnostic/t"][:]

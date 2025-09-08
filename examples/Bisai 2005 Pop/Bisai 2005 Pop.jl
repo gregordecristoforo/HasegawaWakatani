@@ -4,9 +4,9 @@ include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 ## Run scheme test for Burgers equation
 domain = Domain(128, 128, 160, 160, anti_aliased=true)
 ic = initial_condition_linear_stability(domain, 1e-3)
-ic[:,:,1] .+= 0.5
+ic[:, :, 1] .+= 0.5
 
-heatmap(ic[:,:,1])
+heatmap(ic[:, :, 1])
 
 # Linear operator
 function L(u, d, p, t)
@@ -16,27 +16,27 @@ function L(u, d, p, t)
 end
 
 function source(x, y, S_0, λ_s)
-    @. S_0*exp(-(x/λ_s)^2) + 0*y
+    @. S_0 * exp(-(x / λ_s)^2) + 0 * y
 end
 
-S = domain.transform.FT*source(domain.x', domain.y, 5e-4, 5)
+S = domain.transform.FT * source(domain.x', domain.y, 5e-4, 5)
 
 # Non-linear operator, fully non-linear
 function N(u, d, p, t)
     n = @view u[:, :, 1]
     Ω = @view u[:, :, 2]
-    ϕ = solvePhi(Ω, d)
+    ϕ = solve_phi(Ω, d)
 
-    dn = -poissonBracket(ϕ, n, d)
-    dn .-= p["g"] * diffY(n, d)
-    dn += p["g"] * quadraticTerm(n, diffY(ϕ, d), d)
-    dn .-= p["σ_0"] * quadraticTerm(n, spectral_exp(-ϕ, d), d)
+    dn = -poisson_bracket(ϕ, n, d)
+    dn .-= p["g"] * diff_y(n, d)
+    dn += p["g"] * quadratic_term(n, diff_y(ϕ, d), d)
+    dn .-= p["σ_0"] * quadratic_term(n, spectral_exp(-ϕ, d), d)
     # Plus the const source
     dn .+= S
 
-    dΩ = -poissonBracket(ϕ, Ω, d)
-    dΩ .-= p["g"] * diffY(spectral_log(n, d), d)
-    dΩ .-= p["σ_0"] * spectral_expm1(-ϕ,d)
+    dΩ = -poisson_bracket(ϕ, Ω, d)
+    dΩ .-= p["g"] * diff_y(spectral_log(n, d), d)
+    dΩ .-= p["σ_0"] * spectral_expm1(-ϕ, d)
     return [dn;;; dΩ]
 end
 
@@ -57,7 +57,7 @@ prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1)#1e-1)
 # Diagnostics
 diagnostics = [
     ProgressDiagnostic(1000),
-    ProbeAllDiagnostic([(x,0) for x in LinRange(-40,50, 10)], N=10),
+    ProbeAllDiagnostic([(x, 0) for x in LinRange(-40, 50, 10)], N=10),
     PlotDensityDiagnostic(50),
     RadialFluxDiagnostic(50),
     KineticEnergyDiagnostic(50),

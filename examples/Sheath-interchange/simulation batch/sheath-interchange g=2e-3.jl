@@ -16,15 +16,15 @@ end
 function N(u, d, p, t)
     n = @view u[:, :, 1]
     Ω = @view u[:, :, 2]
-    ϕ = solvePhi(Ω, d)
+    ϕ = solve_phi(Ω, d)
 
-    dn = -poissonBracket(ϕ, n, d)
-    dn .-= (p["kappa"] - p["g"]) * diffY(ϕ, d)
-    dn .-= p["g"] * diffY(n, d)
+    dn = -poisson_bracket(ϕ, n, d)
+    dn .-= (p["kappa"] - p["g"]) * diff_y(ϕ, d)
+    dn .-= p["g"] * diff_y(n, d)
     dn .-= p["sigma_n"] * n
 
-    dΩ = -poissonBracket(ϕ, Ω, d)
-    dΩ .-= p["g"] * diffY(n, d)
+    dΩ = -poisson_bracket(ϕ, Ω, d)
+    dΩ .-= p["g"] * diff_y(n, d)
     dΩ .+= p["sigma_Ω"] * ϕ
     return [dn;;; dΩ]
 end
@@ -63,8 +63,8 @@ diagnostics = [
 # Output
 cd(relpath(@__DIR__, pwd()))
 output = Output(prob, 1001, diagnostics, "../output/sheath-interchange g=2e-3.h5",
-simulation_name="10 probes",store_locally=false)
-    
+    simulation_name="10 probes", store_locally=false)
+
 FFTW.set_num_threads(16)
 
 ## Solve and plot

@@ -1,8 +1,6 @@
-using FFTW
-
 # TODO add get_velocity=vExB,
 
-mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Type<:AbstractArray,
+mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:AbstractDomain,u0Type<:AbstractArray,
     u0_hatType<:AbstractArray,tType<:AbstractArray,pType<:Dict,N<:Number,RM<:Function,kwargsType}
 
     L::LType
@@ -19,7 +17,7 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Ty
     remove_modes::RM
     kwargs::kwargsType
 
-    function SpectralODEProblem(N::Function, domain::Domain, u0, tspan;
+    function SpectralODEProblem(N::Function, domain::AbstractDomain, u0, tspan;
         p=Dict(), dt=0.01, kwargs...)
 
         # If no linear operator given, assume there is non
@@ -32,7 +30,7 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:Domain,u0Ty
 
     # function SpectralODEProblem(L::F, N::F, domain::D, u0, tspan; p=Dict(),
     #     dt=0.01, inverse_transformation::F=identity) where {F<:Function, D}
-    function SpectralODEProblem(L::Function, N::Function, domain::Domain, u0, tspan;
+    function SpectralODEProblem(L::Function, N::Function, domain::AbstractDomain, u0, tspan;
         p=Dict(), dt=0.01, remove_modes=remove_nothing, kwargs...)
 
         sz = size(domain.transform.iFT)

@@ -12,7 +12,7 @@ end
 
 # Burgers equation 
 function N(u, d, p, t)
-    return -quadraticTerm(u, diffY(u, d), d)
+    return -quadratic_term(u, diff_y(u, d), d)
 end
 
 # Parameters
@@ -21,7 +21,7 @@ parameters = Dict(
 )
 
 # Break down time 
-dudy = diffY(domain.transform.FT * u0, domain)
+dudy = diff_y(domain.transform.FT * u0, domain)
 t_b = -1 / (minimum(real(domain.transform.iFT * dudy)))
 
 # Time span

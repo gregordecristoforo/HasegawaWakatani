@@ -1,11 +1,11 @@
 #---------------------------------- CFL ----------------------------------------------------
 
 # Calculate velocity assuming U_ExB = ̂z×∇Φ   
-function vExB(u::U, domain::D) where {U<:AbstractArray,D<:Domain}
+function vExB(u::U, domain::D) where {U<:AbstractArray,D<:AbstractDomain}
     W = u[:, :, 2] #Assumption
     W_hat = domain.transform.FT * W
-    phi_hat = solvePhi(W_hat, domain)
-    domain.transform.iFT * -diffY(phi_hat, domain), domain.transform.iFT * diffX(phi_hat, domain)
+    phi_hat = solve_phi(W_hat, domain)
+    domain.transform.iFT * -diff_y(phi_hat, domain), domain.transform.iFT * diff_x(phi_hat, domain)
 end
 
 #contourf(vExB([u0;;;u0], domain)[1].^2 .+ vExB([u0;;;u0], domain)[2].^2) 
@@ -52,5 +52,3 @@ end
 function BurgerCFLDiagnostic(N::Int=100)
     Diagnostic("Burger CFL", burgerCFL, N, "CFL")
 end
-
-export CFLDiagnostic, RadialCFLDiagnostic, BurgerCFLDiagnostic

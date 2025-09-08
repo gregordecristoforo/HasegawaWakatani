@@ -1,32 +1,31 @@
-module Domains
-
-using FFTW
-include("spectralOperators.jl")
+include("../operators/spectralOperators.jl")
 using .SpectralOperators
+
+abstract type AbstractDomain end
 
 # Assumed 1st direction uses rfft, while all others use fft
 """
     Domain(N, L)
     Domain(Nx, Ny, Lx, Ly)
 
-Box domain, that calculates spatial resolution under construction.
+    Box domain, that calculates spatial resolution under construction.
 
-# Contains
-Lengths: ``Lx``, ``Ly`` (Float64)\\
-Number of grid point: ``Nx``, ``Ny`` (Int64)\\
-Spatial resolution: ``dx``, ``dy`` (Float64)\\
-Spatial points: ``x``, ``y`` (LinRange)
+    # Contains
+    Lengths: ``Lx``, ``Ly`` (Float64)\\
+    Number of grid point: ``Nx``, ``Ny`` (Int64)\\
+    Spatial resolution: ``dx``, ``dy`` (Float64)\\
+    Spatial points: ``x``, ``y`` (LinRange)
 
-``dxᵢ = 2Lₓ÷(Nₓ-1)``
+    ``dxᵢ = 2Lₓ÷(Nₓ-1)``
 
-Square Domain can be constructed using:\\
-``Domain(N,L)``
+    Square Domain can be constructed using:\\
+    ``Domain(N,L)``
 
-Rectangular Domain can be constructed using:\\
-``Domain(Nx,Ny,Lx,Ly)``
+    Rectangular Domain can be constructed using:\\
+    ``Domain(Nx,Ny,Lx,Ly)``
 """
 struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractArray,
-    SOC<:SpectralOperatorCache,TP<:TransformPlans}
+    SOC<:SpectralOperators.SpectralOperatorCache,TP<:TransformPlans} <: AbstractDomain
 
     Nx::Int
     Ny::Int
@@ -71,7 +70,7 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
             transform_plans = FFTPlans(plan_fft(utmp), plan_ifft(utmp))
         end
 
-        SC = SpectralOperatorCache(kx, ky, Nx, Ny, realTransform=realTransform,
+        SC = SpectralOperators.SpectralOperatorCache(kx, ky, Nx, Ny, realTransform=realTransform,
             anti_aliased=anti_aliased)
 
         new{typeof(x),typeof(y),typeof(kx),typeof(ky),typeof(SC),
@@ -80,68 +79,64 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
     end
 end
 
-# Allow spectralOperators to be called using the domains
+# Allows spectralOperators to be called using the domains
 
-# TODO add snake_case
-function diffX(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+function diff_x(field::F, domain::D) where {F<:AbstractArray,D<:AbstractDomain}
     SpectralOperators.diffX(field, domain.SC)
 end
 
-function diffY(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+function diff_y(field::F, domain::D) where {F<:AbstractArray,D<:AbstractDomain}
     SpectralOperators.diffY(field, domain.SC)
 end
 
-function diffXX(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+function diff_xx(field::F, domain::D) where {F<:AbstractArray,D<:AbstractDomain}
     SpectralOperators.diffXX(field, domain.SC)
 end
 
-function diffYY(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+function diff_yy(field::F, domain::D) where {F<:AbstractArray,D<:AbstractDomain}
     SpectralOperators.diffYY(field, domain.SC)
 end
 
-function laplacian(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+function laplacian(field::F, domain::D) where {F<:AbstractArray,D<:AbstractDomain}
     SpectralOperators.laplacian(field, domain.SC)
 end
 
 const Δ = laplacian
 const diffusion = laplacian
 
-function hyper_diffusion(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+function hyper_diffusion(field::F, domain::D) where {F<:AbstractArray,D<:AbstractDomain}
     SpectralOperators.hyper_diffusion(field, domain.SC)
 end
 
-function quadraticTerm(u::U, v::V, domain::D) where {U<:AbstractArray,V<:AbstractArray,D<:Domain}
+function quadratic_term(u::U, v::V, domain::D) where {U<:AbstractArray,V<:AbstractArray,
+    D<:AbstractDomain}
     if size(u) != size(v)
         error("u and v must have the same size")
     end
     SpectralOperators.quadraticTerm(u, v, domain.SC)
 end
 
-function poissonBracket(A::U, B::V, domain::D) where {U<:AbstractArray,V<:AbstractArray,D<:Domain}
+function poisson_bracket(A::U, B::V, domain::D) where {U<:AbstractArray,V<:AbstractArray,
+    D<:AbstractDomain}
     SpectralOperators.poissonBracket(A, B, domain.SC)
 end
 
-function solvePhi(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+function solve_phi(field::F, domain::D) where {F<:AbstractArray,D<:AbstractDomain}
     SpectralOperators.solvePhi(field, domain.SC)
 end
 
-function reciprocal(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+function reciprocal(field::F, domain::D) where {F<:AbstractArray,D<:AbstractDomain}
     SpectralOperators.spectral_function(u -> div(1, u), field, domain.SC)
 end
 
-function spectral_exp(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+function spectral_exp(field::F, domain::D) where {F<:AbstractArray,D<:AbstractDomain}
     SpectralOperators.spectral_function(exp, field, domain.SC)
 end
 
-function spectral_expm1(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+function spectral_expm1(field::F, domain::D) where {F<:AbstractArray,D<:AbstractDomain}
     SpectralOperators.spectral_function(expm1, field, domain.SC)
 end
 
-function spectral_log(field::F, domain::D) where {F<:AbstractArray,D<:Domain}
+function spectral_log(field::F, domain::D) where {F<:AbstractArray,D<:AbstractDomain}
     SpectralOperators.spectral_function(log, field, domain.SC)
-end
-
-export Domain, diffX, diffXX, diffY, diffYY, poissonBracket, solvePhi, quadraticTerm,
-    diffusion, laplacian, Δ, SpectralOperatorCache, reciprocal, spectral_exp, spectral_expm1,
-    spectral_log, hyper_diffusion
 end

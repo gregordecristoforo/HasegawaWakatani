@@ -3,7 +3,7 @@
 # probe/high time resolution (fields, velocity etc...)
 
 function probe_field(u::U, domain::D, positions::P; interpolation::I=nothing) where {
-    U<:AbstractArray,D<:Domain,P<:Union{AbstractArray,Tuple,Number},I<:Union{Nothing,Function}}
+    U<:AbstractArray,D<:AbstractDomain,P<:Union{AbstractArray,Tuple,Number},I<:Union{Nothing,Function}}
     # Check if the user sent in tuple of points or single point
     if isa(positions, Tuple) && isa(positions[1], Number)
         positions = [positions]
@@ -79,7 +79,7 @@ end
 function probe_potential(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
     U<:AbstractArray,SOP<:SpectralODEProblem,N<:Number,P<:Union{AbstractArray,Tuple,Number},
     I<:Union{Nothing,Function}}
-    ϕ_hat = @views solvePhi(u[:, :, 2], prob.domain)
+    ϕ_hat = @views solve_phi(u[:, :, 2], prob.domain)
     ϕ = prob.domain.transform.iFT * ϕ_hat
     probe_field(ϕ, prob.domain, positions; interpolation)
 end
@@ -103,8 +103,8 @@ end
 function probe_radial_velocity(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
     U<:AbstractArray,SOP<:SpectralODEProblem,N<:Number,P<:Union{AbstractArray,Tuple,Number},
     I<:Union{Nothing,Function}}
-    ϕ_hat = @views solvePhi(u[:, :, 2], prob.domain)
-    v_x_hat = -diffY(ϕ_hat, prob.domain)
+    ϕ_hat = @views solve_phi(u[:, :, 2], prob.domain)
+    v_x_hat = -diff_y(ϕ_hat, prob.domain)
     v_x = prob.domain.transform.iFT * v_x_hat
     probe_field(v_x, prob.domain, positions; interpolation)
 end
@@ -130,8 +130,8 @@ function probe_all(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing
     I<:Union{Nothing,Function}}
 
     # Calculate spectral fields
-    ϕ_hat = @views solvePhi(u[:, :, 2], prob.domain)
-    v_x_hat = -diffY(ϕ_hat, prob.domain)
+    ϕ_hat = @views solve_phi(u[:, :, 2], prob.domain)
+    v_x_hat = -diff_y(ϕ_hat, prob.domain)
 
     # Cache for transformation
     cache = zeros(size(prob.domain.transform.FT))
@@ -165,6 +165,3 @@ function ProbeAllDiagnostic(positions::P; interpolation::I=nothing, N::Int=100) 
 
     return Diagnostic("All probe", probe_all, N, label, args, kwargs, assumesSpectralField=true)
 end
-
-export ProbeDensityDiagnostic, ProbePotentialDiagnostic, ProbeVorticityDiagnostic, ProbeRadialVelocityDiagnostic,
-    ProbeAllDiagnostic

@@ -1,5 +1,3 @@
-export initial_condition, gaussian, sinusoidal, sinusoidalX, sinusoidalY, gaussianWallX, gaussianWallY
-
 # ------------------------------- Initial fields -------------------------------------------
 
 function gaussian(x, y; A=1, B=0, l=1, x0=0, y0=0)
@@ -42,16 +40,16 @@ function randomIC(x, y)
     rand()
 end
 
-function initial_condition(fun::Function, domain::Domain; kwargs...)
+function initial_condition(fun::Function, domain::AbstractDomain; kwargs...)
     fun.(domain.x', domain.y; kwargs...)
 end
 
-function all_modes(domain::Domain, value=10^-6)
+function all_modes(domain::AbstractDomain, value=10^-6)
     n_hat = value * ones(domain.Ny, domain.Nx)
     real(ifft(n_hat))
 end
 
-function all_modes_with_random_phase(domain::Domain, value=10^-6)
+function all_modes_with_random_phase(domain::AbstractDomain, value=10^-6)
     θ = 2 * π * rand(domain.Ny, domain.Nx)
     n_hat = value * ones(domain.Ny, domain.Nx) .* exp.(im * θ)
     n_hat[:, 1] .= 0
@@ -59,7 +57,7 @@ function all_modes_with_random_phase(domain::Domain, value=10^-6)
     real(ifft(n_hat))
 end
 
-function initial_condition_linear_stability(domain::Domain, value=10^-6)
+function initial_condition_linear_stability(domain::AbstractDomain, value=10^-6)
     θ = 2 * π * rand(domain.Ny, domain.Nx)
     phi_hat = value * ones(domain.Ny, domain.Nx) .* exp.(im * θ)
     phi_hat[:, 1] .= 0
@@ -68,6 +66,7 @@ function initial_condition_linear_stability(domain::Domain, value=10^-6)
     [real(ifft(n_hat));;; real(ifft(phi_hat))]
 end
 
+# TODO move to test/examples folder
 # --------------------------- Analytical solutions -----------------------------------------
 
 function HeatEquationAnalyticalSolution(u0, domain, p, t)
@@ -92,9 +91,10 @@ end
 
 #implicitInviscidBurgerSolution.(0.1, 0, 1, y -> gaussian(0, y, l=0.08))
 
-using Roots
+# No need to be part of package
+# using Roots
 
-function burgers_equation_analytical_solution(u0, domain::Domain, p, t, f=y -> gaussian(0, y, l=1))
+function burgers_equation_analytical_solution(u0, domain::AbstractDomain, p, t, f=y -> gaussian(0, y, l=1))
     [find_zero.(u -> implicitBurgerSolution(u, domain.y[yi], t, f), u0[yi, xi])
      for yi in eachindex(domain.y), xi in eachindex(domain.x)]
 end
@@ -188,25 +188,25 @@ end
 #and if so takes the real part of the inverse Fourier transform.
 #"""
 """
-ifftPlot(args...; kwargs...)
-Plot the real part of the inverse Fourier transform (IFFT) of each argument that is a complex array. 
-This function is designed to handle multiple input arrays and plot them using the `plot` function 
-from a plotting library such as Plots.jl. Non-complex arrays are plotted as-is.
+    ifftPlot(args...; kwargs...)
+    Plot the real part of the inverse Fourier transform (IFFT) of each argument that is a complex array. 
+    This function is designed to handle multiple input arrays and plot them using the `plot` function 
+    from a plotting library such as Plots.jl. Non-complex arrays are plotted as-is.
 
-# Arguments
-- `args...`: A variable number of arguments. Each argument can be an array. If the array is of a complex type, 
-  its IFFT is computed, and only the real part is plotted. If the array is not complex, it is plotted directly.
-- `kwargs...`: Keyword arguments that are passed directly to the `plot` function to customize the plot.
+    # Arguments
+    - `args...`: A variable number of arguments. Each argument can be an array. If the array is of a complex type, 
+    its IFFT is computed, and only the real part is plotted. If the array is not complex, it is plotted directly.
+    - `kwargs...`: Keyword arguments that are passed directly to the `plot` function to customize the plot.
 
-# Usage
-using FFTW, Plots
+    # Usage
+    using FFTW, Plots
 
-# Create some sample data
-x = rand(ComplexF64, 100)\\
-y = rand(100)
+    # Create some sample data
+    x = rand(ComplexF64, 100)\\
+    y = rand(100)
 
-# Plot the real part of the IFFT of `x` and `y` directly
-ifftPlot(x, y, title="IFFT Plot Example", legend=:topright)
+    # Plot the real part of the IFFT of `x` and `y` directly
+    ifftPlot(x, y, title="IFFT Plot Example", legend=:topright)
 
 """
 function ifftPlot(args...; kwargs...)
@@ -233,7 +233,7 @@ end
 
 # Extend plotting to allow domain as input
 import Plots.plot
-function plot(domain::Domain, args...; kwargs...)
+function plot(domain::AbstractDomain, args...; kwargs...)
     plot(domain.x, domain.y, args...; kwargs...)
 end
 # Extending PlotlyJS to easily plot surfaces when using Plots for academic figures
@@ -316,10 +316,10 @@ function semilogy(x, args...; base::Symbol=:log10, kwargs...)
 end
 
 # Default plot style (follows cosmoplots https://github.com/uit-cosmo/cosmoplots/blob/main/cosmoplots/default.mplstyle)
-default(frame=:box, dpi=300, size=(300 * 3.37, 300 * 2.08277), fontfamily="Computer Modern",
-    titlefontsize=8, guidefontsize=8, tickfontsize=8, legendfontsize=8, legendfontcolor=:black,
-    legendtitlefontcolor=:black, legendtitlefontsize=8, linewidth=0.75, grid=false,
-    minorticks=true, markersize=2.25, widen=1.1, aspect_ratio=:equal)
+# default(frame=:box, dpi=300, size=(300 * 3.37, 300 * 2.08277), fontfamily="Computer Modern",
+#     titlefontsize=8, guidefontsize=8, tickfontsize=8, legendfontsize=8, legendfontcolor=:black,
+#     legendtitlefontcolor=:black, legendtitlefontsize=8, linewidth=0.75, grid=false,
+#     minorticks=true, markersize=2.25, widen=1.1, aspect_ratio=:equal)
 
 # TODO add support for log plots, yikes
 #= import PythonPlot

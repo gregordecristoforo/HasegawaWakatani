@@ -17,15 +17,15 @@ end
 function N(u, d, p, t)
     n = @view u[:, :, 1]
     Ω = @view u[:, :, 2]
-    ϕ = solvePhi(Ω, d)
+    ϕ = solve_phi(Ω, d)
 
-    dn = -poissonBracket(ϕ, n, d)
-    dn .-= (p["kappa"] - p["g"]) * diffY(ϕ, d)
-    dn .-= p["g"] * diffY(n, d)
+    dn = -poisson_bracket(ϕ, n, d)
+    dn .-= (p["kappa"] - p["g"]) * diff_y(ϕ, d)
+    dn .-= p["g"] * diff_y(n, d)
     dn .-= p["sigma_n"] * n
 
-    dΩ = -poissonBracket(ϕ, Ω, d)
-    dΩ .-= p["g"] * diffY(n, d)
+    dΩ = -poisson_bracket(ϕ, Ω, d)
+    dΩ .-= p["g"] * diff_y(n, d)
     dΩ .+= p["sigma_Ω"] * ϕ
     return [dn;;; dΩ]
 end
@@ -33,18 +33,18 @@ end
 function N(u, d, p, t)
     n = @view u[:, :, 1]
     Ω = @view u[:, :, 2]
-    ϕ = solvePhi(Ω, d)
+    ϕ = solve_phi(Ω, d)
 
-    dn = -poissonBracket(ϕ, n, d)
-    dn .-= (p["kappa"] - p["g"]) * diffY(ϕ, d)#.+= p["g"]* quadraticTerm(n, diffY(ϕ, d), d)
-    #dn .-= 2 * p["kappa"] * p["D_n"] * diffX(n, d)
-    #dn .+= p["D_n"] * quadraticTerm(diffX(n, d), diffX(n, d), d)
-    #dn .+= p["D_n"] * quadraticTerm(diffY(n, d), diffY(n, d), d)
-    dn .-= p["g"] * diffY(n, d)
-    dn .+= p["sigma_n"]*ϕ #* spectral_exp(-ϕ, d) #quadraticTerm(n, spectral_exp(-ϕ, d), d)
+    dn = -poisson_bracket(ϕ, n, d)
+    dn .-= (p["kappa"] - p["g"]) * diff_y(ϕ, d)#.+= p["g"]* quadratic_term(n, diff_y(ϕ, d), d)
+    #dn .-= 2 * p["kappa"] * p["D_n"] * diff_x(n, d)
+    #dn .+= p["D_n"] * quadratic_term(diff_x(n, d), diff_x(n, d), d)
+    #dn .+= p["D_n"] * quadratic_term(diff_y(n, d), diff_y(n, d), d)
+    dn .-= p["g"] * diff_y(n, d)
+    dn .+= p["sigma_n"] * ϕ #* spectral_exp(-ϕ, d) #quadratic_term(n, spectral_exp(-ϕ, d), d)
 
-    dΩ = -poissonBracket(ϕ, Ω, d)
-    dΩ .-= p["g"] * diffY(n, d) # .-= p["g"] * diffY(spectral_log(n, d), d)
+    dΩ = -poisson_bracket(ϕ, Ω, d)
+    dΩ .-= p["g"] * diff_y(n, d) # .-= p["g"] * diff_y(spectral_log(n, d), d)
     #dΩ .+= p["sigma_Ω"]*ϕ #* spectral_expm1(-ϕ, d)
     return [dn;;; dΩ]
 end

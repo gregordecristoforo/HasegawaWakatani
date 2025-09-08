@@ -5,7 +5,7 @@ include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 domain = Domain(128, 128, 100, 100, anti_aliased=true)
 ic = initial_condition_linear_stability(domain, 1e-3)
 
-plot(ic[:,:,1])
+plot(ic[:, :, 1])
 
 # Linear operator
 function L(u, d, p, t)
@@ -18,15 +18,15 @@ end
 function N(u, d, p, t)
     n = @view u[:, :, 1]
     Ω = @view u[:, :, 2]
-    ϕ = solvePhi(Ω, d)
+    ϕ = solve_phi(Ω, d)
 
-    dn = -poissonBracket(ϕ, n, d)
-    dn .-= (p["kappa"] - p["g"]) * diffY(ϕ, d)
-    dn .-= p["g"] * diffY(n, d)
+    dn = -poisson_bracket(ϕ, n, d)
+    dn .-= (p["kappa"] - p["g"]) * diff_y(ϕ, d)
+    dn .-= p["g"] * diff_y(n, d)
     dn .-= p["sigma_n"] * n
 
-    dΩ = -poissonBracket(ϕ, Ω, d)
-    dΩ .-= p["g"] * diffY(n, d)
+    dΩ = -poisson_bracket(ϕ, Ω, d)
+    dΩ .-= p["g"] * diff_y(n, d)
     dΩ .+= p["sigma_Ω"] * ϕ
     return [dn;;; dΩ]
 end
@@ -35,16 +35,16 @@ end
 # function N(u, d, p, t)
 #     n = u[:, :, 1]
 #     W = u[:, :, 2]
-#     phi = solvePhi(W, d)
-#     dn = -poissonBracket(phi, n, d)
-#     dn += p["g"] * quadraticTerm(n, diffY(n, d), d)
-#     dn += -p["g"] * diffY(n, d)
+#     phi = solve_phi(W, d)
+#     dn = -poisson_bracket(phi, n, d)
+#     dn += p["g"] * quadratic_term(n, diff_y(n, d), d)
+#     dn += -p["g"] * diff_y(n, d)
 #     dn += -p["sigma"] * n
-#     dW = -poissonBracket(phi, W, d)
-#     #dW += -p["g"] * diffY(spectral_log(n, d), d)
-#     dW += -p["g"] * quadraticTerm(reciprocal(n, d), diffY(n, d), d)
+#     dW = -poisson_bracket(phi, W, d)
+#     #dW += -p["g"] * diff_y(spectral_log(n, d), d)
+#     dW += -p["g"] * quadratic_term(reciprocal(n, d), diff_y(n, d), d)
 #     dW += n
-#     dW += -quadraticTerm(n, spectral_exp(phi, d), d)
+#     dW += -quadratic_term(n, spectral_exp(phi, d), d)
 #     [dn;;; dW]
 # end
 
@@ -65,7 +65,7 @@ prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-1)
 # Diagnostics
 diagnostics = [
     ProgressDiagnostic(1000),
-    ProbeAllDiagnostic([(x,0) for x in LinRange(-40,50, 10)], N=100),
+    ProbeAllDiagnostic([(x, 0) for x in LinRange(-40, 50, 10)], N=100),
     #PlotDensityDiagnostic(50),
     RadialFluxDiagnostic(50),
     KineticEnergyDiagnostic(50),

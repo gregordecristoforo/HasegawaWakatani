@@ -10,5 +10,3 @@ end
 function ProgressDiagnostic(N::Int=100)
     Diagnostic("Progress", progress, N, "progress", assumesSpectralField=true, storesData=false)
 end
-
-export ProgressDiagnostic

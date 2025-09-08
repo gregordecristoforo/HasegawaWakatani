@@ -1,6 +1,4 @@
-using HDF5
-using H5Zblosc
-using Dates
+# ------------------------------------- Outputer -------------------------------------------
 
 mutable struct Output{DV<:AbstractArray,U<:AbstractArray,UB<:AbstractArray,T<:AbstractArray,
     FN<:AbstractString,F<:Union{HDF5.File,Nothing},S<:Union{HDF5.Group,Nothing},PT<:Function,
@@ -20,7 +18,7 @@ mutable struct Output{DV<:AbstractArray,U<:AbstractArray,UB<:AbstractArray,T<:Ab
     store_locally::Bool
     h5_kwargs::K #Possibly also called a filter
 
-    function Output(prob::SOP, N_data::Int, diagnostics::DV=DEFAULT_DIAGNOSTICS,
+    function Output(prob::SOP, N_data::Integer, diagnostics::DV=DEFAULT_DIAGNOSTICS,
         filename::FN=basename(tempname()) * ".h5"; physical_transform::PT=identity,
         simulation_name::SN=:timestamp, store_hdf::Bool=true, store_locally::Bool=true,
         h5_kwargs...) where {SOP<:SpectralODEProblem,DV<:AbstractArray,FN<:AbstractString,
@@ -136,7 +134,7 @@ mutable struct Output{DV<:AbstractArray,U<:AbstractArray,UB<:AbstractArray,T<:Ab
     end
 end
 
-function handle_output!(output::O, step::Int, u::T, prob::SOP, t::N) where {O<:Output,
+function handle_output!(output::O, step::Integer, u::T, prob::SOP, t::N) where {O<:Output,
     T<:AbstractArray,SOP<:SpectralODEProblem,N<:Number}
 
     # Keeps track such that fields only transformed once
@@ -205,7 +203,7 @@ function handle_output!(output::O, step::Int, u::T, prob::SOP, t::N) where {O<:O
 end
 
 # Perhaps one could look into HDF5 compound types in the future
-function output_cache!(output::O, cache::C, step::Int, t::N) where {O<:Output,
+function output_cache!(output::O, cache::C, step::Integer, t::N) where {O<:Output,
     C<:AbstractCache,N<:Number}
     if output.store_hdf
         # Create or open a h5group for the backup cache
@@ -286,15 +284,16 @@ end
 #------------------------------ Removal of modes -------------------------------------------
 # TODO perhaps moved to utilitise
 
-function remove_zonal_modes!(u::U, d::D) where {U<:AbstractArray,D<:Domain}
+function remove_zonal_modes!(u::U, d::D) where {U<:AbstractArray,D<:AbstractDomain}
     @inbounds u[1, :, :] .= 0
 end
 
-function remove_streamer_modes!(u::U, d::D) where {U<:AbstractArray,D<:Domain}
+function remove_streamer_modes!(u::U, d::D) where {U<:AbstractArray,D<:AbstractDomain}
     @inbounds u[:, 1, :] .= 0
 end
 
-function remove_asymmetric_modes!(u::U, domain::D) where {U<:AbstractArray,D<:Domain}
+function remove_asymmetric_modes!(u::U, domain::D) where {U<:AbstractArray,
+    D<:AbstractDomain}
     if domain.Nx % 2 == 0
         @inbounds u[:, domain.Nx÷2+1, :] .= 0
     end
@@ -303,7 +302,7 @@ function remove_asymmetric_modes!(u::U, domain::D) where {U<:AbstractArray,D<:Do
     end
 end
 
-function remove_nothing(u::U, d::D) where {U<:AbstractArray,D<:Domain}
+function remove_nothing(u::U, d::D) where {U<:AbstractArray,D<:AbstractDomain}
     nothing
 end
 
@@ -311,7 +310,6 @@ end
 
 # Gives a more managable array compared to output.u
 function extract_output(output::Output)
-    # TODO add check for data type of vector
     Array(reshape(reduce(hcat, output.u), size(output.u[1])..., length(output.u)))
 end
 
@@ -319,9 +317,3 @@ function extract_diagnostic(data::Vector)
     Array(reshape(reduce(hcat, data), size(data[1])..., length(data)))
 end
 # These are just stack() ^^
-
-# function remove_zonal_modes!(u::U) where {U<:AbstractArray}
-#     @inbounds u[1, ntuple(_ -> :, ndims(u) - 1)...] .= 0
-# end
-
-export remove_zonal_modes, remove_streamer_modes, remove_asymmetric_modes!, remove_nothing

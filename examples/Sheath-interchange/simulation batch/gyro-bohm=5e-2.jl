@@ -17,15 +17,15 @@ end
 function N(u, d, p, t)
     n = @view u[:, :, 1]
     Ω = @view u[:, :, 2]
-    ϕ = solvePhi(Ω, d)
+    ϕ = solve_phi(Ω, d)
 
-    dn = -poissonBracket(ϕ, n, d)
-    dn .-= (1 - p["g"]) * diffY(ϕ, d)
-    dn .-= p["g"] * diffY(n, d)
+    dn = -poisson_bracket(ϕ, n, d)
+    dn .-= (1 - p["g"]) * diff_y(ϕ, d)
+    dn .-= p["g"] * diff_y(n, d)
     dn .+= p["sigma"] * ϕ
 
-    dΩ = -poissonBracket(ϕ, Ω, d)
-    dΩ .-= p["g"] * diffY(n, d)
+    dΩ = -poisson_bracket(ϕ, Ω, d)
+    dΩ .-= p["g"] * diff_y(n, d)
     dΩ .+= p["sigma"] * ϕ
     return [dn;;; dΩ]
 end

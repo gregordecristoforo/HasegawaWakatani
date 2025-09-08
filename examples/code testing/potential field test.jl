@@ -18,10 +18,10 @@ l = 0.01
 surface(Ω)
 
 Ω_hat = d.transform.FT * Ω
-ϕ_hat = solvePhi(Ω_hat, d)
+ϕ_hat = solve_phi(Ω_hat, d)
 ϕ = d.transform.iFT * ϕ_hat
 #Remove the value at boundary since should be zero for periodicity
-ϕ_n = ϕ .- ϕ[1] 
+ϕ_n = ϕ .- ϕ[1]
 
 ϕ_a = analytical_solution.(d.x', d.y, l=l)
 norm(ϕ_n .- ϕ_a)

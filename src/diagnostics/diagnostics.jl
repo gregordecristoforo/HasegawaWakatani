@@ -1,10 +1,3 @@
-using LinearAlgebra
-using Plots
-using FFTW
-using Printf
-using Interpolations
-import PlotlyJS
-
 # ----------------------------------- Diagnostics ------------------------------------------
 
 mutable struct Diagnostic{N<:AbstractString,M<:Function,D<:AbstractArray,T<:AbstractArray,
@@ -116,7 +109,7 @@ function initialize_diagnostic!(diagnostic::D, U::T, prob::SOP, simulation::S, h
     end
 end
 
-function perform_diagnostic!(diagnostic::D, step::Int, u::U, prob::SOP, t::N;
+function perform_diagnostic!(diagnostic::D, step::Integer, u::U, prob::SOP, t::N;
     store_hdf::Bool=true, store_locally::Bool=true) where {D<:Diagnostic,U<:AbstractArray,
     SOP<:SpectralODEProblem,N<:Number}
     # u might be real or complex depending on previous handle_output and diagnostic.assumesSpectralField
@@ -150,18 +143,18 @@ end
 
 #-------------------------------------- Include --------------------------------------------
 
-include("diagnostics/probe.jl")
-include("diagnostics/COM.jl")
-include("diagnostics/CFL.jl")
-include("diagnostics/display.jl")
-include("diagnostics/spectral.jl")
-include("diagnostics/boundary.jl")
-include("diagnostics/projection.jl")
-include("diagnostics/parameter_study.jl")
-include("diagnostics/progress.jl")
-include("diagnostics/profiles.jl")
-include("diagnostics/energy_integrals.jl")
-include("diagnostics/fluxes.jl")
+include("probe.jl")
+include("COM.jl")
+include("CFL.jl")
+include("display.jl")
+include("spectral.jl")
+include("boundary.jl")
+include("projection.jl")
+include("parameter_study.jl")
+include("progress.jl")
+include("profiles.jl")
+include("energy_integrals.jl")
+include("fluxes.jl")
 
 # Default diagnostic
 #cflDiagnostic = Diagnostic(CFLExB, 100, "cfl")

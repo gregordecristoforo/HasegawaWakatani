@@ -25,5 +25,3 @@ function RadialCOMDiagnostic(N::Int=100)
     args = (Dict("previous_position" => 0.0, "previous_time" => 0.0),)
     return Diagnostic("RadialCOMDiagnostic", radial_COM, N, "X_COM, V_COM", args)#, kwargs)
 end
-
-export RadialCOMDiagnostic

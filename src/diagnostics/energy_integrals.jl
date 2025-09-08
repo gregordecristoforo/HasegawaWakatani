@@ -20,7 +20,7 @@ end
 # K(t) = ∫1/2(∇_⟂Φ)^2 = ∫dx1/2 U_E^2
 function kinetic_energy_integral(u::U, prob::P, t::T; quadrature=nothing) where
 {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    ϕ = @views solvePhi(u[:, :, 2], prob.domain)
+    ϕ = @views solve_phi(u[:, :, 2], prob.domain)
     E_kin = -diffusion(abs.(ϕ) .^ 2, prob.domain)
 
     if prob.domain.realTransform
@@ -64,7 +64,7 @@ end
 # Γ_c(t) = C∫(n-ϕ)^2
 function resistive_dissipation_integral(u::U, prob::P, t::T; quadrature=nothing) where
 {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    h = @views u[:, :, 1] .- solvePhi(u[:, :, 2], prob.domain)
+    h = @views u[:, :, 1] .- solve_phi(u[:, :, 2], prob.domain)
     if prob.domain.realTransform
         @views prob.p["C"] * (2 * sum(abs.(h[1:end, :]) .^ 2) .- sum(abs.(h[1, :]) .^ 2)) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
     else
@@ -134,7 +134,3 @@ function EnergyEvolutionDiagnostic(N::Int=10)
 end
 
 # TODO add enstropy dissipation and evolution, more tricky probably
-
-export PotentialEnergyDiagnostic, KineticEnergyDiagnostic, TotalEnergyDiagnostic, EnstropyEnergyDiagnostic,
-    ResistiveDissipationDiagnostic, PotentialDissipationDiagnostic, KineticDissipationDiagnostic,
-    ViscousDissipationDiagnostic, EnergyEvolutionDiagnostic

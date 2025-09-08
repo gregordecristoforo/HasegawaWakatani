@@ -1,8 +1,3 @@
-using FFTW
-using LinearAlgebra
-export TransformPlans, FFTPlans, rFFTPlans, spectral_transform, spectral_transform!,
-    multi_fft, multi_ifft
-
 abstract type TransformPlans end
 
 struct FFTPlans{F,B} <: TransformPlans where {F<:FFTW.Plan,B<:FFTW.Plan}

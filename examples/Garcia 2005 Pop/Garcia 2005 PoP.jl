@@ -7,7 +7,7 @@ using Plots
 domain = Domain(1024, 1024, 50, 50, anti_aliased=false)
 #domain = Domain(256, 256, 50, 50, anti_aliased=false)
 u0 = gaussian.(domain.x', domain.y, A=1, B=0, l=1)
-
+#
 # Linear operator
 function L(u, d, p, t)
     D_θ = p["kappa"] * diffusion(u, d)
@@ -19,10 +19,10 @@ end
 function N(u, d, p, t)
     θ = @view u[:, :, 1]
     Ω = @view u[:, :, 2]
-    ϕ = solvePhi(Ω, d)
-    dθ = -poissonBracket(ϕ, θ, d)
-    dΩ = -poissonBracket(ϕ, Ω, d)
-    dΩ .-= diffY(θ, d)
+    ϕ = solve_phi(Ω, d)
+    dθ = -poisson_bracket(ϕ, θ, d)
+    dΩ = -poisson_bracket(ϕ, Ω, d)
+    dΩ .-= diff_y(θ, d)
     return [dθ;;; dΩ]
 end
 
@@ -31,6 +31,7 @@ parameters = Dict(
     "nu" => 1e-2,
     "kappa" => 1e-2
 )
+#parameters = (ν=1e-2, κ=1e-2)
 
 # Time interval
 t_span = [0, 20]

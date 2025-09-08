@@ -15,7 +15,7 @@ function upperYBoundary(u::T) where {T<:AbstractArray}
     u[:, end]
 end
 
-function plotBoundaries(domain::D, u::T) where {D<:Domain, T<:AbstractArray}
+function plotBoundaries(domain::D, u::T) where {D<:AbstractDomain,T<:AbstractArray}
     lx = domain.y[1]
     ux = domain.y[end]
     ly = domain.x[1]

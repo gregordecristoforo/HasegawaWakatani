@@ -11,7 +11,7 @@ function L(u, d, p, t)
 end
 
 function N(u, d, p, t)
-    p["nu"] * (quadraticTerm(diffX(u, d), diffX(u, d), d) .+ quadraticTerm(diffY(u, d), diffY(u, d), d))
+    p["nu"] * (quadratic_term(diff_x(u, d), diff_x(u, d), d) .+ quadratic_term(diff_y(u, d), diff_y(u, d), d))
 end
 
 # Parameters

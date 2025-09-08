@@ -1,9 +1,12 @@
 module SpectralOperators
-using Base.Threads
-include("fftutilities.jl")
 
-export SpectralOperatorCache, FFTPlans, diffX, diffY, diffXX, diffYY, diffusion, solvePhi,
-    poissonBracket, quadraticTerm, quadraticTerm!
+using FFTW, Base.Threads, LinearAlgebra
+include("fftutilities.jl")
+export TransformPlans, FFTPlans, rFFTPlans, spectral_transform, spectral_transform!
+#    multi_fft, multi_ifft
+
+# TODO remove? and fix naming
+#export diffX, diffY, diffXX, diffYY, diffusion, solvePhi, poissonBracket, quadraticTerm, quadraticTerm!
 
 struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractArray,
     DYY<:AbstractArray,L<:AbstractArray,SP<:AbstractArray,P<:AbstractArray,DU<:AbstractArray,

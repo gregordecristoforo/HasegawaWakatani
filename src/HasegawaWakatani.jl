@@ -1,26 +1,43 @@
 module HasegawaWakatani
 
-#using DotEnv                     # ✓
-#DotEnv.load!()                   # ✓
-using Plots                      # ✓
-include("domain.jl")             # ✓
-using .Domains                   # ✓
-# TODO remove hack
-export diffX, diffXX, diffY, diffYY, poissonBracket, solvePhi, quadraticTerm,
+using FFTW, HDF5, H5Zblosc, LinearAlgebra, LaTeXStrings, MuladdMacro, UnPack, Base.Threads,
+    Dates, Printf
+
+# TODO make ext
+using Plots, Interpolations
+
+include("domains/domain.jl")
+export Domain, diff_x, diff_xx, diff_y, diff_yy, poisson_bracket, solve_phi, quadratic_term,
     diffusion, laplacian, Δ, SpectralOperatorCache, reciprocal, spectral_exp, spectral_expm1,
     spectral_log, hyper_diffusion
-using LinearAlgebra              # ✓
-using LaTeXStrings               # ✓
-include("spectralODEProblem.jl") # ✓
-include("schemes.jl")            # ✓   
-include("outputer.jl")           # ✓
-include("spectralSolve.jl")      # ✓
-include("diagnostics.jl")        # ✓
-include("utilities.jl")          # ✓
 
-# Main API
-export Domain, SpectralODEProblem, spectral_solve, Output
+include("spectralODEProblem.jl")
+export SpectralODEProblem
+
+include("schemes.jl")
+export MSS1, MSS2, MSS3
+
+include("diagnostics/diagnostics.jl")
+export CFLDiagnostic, RadialCFLDiagnostic, BurgerCFLDiagnostic, RadialCOMDiagnostic,
+    PlotDensityDiagnostic, PlotPotentialDiagnostic, PlotVorticityDiagnostic,
+    PotentialEnergyDiagnostic, KineticEnergyDiagnostic, TotalEnergyDiagnostic,
+    EnstropyEnergyDiagnostic, ResistiveDissipationDiagnostic, PotentialDissipationDiagnostic,
+    KineticDissipationDiagnostic, ViscousDissipationDiagnostic, EnergyEvolutionDiagnostic,
+    RadialFluxDiagnostic, ProbeDensityDiagnostic, ProbePotentialDiagnostic,
+    ProbeVorticityDiagnostic, ProbeRadialVelocityDiagnostic, ProbeAllDiagnostic,
+    radial_density_profile, poloidal_density_profile, radial_vorticity_profile,
+    poloidal_vorticity_profile, poloidal_vorticity_profile, ProgressDiagnostic,
+    GetModeDiagnostic, GetLogModeDiagnostic, RadialPotentialEnergySpectraDiagnostic,
+    PoloidalPotentialEnergySpectraDiagnostic, RadialKineticEnergySpectraDiagnostic,
+    PoloidalKineticEnergySpectraDiagnostic, plot_frequencies
+
+include("outputer.jl")
+export Output, remove_zonal_modes, remove_streamer_modes, remove_asymmetric_modes!, remove_nothing
+
+include("spectralSolve.jl")
+export spectral_solve
+
+include("utilities.jl")
+export initial_condition, gaussian, sinusoidal, sinusoidalX, sinusoidalY, gaussianWallX, gaussianWallY
+
 end
-
-# TODO remove
-#Includes Domain, diagnostics, utilities, spectralSolve, spectralODEProblem and schemes

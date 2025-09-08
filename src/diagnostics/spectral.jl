@@ -76,10 +76,6 @@ function PoloidalKineticEnergySpectraDiagnostic(N::Int=100)
         "poloidal kinetic energy spectra", assumesSpectralField=true)
 end
 
-export GetModeDiagnostic, GetLogModeDiagnostic, RadialPotentialEnergySpectraDiagnostic,
-    PoloidalPotentialEnergySpectraDiagnostic, RadialKineticEnergySpectraDiagnostic,
-    PoloidalKineticEnergySpectraDiagnostic, plot_frequencies
-
 
 
 
