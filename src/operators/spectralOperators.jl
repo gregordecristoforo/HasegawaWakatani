@@ -1,6 +1,7 @@
 module SpectralOperators
 
 using FFTW, CUDA, Base.Threads, LinearAlgebra
+
 include("fftutilities.jl")
 export TransformPlans, FFTPlans, rFFTPlans, spectral_transform, spectral_transform!
 #    multi_fft, multi_ifft
