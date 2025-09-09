@@ -2,6 +2,7 @@ module HasegawaWakatani
 
 using FFTW, HDF5, H5Zblosc, LinearAlgebra, LaTeXStrings, MuladdMacro, UnPack, Base.Threads,
     Dates, Printf, CUDA
+export @unpack
 
 # TODO make ext
 using Plots
