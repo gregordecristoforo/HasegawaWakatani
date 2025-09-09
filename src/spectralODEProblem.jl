@@ -1,7 +1,11 @@
+
+# Inspired by SciMLBase, singleton type
+struct NullParameters end
+
 # TODO add get_velocity=vExB,
 
 mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:AbstractDomain,u0Type<:AbstractArray,
-    u0_hatType<:AbstractArray,tType<:AbstractArray,pType<:Dict,N<:Number,RM<:Function,kwargsType}
+    u0_hatType<:AbstractArray,tType<:AbstractArray,pType,N<:Number,RM<:Function,kwargsType}
 
     L::LType
     N::NType
@@ -18,7 +22,7 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:AbstractDom
     kwargs::kwargsType
 
     function SpectralODEProblem(N::Function, domain::AbstractDomain, u0, tspan;
-        p=Dict(), dt=0.01, kwargs...)
+        p=NullParameters(), dt=0.01, kwargs...)
 
         # If no linear operator given, assume there is non
         function L(u, d, p, t)
@@ -31,7 +35,7 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:AbstractDom
     # function SpectralODEProblem(L::F, N::F, domain::D, u0, tspan; p=Dict(),
     #     dt=0.01, inverse_transformation::F=identity) where {F<:Function, D}
     function SpectralODEProblem(L::Function, N::Function, domain::AbstractDomain, u0, tspan;
-        p=Dict(), dt=0.01, remove_modes=remove_nothing, kwargs...)
+        p=NullParameters(), dt=0.01, remove_modes=remove_nothing, kwargs...)
         # TODO check if user want to use CUDA 
         if domain.use_cuda
             u0 = CuArray(u0)
@@ -68,6 +72,15 @@ end
 
 #Need to handle kwargs like dt = 0.01, inverse_transformation::F=identity somewhere!
 
-function Base.display(prob::SpectralODEProblem)
-    println(typeof(prob))
+function Base.show(io::IO, m::MIME"text/plain", prob::SpectralODEProblem)
+    print(io, nameof(typeof(prob)), "(", nameof(prob.L), ",", nameof(prob.N), ";dt=", prob.dt)
+    typeof(prob.p) == NullParameters ? nothing : print(io, ",p=", prob.p)
+    println(io, ")")
+    println(io, "remove_modes: ", nameof(prob.remove_modes))
+    print(io, "domain: ")
+    show(io, prob.domain)
+    print(io, "\ntimespan: ")
+    show(io, prob.tspan)
+    print(io, "\nu0: ")
+    show(io, m, prob.u0)
 end
