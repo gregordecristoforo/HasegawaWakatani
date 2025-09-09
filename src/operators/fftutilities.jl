@@ -3,7 +3,6 @@ abstract type TransformPlans end
 """
     FFTPlans{FT<:FFTW.Plan, iFT<:FFTW.Plan} 
   Collection of transform plans using standard FFT.
-
 """
 struct FFTPlans{FWD<:FFTW.Plan,BWD<:FFTW.Plan} <: TransformPlans
     FT::FWD
@@ -56,7 +55,7 @@ end
 """
     Base.show(io::IO, transformplans::TransformPlans)
 
-Pretty-print `TransformPlans`.
+  Pretty-print `TransformPlans`.
 """
 function Base.show(io::IO, transformplans::TransformPlans)
     typename = nameof(typeof(transformplans))
@@ -79,7 +78,7 @@ end
 """
     Base.show(io::IO, ::MIME"text/plain", transformplans::TransformPlans)
 
-Compact one-line show of TransformPlans for use in arrays and etc.
+  Compact one-line show of TransformPlans for use in arrays and etc.
 """
 function Base.show(io::IO, ::MIME"text/plain", transformplans::TransformPlans)
     typename = nameof(typeof(transformplans))
