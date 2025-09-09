@@ -97,22 +97,20 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
     end
 end
 
-function Base.show(io::IO, d::AbstractDomain)
-    typename = nameof(typeof(d))
-
-    # TODO could be made into a loop
-    print(io, typename, "(Nx:", d.Nx, ", Ny:", d.Ny, ", Lx:", d.Lx, ", Ly:", d.Ly,
-        ", real_transform:", d.realTransform, ", anti_aliased:", d.anti_aliased, ", CUDA:",
-        d.use_cuda, ")")
-    if first(d.x) != 0.0 || first(d.y) != 0.0
-        print(io, " offset by (", first(d.x), ", ", first(d.y), ")")
-    end
-end
-
 # TODO make this use IOContext compact
 function Base.show(io::IO, m::MIME"text/plain", d::AbstractDomain)
     typename = nameof(typeof(d))
-    print(io, typename, "(", d.Nx, ",", d.Ny, ",", d.Lx, ",", d.Ly, ")")
+
+    if get(io, :compact, false)
+        print(io, typename, "(", d.Nx, ",", d.Ny, ",", d.Lx, ",", d.Ly, ")")
+    else
+        print(io, typename, "(Nx:", d.Nx, ", Ny:", d.Ny, ", Lx:", d.Lx, ", Ly:", d.Ly,
+            ", real_transform:", d.realTransform, ", anti_aliased:", d.anti_aliased, ", CUDA:",
+            d.use_cuda, ")")
+        if first(d.x) != 0.0 || first(d.y) != 0.0
+            print(io, " offset by (", first(d.x), ", ", first(d.y), ")")
+        end
+    end
 end
 
 # ----------------------------------- Operators --------------------------------------------
