@@ -110,7 +110,7 @@ function Base.show(io::IO, d::AbstractDomain)
 end
 
 # TODO make this use IOContext compact
-function Base.show(io::IO, ::MIME"text/plain", d::AbstractDomain)
+function Base.show(io::IO, m::MIME"text/plain", d::AbstractDomain)
     typename = nameof(typeof(d))
     print(io, typename, "(", d.Nx, ",", d.Ny, ",", d.Lx, ",", d.Ly, ")")
 end
