@@ -97,6 +97,20 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
     end
 end
 
+function Base.show(io::IO, d::AbstractDomain)
+    typename = nameof(typeof(d))
+
+    # TODO could be made into a loop
+    print(typename, "(Nx:", d.Nx, ", Ny:", d.Ny, ", Lx:", d.Lx, ", Ly:", d.Ly,
+        ", real_transform:", d.realTransform, ", anti_aliased:", d.anti_aliased, ", CUDA:",
+        d.use_cuda, ")")
+    if first(d.x) != 0.0 || first(d.y) != 0.0
+        print(" offset by (", first(d.x), ", ", first(d.y), ")")
+    end
+end
+
+# ----------------------------------- Operators --------------------------------------------
+
 # Allows spectralOperators to be called using the domains
 
 function diff_x(field::F, domain::D) where {F<:AbstractArray,D<:AbstractDomain}
