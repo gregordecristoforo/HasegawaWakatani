@@ -198,10 +198,8 @@ function handle_output!(output::O, step::Integer, u::T, prob::SOP, t::N) where {
         output.store_hdf ? flush(output.file) : nothing
     end
 
-    # Check if last value is NaN, if the matrix has one NaN the whole array will turn NaN after fft
-    if isnan(Array(u)[end])
-        error("Breakdown occured at t=$t")
-    end
+    # Check if first value is NaN, if one value is NaN the whole Array will turn NaN after FFT
+    assert_no_nan(u)
 end
 
 # Perhaps one could look into HDF5 compound types in the future
@@ -285,6 +283,18 @@ end
 function parameter_string(parameters::P) where {P<:Dict}
     tmp = [string(key, "=", value) for (key, value) in sort(collect(parameters))]
     join(tmp, ", ")
+end
+
+function assert_no_nan(u::AbstractArray)
+    if isnan(u[1])
+        error("Breakdown occured at t=$t")
+    end
+end
+
+function assert_no_nan(u::CuArray)
+    if CUDA.@allowscalar isnan(u[1])
+        error("Breakdown occured at t=$t")
+    end
 end
 
 #------------------------------ Removal of modes -------------------------------------------
