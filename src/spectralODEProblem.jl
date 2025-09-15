@@ -127,10 +127,3 @@ end
 function _allocate_coefficients(u0::AbstractArray{<:AbstractArray}, domain::Domain)
     [_allocate_coefficients(u, domain) for u in u0]
 end
-
-using ComponentArrays
-# TODO move this implementation in extensions
-function _allocate_coefficients(u0::ComponentArray, domain::Domain)
-    ComponentArray(; (key => _allocate_coefficients(getproperty(u0, key), domain)
-                      for key in keys(u0))...)
-end

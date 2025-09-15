@@ -40,14 +40,6 @@ function _spectral_transform!(du, u::AbstractArray{<:AbstractArray}, p::P) where
     end
 end
 
-using ComponentArrays
-# TODO move this implementation in extensions
-function _spectral_transform!(du, u::ComponentArray, p::P) where {P<:FFTW.Plan}
-    for k in keys(u)
-        _spectral_transform!(getproperty(du, k), getproperty(u, k), p)
-    end
-end
-
 # TODO optimize spectral_transform methods, maybe use spectral_transform!
 """
     spectral_transform(U<:AbstractArray, transformplan<:FFTW.Plan)
