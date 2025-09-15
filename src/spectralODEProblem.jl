@@ -51,7 +51,7 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:AbstractDom
         p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing, kwargs...)
 
         # Prepare data structures
-        u0 = prepare_initial_state(u0, domain)
+        u0 = prepare_initial_condition(u0, domain)
         u0_hat = prepare_spectral_coefficients(u0, domain)
 
         # Remove unwanted modes
@@ -84,7 +84,7 @@ function Base.show(io::IO, m::MIME"text/plain", prob::SpectralODEProblem)
     show(io, m, prob.u0)
 end
 
-function prepare_initial_state(u0, domain::Domain)
+function prepare_initial_condition(u0, domain::Domain)
     # Transform to CUDA if used
     domain.use_cuda ? u0 = adapt(CuArray{domain.precision}, u0) : nothing
 
