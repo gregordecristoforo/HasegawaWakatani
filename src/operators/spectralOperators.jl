@@ -1,26 +1,22 @@
 module SpectralOperators
 
-using FFTW, CUDA, Base.Threads, LinearAlgebra
+using FFTW, CUDA, Base.Threads, LinearAlgebra, Adapt
 
 include("fftutilities.jl")
 export TransformPlans, FFTPlans, rFFTPlans, spectral_transform, spectral_transform!
-#    multi_fft, multi_ifft
-
-# TODO remove? and fix naming
-#export diffX, diffY, diffXX, diffYY, diffusion, solvePhi, poissonBracket, quadraticTerm, quadraticTerm!
 
 struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractArray,
     DYY<:AbstractArray,L<:AbstractArray,SP<:AbstractArray,P<:AbstractArray,DU<:AbstractArray,
-    T<:TransformPlans,PHI<:AbstractArray}
+    T<:AbstractFloat,TP<:TransformPlans,PHI<:AbstractArray}
 
     # Spectral coefficents
-    DiffX::DX
-    DiffY::DY
-    DiffXX::DXX
-    DiffYY::DYY
-    Laplacian::L
-    invLaplacian::L
-    HyperLaplacian::L
+    diff_x::DX
+    diff_y::DY
+    diff_xx::DXX
+    diff_yy::DYY
+    laplacian::L
+    laplacian_inv::L
+    hyper_laplacian::L
 
     # Psudo spectral cache
     padded::Bool
@@ -28,29 +24,35 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
     vp::SP
     U::P
     V::P
-    qtl::DU
-    qtr::DU
-    C::Float64                    # Coefficient used for correct anti-aliasing normalization
-    QTPlans::T                                               # QT stands for quadratic terms
+    qt_left::DU
+    qt_right::DU
+    dealiasing_coefficient::T
+    QTPlans::TP                                               # QT stands for quadratic terms
 
     # Other cache
     phi::PHI
 
-    function SpectralOperatorCache(kx, ky, Nx, Ny; realTransform=true, anti_aliased=true, use_cuda=false)
-        # Spectral coefficents (TODO All have to be CUDA)
-        DiffX = transpose(im * kx)
-        DiffY = im * ky
-        DiffXX = -kx' .^ 2
-        DiffYY = -ky .^ 2
-        Laplacian = -kx' .^ 2 .- ky .^ 2
-        invLaplacian = Laplacian .^ -1
-        HyperLaplacian = Laplacian .^ 3
-        invLaplacian[1] = 0 # First entry will always be NaN or Inf
+    function SpectralOperatorCache(kx, ky, Nx, Ny; real_transform=true, anti_aliased=true,
+        use_cuda=true, precision=Float64)
 
-        qtl = im * zeros(length(ky), length(kx))
-        qtr = zero(qtl)
-        phi = zero(qtl)
+        # Compute spectral coefficents
+        diff_x = transpose(im * kx)
+        diff_y = im * ky
+        diff_xx = -kx' .^ 2
+        diff_yy = -ky .^ 2
+        laplacian = -kx' .^ 2 .- ky .^ 2
+        laplacian_inv = laplacian .^ -1
+        hyper_laplacian = laplacian .^ 3
+        # Perhaps a better way exist
+        CUDA.@allowscalar laplacian_inv[1] = 0 # First entry will always be NaN or Inf
 
+        # Allocate extra arrays for in-place operations
+        qt_left = zeros(complex(precision), length(ky), length(kx))
+        use_cuda ? qt_left = adapt(CuArray, qt_left) : nothing
+        qt_right = zero(qt_left)
+        phi = zero(qt_left)
+
+        # Compute padding length
         if anti_aliased
             N = Nx > 1 ? div(3 * Nx, 2, RoundUp) : 1
             M = Ny > 1 ? div(3 * Ny, 2, RoundUp) : 1
@@ -58,61 +60,50 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
             N, M = Nx, Ny
         end
 
-        # TODO make these CUDA
-        if realTransform
+        # Determine transform plans for pseudo spectral schemes
+        if real_transform
             m = M % 2 == 0 ? M ÷ 2 + 1 : (M - 1) ÷ 2 + 1
-            spectral_pad = use_cuda ? im * CUDA.zeros(Float64, m, N) : im * zeros(m, N)  #These control precision
+            spectral_pad = zeros(complex(precision), m, N)
+            use_cuda ? spectral_pad = adapt(CuArray, spectral_pad) : nothing
             iFT = plan_irfft(im * spectral_pad, M)
             FT = plan_rfft(iFT * spectral_pad)
             QT_plans = rFFTPlans(FT, iFT)
         else
-            spectral_pad = use_cuda ? im * CUDA.zeros(Float64, M, N) : im * zeros(M, N)
+            spectral_pad = zeros(complex(precision), M, N)
+            use_cuda ? spectral_pad = adapt(CuArray, spectral_pad) : nothing
             FT = plan_fft(spectral_pad)
             iFT = plan_ifft(spectral_pad)
             QT_plans = FFTPlans(FT, iFT)
         end
 
+        # Allocate data for pseudo spectral schemes
         up = zero(spectral_pad)
         vp = zero(spectral_pad)
-
-        # Calculate correct conversion coefficent
-        C = M * N / (Nx * Ny)
         U = iFT * up
         V = iFT * vp
 
-        if use_cuda # cu to get 32, CuArray to get 64
-            DiffX = CuArray(DiffX)
-            DiffY = CuArray(DiffY)
-            DiffXX = CuArray(DiffXX)
-            DiffYY = CuArray(DiffYY)
-            Laplacian = CuArray(Laplacian)
-            invLaplacian = CuArray(invLaplacian)
-            HyperLaplacian = CuArray(HyperLaplacian)
-            up = CuArray(up)
-            vp = CuArray(vp)
-            U = CuArray(U)
-            V = CuArray(V)
-            qtl = CuArray(qtl)
-            qtr = CuArray(qtr)
-            phi = CuArray(phi)
-            #C = Float32(C) # TODO make less forced
-        end
+        # Calculate correct conversion coefficent
+        dealiasing_coefficient = precision(M * N / (Nx * Ny))
 
-        new{typeof(DiffX),typeof(DiffY),typeof(DiffXX),typeof(DiffYY),typeof(Laplacian),
-            typeof(up),typeof(U),typeof(qtr),typeof(QT_plans),typeof(phi)
-        }(DiffX, DiffY, DiffXX, DiffYY, Laplacian, invLaplacian, HyperLaplacian,
-            anti_aliased, up, vp, U, V, qtl, qtr, C, QT_plans, phi)
+        new{typeof(diff_x),typeof(diff_y),typeof(diff_xx),typeof(diff_yy),typeof(laplacian),
+            typeof(up),typeof(U),typeof(qt_right),typeof(dealiasing_coefficient),
+            typeof(QT_plans),typeof(phi)}(diff_x, diff_y, diff_xx, diff_yy, laplacian,
+            laplacian_inv, hyper_laplacian, anti_aliased, up, vp, U, V, qt_left, qt_right,
+            dealiasing_coefficient, QT_plans, phi)
     end
 end
 
+# TODO check if operators like laplacians and diff_xx and diff_yy should be Complex 
+# TODO refactor anti_aliased to dealiased
+
 #------------------------- Quadratic terms interface ---------------------------------------
-function quadraticTerm(u::U, v::V, SC::SOC) where {U<:AbstractArray,V<:AbstractArray,
+function quadratic_term(u::U, v::V, SC::SOC) where {U<:AbstractArray,V<:AbstractArray,
     SOC<:SpectralOperatorCache}
-    spectral_conv!(SC.qtl, u, v, SC)
+    spectral_conv!(SC.qt_left, u, v, SC)
 end
 
 # TODO perhaps remove and make alias as it has the same parameters
-function quadraticTerm!(out::DF, u::F, v::F, SC::SOC) where {DF<:AbstractArray,
+function quadratic_term!(out::DF, u::F, v::F, SC::SOC) where {DF<:AbstractArray,
     F<:AbstractArray,SOC<:SpectralOperatorCache}
     spectral_conv!(out, u, v, SC)
 end
@@ -131,7 +122,7 @@ function spectral_conv!(out::DU, u::U, v::V, SC::SOC) where {DU<:AbstractArray,
         SC.U[i] *= SC.V[i]
     end
     mul!(SC.padded ? SC.up : out, plans.FT, SC.U)
-    SC.padded ? SC.C * unpad!(out, SC.up, plans) : out
+    SC.padded ? SC.dealiasing_coefficient * unpad!(out, SC.up, plans) : out
 end
 
 # Kept for legacy 
@@ -151,7 +142,7 @@ function spectral_conv!(out::DU, u::U, v::V, SC::SOC) where {DU<:CuArray,U<:CuAr
     @. SC.U *= SC.V
     mul!(SC.padded ? SC.up : out, plans.FT, SC.U)
     #if padded unpad!(qt, up, plans) end
-    SC.padded ? SC.C * unpad!(out, SC.up, plans) : out
+    SC.padded ? SC.dealiasing_coefficient * unpad!(out, SC.up, plans) : out
 end
 
 # Specialized for 2D arrays
@@ -215,41 +206,43 @@ end
 
 #-------------------------------- Differentiation ------------------------------------------
 
-function diffX(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
-    SC.DiffX .* field
+function diff_x(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
+    SC.diff_x .* field
 end
 
-function diffY(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
-    SC.DiffY .* field
+function diff_y(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
+    SC.diff_y .* field
 end
 
-function diffXX(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
-    SC.DiffXX .* field
+function diff_xx(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
+    SC.diff_xx .* field
 end
 
-function diffYY(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
-    SC.DiffYY .* field
+function diff_yy(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
+    SC.diff_yy .* field
 end
+
+# TODO add diff_xn, diff_yn
 
 function laplacian(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
-    SC.Laplacian .* field
+    SC.laplacian .* field
 end
 
 function hyper_diffusion(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
-    SC.HyperLaplacian .* field
+    SC.hyper_laplacian .* field
 end
 
-function solvePhi(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
-    SC.phi .= SC.invLaplacian .* field
+function solve_phi(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
+    SC.phi .= SC.laplacian_inv .* field
 end
 
-# function poissonBracket(A::U, B::V, SC::SOC) where {U<:AbstractArray,SOC<:SpectralOperatorCache}
-#     quadraticTerm(diffX(A, SC), diffY(B, SC), SC) - quadraticTerm(diffY(A, SC), diffX(B, SC), SC)
+# function poisson_bracket(A::U, B::V, SC::SOC) where {U<:AbstractArray,SOC<:SpectralOperatorCache}
+#     quadratic_term(diff_x(A, SC), diff_y(B, SC), SC) - quadratic_term(diff_y(A, SC), diff_x(B, SC), SC)
 # end
 
-function poissonBracket(A::U, B::V, SC::SOC) where {U<:AbstractArray,V<:AbstractArray,
+function poisson_bracket(A::U, B::V, SC::SOC) where {U<:AbstractArray,V<:AbstractArray,
     SOC<:SpectralOperatorCache}
-    spectral_conv!(SC.qtl, diffX(A, SC), diffY(B, SC), SC) .-= spectral_conv!(SC.qtr, diffY(A, SC), diffX(B, SC), SC)
+    spectral_conv!(SC.qt_left, diff_x(A, SC), diff_y(B, SC), SC) .-= spectral_conv!(SC.qt_right, diff_y(A, SC), diff_x(B, SC), SC) # TODO fix formatting
 end
 
 #---------------------------------- Other non-linearities ---------------------------------- 
@@ -257,9 +250,9 @@ function spectral_function(f::F, u::U, SC::SOC) where {F<:Function,U<:AbstractAr
     plans = SC.QTPlans
     mul!(SC.U, plans.iFT, SC.padded ? pad!(SC.up, u, plans) : u)
     # Assumes function is broadcastable and only 1 argument TODO expand upon this
-    SC.V .= f.(SC.C * SC.U)
-    mul!(SC.padded ? SC.up : SC.qtl, plans.FT, SC.V)
-    SC.padded ? unpad!(SC.qtl, SC.up, plans) / SC.C : SC.qtl
+    SC.V .= f.(SC.dealiasing_coefficient * SC.U)
+    mul!(SC.padded ? SC.up : SC.qt_left, plans.FT, SC.V)
+    SC.padded ? unpad!(SC.qt_left, SC.up, plans) / SC.dealiasing_coefficient : SC.qt_left
 end
 
 end

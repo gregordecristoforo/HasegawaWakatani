@@ -86,7 +86,7 @@ end
 
 
 
-# radii = -domain.SC.Laplacian
+# radii = -domain.SC.laplacian
 # dk = 0.5*0.15
 
 # radii.÷dk

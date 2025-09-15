@@ -1,9 +1,27 @@
 
 # Inspired by SciMLBase, singleton type
+"""
+    Nullparamters()
+  Singleton to signalize that the user has not specified any parameters.
+"""
 struct NullParameters end
 
 # TODO add get_velocity=vExB,
 
+"""
+    SpectralODEProblem(L::Function, N::Function, domain::AbstractDomain, u0, tspan;
+        p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing, kwargs...)
+    SpectralODEProblem(N::Function, domain::AbstractDomain, u0, tspan;
+        p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing, kwargs...)
+  
+  Collection of data needed to specify the spectral ODE problem to be solved. The user needs
+   to specify the non-linear operator `N`, with the linear operator `L` being optional and 
+   otherwise assumed tp be zero. In addition the `domain`, initial condition `u0` and
+   timespan `tspan` needs to be specified. The parameters `p` will be passed onto the 
+   RHS/operators and the timestep `dt` is used by the temporal scheme. There is also the 
+   option to add a method `remove_modes` to remove certain modes after each timestep. Other
+   `kwargs` can be stored in the struct, however these are currently unused.
+"""
 mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:AbstractDomain,u0Type<:AbstractArray,
     u0_hatType<:AbstractArray,tType,pType,N<:Number,RMType<:Function,kwargsType}
 
@@ -32,29 +50,18 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:AbstractDom
     function SpectralODEProblem(L::Function, N::Function, domain::AbstractDomain, u0, tspan;
         p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing, kwargs...)
 
-        # Transform to CUDA
-        domain.use_cuda ? u0 = CuArray(u0) : nothing # TODO option for 32 or 64 bit CUDA
+        # Prepare data structures
+        u0 = prepare_initial_state(u0, domain)
+        u0_hat = prepare_spectral_coefficients(u0, domain)
 
-        # Allocate array for spectral modes 
-        sz = size(domain.transform.iFT)
-        allocation_size = (sz..., size(u0)[length(sz)+1:end]...)
-        u0_hat = zeros(eltype(domain.transform.iFT), allocation_size...)
-
-        # Used for normal Fourier transform
-        eltype(domain.transform.FT) <: Complex ? u0 = complex(u0) : nothing
-
-        # Transform to CUDA
-        domain.use_cuda ? u0_hat = CuArray(u0_hat) : nothing # This controls precision
-
-        # Compute 
-        spectral_transform!(u0_hat, u0, domain.transform.FT)
+        # Remove unwanted modes
         remove_modes(u0_hat, domain)
 
         # Handle timespan
         length(tspan) != 2 ? throw("tspan should have exactly two elements") : nothing
         tspan = promote(first(tspan), last(tspan))
 
-        #dt = Float32(dt)
+        #dt = convert(precision, dt)
 
         new{typeof(L),typeof(N),typeof(domain),typeof(u0),typeof(u0_hat),typeof(tspan),
             typeof(p),typeof(dt),typeof(remove_modes),typeof(kwargs)}(L, N, domain, u0, u0_hat,
@@ -75,4 +82,55 @@ function Base.show(io::IO, m::MIME"text/plain", prob::SpectralODEProblem)
     show(io, prob.tspan)
     print(io, "\nu0: ")
     show(io, m, prob.u0)
+end
+
+function prepare_initial_state(u0, domain::Domain)
+    # Transform to CUDA if used
+    domain.use_cuda ? u0 = adapt(CuArray{domain.precision}, u0) : nothing
+
+    # Used for normal Fourier transform
+    eltype(domain.transform.FT) <: Complex ? u0 = complex(u0) : nothing
+
+    return u0
+end
+
+function prepare_spectral_coefficients(u0, domain::Domain)
+    # Allocate data structure for spectral modes
+    u0_hat = allocate_coefficients(u0, domain)
+
+    # Compute spectral initial conditions
+    spectral_transform!(u0_hat, u0, get_fwd_transform(domain))
+
+    return u0_hat
+end
+
+"""
+    allocate_coefficients(u0, transformplans::TransformPlans)
+  Recursively iterates trough the initial condition data structure to try to get to the 
+  lowest level Array and then allocates the needed shape after applying the fwd transform.
+"""
+function allocate_coefficients(u0, domain::Domain)
+    _allocate_coefficients(u0, domain)
+end
+
+# TODO perhaps clean up this logic
+function _allocate_coefficients(u0::AbstractArray{<:Number}, domain::Domain)
+    # Allocate array for spectral modes 
+    sz = size(get_bwd(domain))
+    allocation_size = (sz..., size(u0)[length(sz)+1:end]...)
+    u0_hat = zeros(eltype(get_bwd(domain)), allocation_size)
+
+    # Transform to CUDA
+    domain.use_cuda ? adapt(CuArray, u0_hat) : u0_hat
+end
+
+function _allocate_coefficients(u0::AbstractArray{<:AbstractArray}, domain::Domain)
+    [_allocate_coefficients(u, domain) for u in u0]
+end
+
+using ComponentArrays
+# TODO move this implementation in extensions
+function _allocate_coefficients(u0::ComponentArray, domain::Domain)
+    ComponentArray(; (key => _allocate_coefficients(getproperty(u0, key), domain)
+                      for key in keys(u0))...)
 end

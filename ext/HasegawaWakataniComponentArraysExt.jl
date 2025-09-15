@@ -1,0 +1,4 @@
+module HasegawaWakataniComponentArraysExt
+using HasegawaWakatani
+
+end

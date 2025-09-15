@@ -111,7 +111,7 @@ function probe_potential(u::U, prob::SOP, t::N, positions::P; interpolation::I=n
         is_in_domain(positions, domain) ? nothing : error("One or more probes are outside the domain")
     end
 
-    ϕ_hat = @views solvePhi(u[:, :, 2], prob.domain)
+    ϕ_hat = @views solve_phi(u[:, :, 2], prob.domain)
     ϕ = prob.domain.transform.iFT * ϕ_hat
     probe_field(ϕ, prob.domain, positions; interpolation)
 end
@@ -140,8 +140,8 @@ function probe_radial_velocity(u::U, prob::SOP, t::N, positions::P; interpolatio
         is_in_domain(positions, domain) ? nothing : error("One or more probes are outside the domain")
     end
 
-    ϕ_hat = @views solvePhi(u[:, :, 2], prob.domain)
-    v_x_hat = -diffY(ϕ_hat, prob.domain)
+    ϕ_hat = @views solve_phi(u[:, :, 2], prob.domain)
+    v_x_hat = -diff_y(ϕ_hat, prob.domain)
     v_x = prob.domain.transform.iFT * v_x_hat
     probe_field(v_x, prob.domain, positions; interpolation)
 end

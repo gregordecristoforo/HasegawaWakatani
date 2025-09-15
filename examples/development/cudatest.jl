@@ -1,3 +1,6 @@
+using HasegawaWakatani
+using CUDA
+
 domain = Domain(256, 256, 128, 128, anti_aliased=true, use_cuda=true)
 
 domain.kx
@@ -5,38 +8,39 @@ domain.ky
 domain.x
 domain.y
 
-domain.SC.Laplacian
-domain.SC.invLaplacian
-domain.SC.HyperLaplacian
-domain.SC.DiffX
-domain.SC.DiffY
-domain.SC.DiffXX
-domain.SC.DiffYY
+domain.SC.laplacian
+domain.SC.laplacian_inv
+domain.SC.hyper_laplacian
+domain.SC.diff_x
+domain.SC.diff_y
+domain.SC.diff_xx
+domain.SC.diff_yy
 
 FT = domain.transform.FT
-u = CuArray(ic[:, :, 1])
+u = CuArray(ones(256, 256))
 u_hat = FT * u
 
-diffX(u_hat, domain)           # ✓
-diffY(u_hat, domain)           # ✓
-diffXX(u_hat, domain)          # ✓
-diffYY(u_hat, domain)          # ✓
-diffusion(u_hat, domain)       # ✓
-hyper_diffusion(u_hat, domain) # ✓
-solvePhi(u_hat, domain)        # ✓
+diff_x(u_hat, domain)           # ✓
+diff_y(u_hat, domain)           # ✓
+diff_xx(u_hat, domain)          # ✓
+diff_yy(u_hat, domain)          # ✓
+diffusion(u_hat, domain)        # ✓
+hyper_diffusion(u_hat, domain)  # ✓
+solve_phi(u_hat, domain)        # ✓
 
-spectral_transform!(u_hat, u, domain.transform.FT) # ✓
+HasegawaWakatani.SpectralOperators.spectral_transform!(u_hat, u, domain.transform.FT) # ✓
 
-# QuadraticTerms cache
+# quadratic_terms cache
 domain.SC.up                  # ✓
 domain.SC.vp                  # ✓
 domain.SC.U                   # ✓
 domain.SC.V                   # ✓
-domain.SC.qtl                 # ✓
-domain.SC.qtr                 # ✓
+domain.SC.qt_left             # ✓
+domain.SC.qt_right            # ✓
 domain.SC.phi                 # ✓
 domain.SC.QTPlans.FT          # ✓
 domain.SC.QTPlans.iFT         # ✓
+typeof(domain.SC.dealiasing_coefficient)
 
 # More complex methods
 spectral_exp(u_hat, domain)   # ✓
@@ -44,8 +48,8 @@ spectral_expm1(u_hat, domain) # ✓
 spectral_log(u_hat, domain)   # ✓
 
 # Methods utilizing threading
-quadraticTerm(diffXX(u_hat, domain), diffYY(u_hat, domain), domain) # ✓
-poissonBracket(u_hat, u_hat, domain)                                # ✓
+quadratic_term(diff_xx(u_hat, domain), diff_yy(u_hat, domain), domain) # ✓
+poisson_bracket(u_hat, u_hat, domain)                                  # ✓
 
 p = Dict(
     "D" => 1e-2,
@@ -94,11 +98,11 @@ total_0 - CUDA.free_memory()
 # 369098752 bytes | 0.369 GB (Out of nowhere)
 #-570425344 bytes |-0.570 GB (Freed out of nowhere too)
 
-data_cpu = output.simulation["fields"][:,:,1,end]
+data_cpu = output.simulation["fields"][:, :, 1, end]
 heatmap(data_cpu)
 heatmap(data_gpu)
-heatmap(ic[:,:,1])
+heatmap(ic[:, :, 1])
 
 CUDA.pool_status()
 
-ic - output.simulation["fields"][:,:,:,1]
+ic - output.simulation["fields"][:, :, :, 1]

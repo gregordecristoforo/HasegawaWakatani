@@ -70,7 +70,7 @@ end
 # --------------------------- Analytical solutions -----------------------------------------
 
 function HeatEquationAnalyticalSolution(u0, domain, p, t)
-    u0_hat = (domain.transform.FT * u0) .* exp.(p["nu"] * domain.SC.Laplacian * t)
+    u0_hat = (domain.transform.FT * u0) .* exp.(p["nu"] * domain.SC.laplacian * t)
     domain.transform.iFT * u0_hat
 end
 
@@ -150,9 +150,9 @@ function test_resolution_convergence(prob, initialField, analyticalSolution, res
 
         # Create higher resolution domain
         if oneDimensional
-            domain = Domain(1, N, od.Lx, od.Ly, realTransform=od.realTransform, anti_aliased=od.anti_aliased)
+            domain = Domain(1, N, od.Lx, od.Ly, real_transform=od.real_transform, anti_aliased=od.anti_aliased)
         else
-            domain = Domain(N, N, od.Lx, od.Ly, realTransform=od.realTransform, anti_aliased=od.anti_aliased)
+            domain = Domain(N, N, od.Lx, od.Ly, real_transform=od.real_transform, anti_aliased=od.anti_aliased)
         end
         u0 = initial_condition(initialField, domain) #TODO rethink initial condition 
 

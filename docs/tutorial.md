@@ -31,29 +31,29 @@ The non-linear operator ``N`` looks like:
 function N(u, d, p, t)
     n = @view u[:, :, 1]
     Ω = @view u[:, :, 2]
-    ϕ = solvePhi(Ω, d)
+    ϕ = solve_phi(Ω, d)
 
-    dn = -poissonBracket(ϕ, n, d)
-    dn .-= (1 - p["g"]) * diffY(ϕ, d)
-    dn .-= p["g"] * diffY(n, d)
+    dn = -poisson_bracket(ϕ, n, d)
+    dn .-= (1 - p["g"]) * diff_y(ϕ, d)
+    dn .-= p["g"] * diff_y(n, d)
     dn .+= p["sigma"] * ϕ
 
-    dΩ = -poissonBracket(ϕ, Ω, d)
-    dΩ .-= p["g"] * diffY(n, d)
+    dΩ = -poisson_bracket(ϕ, Ω, d)
+    dΩ .-= p["g"] * diff_y(n, d)
     dΩ .+= p["sigma"] * ϕ
     return cat(dn, dΩ, dims=3)
 end
 ```
-where it is worth noting the use of the ``@view`` macro to access a slice of the solution $u$ (in spectral space so should really be $\hat{u}$), the ``solvePhi`` used to obtain the electrostatic potential from the vorticity field, the ``.`` infront of the operators ensure the operators happens elementwise and also speeds up the calculation and ``cat(dn, dΩ, dims=3)`` is used to combine the two changes to the field.
+where it is worth noting the use of the ``@view`` macro to access a slice of the solution $u$ (in spectral space so should really be $\hat{u}$), the ``solve_phi`` used to obtain the electrostatic potential from the vorticity field, the ``.`` infront of the operators ensure the operators happens elementwise and also speeds up the calculation and ``cat(dn, dΩ, dims=3)`` is used to combine the two changes to the field.
 
-The operators supported are ``DiffX``, ``DiffXX``, ``DiffY`` and ``DiffYY`` for spatial derivatives in the $x$ and $y$ direction respectively. The ``laplacian`` operator with aliases ``diffusion`` and ``Δ`` with the support of ``hyper_diffusion``. ``solvePhi`` which computes the electrostatic potential from the vorticity. The non-linear operators supported are ``quadraticTerm`` which computes the quadratic term using the pseudo-spectral method, ``poissonBracket`` which utilizes the ``quadraticTerm`` method, and also ``reciprocal``, ``spectral_exp``, ``spectral_expm1`` and ``spectral_log`` which all uses ``spectral_function`` to evaluate the function in physical space and get the modes back.
+The operators supported are ``diff_x``, ``diff_xx``, ``diff_y`` and ``diff_yy`` for spatial derivatives in the $x$ and $y$ direction respectively. The ``laplacian`` operator with aliases ``diffusion`` and ``Δ`` with the support of ``hyper_diffusion``. ``solve_phi`` which computes the electrostatic potential from the vorticity. The non-linear operators supported are ``quadratic_term`` which computes the quadratic term using the pseudo-spectral method, ``poisson_bracket`` which utilizes the ``quadratic_term`` method, and also ``reciprocal``, ``spectral_exp``, ``spectral_expm1`` and ``spectral_log`` which all uses ``spectral_function`` to evaluate the function in physical space and get the modes back.
 
 ## Domain
 The ``Domain`` contains the information about the spatial discretization, the ``SpectralOperatorCache`` (explained above) and the transform plans (``FFTPlans`` in the current implementation). The easiest way to initialize a domain is ``Domain(N)`` which assumes a centered unit square domain. One may also use ``Domain(N,L)`` for a square domain with a different size. Both initilizations are optimized for run-time, for full flexibility use
 ```
-Domain(Nx, Ny, Lx, Ly; realTransform=true, anti_aliased=true, use_cuda=true, x0=-Lx / 2, y0=-Ly / 2)
+Domain(Nx, Ny, Lx, Ly; real_transform=true, anti_aliased=true, use_cuda=true, x0=-Lx / 2, y0=-Ly / 2)
 ```
-where ``x0`` and ``y0`` specify the down-left corner position (origin). The keyword arguments allows for the user to toggle the use of de-aliasing ``anti-aliasing``, realFFT ``realTransform`` and the use of *CUDA* ``use_cuda``,currently only supported in the *cuda* branch. Based on the toggles the program allocates fitting FFTPlans (the ``transform`` field of the ``Domain``) and ``SpectralOperatorCache``. The ``Domain`` discretization is stored in the ``x`` and ``y`` fields with the respective wavenumbers stored in ``kx`` and ``ky``.
+where ``x0`` and ``y0`` specify the down-left corner position (origin). The keyword arguments allows for the user to toggle the use of de-aliasing ``anti-aliasing``, realFFT ``real_transform`` and the use of *CUDA* ``use_cuda``,currently only supported in the *cuda* branch. Based on the toggles the program allocates fitting FFTPlans (the ``transform`` field of the ``Domain``) and ``SpectralOperatorCache``. The ``Domain`` discretization is stored in the ``x`` and ``y`` fields with the respective wavenumbers stored in ``kx`` and ``ky``.
 
 ## Initial condition
 The initial condition needs to be compatible with the expected return value of the linear and non-linear operators. To achieve this use the ``initial_condition(fun, domain)`` function for a specified function ``fun`` on the form ``f(x,y;kwargs...)`` or use the badly named ``initial_condition_linear_stability(domain, amplitude)`` for random uncorrelated modes with a cross-phase of $\pi/2$ and amplitude determined by ``amplitude``.

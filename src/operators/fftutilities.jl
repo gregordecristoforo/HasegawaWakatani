@@ -21,20 +21,30 @@ end
 """
     spectral_transform!(U<:AbstractArray, transformplan<:FFTW.Plan)
     spectral_transform!(U<:Union{Tuple,Vector}, transformplan<:FFTW.Plan)
-  Spectral transform, applies transform plan p to U in-place returning du.
+  Spectral transform, applies transform plan p to u in-place returning du.
 """
-function spectral_transform!(du::DU, u::U, p::P) where {DU<:AbstractArray,U<:AbstractArray,P<:FFTW.Plan}
-    @assert ndims(du) == ndims(u)
+function spectral_transform!(du, u, p::P) where {P<:FFTW.Plan}
+    _spectral_transform!(du, u, p)
+end
+
+function _spectral_transform!(du, u::AbstractArray{<:Number}, p::P) where {P<:FFTW.Plan}
     idx = ntuple(_ -> :, ndims(p))
     for i in axes(u, ndims(p) + 1)
         mul!(view(du, idx..., i), p, u[idx..., i])
     end
 end
 
-function spectral_transform!(du::DU, u::U, p::P) where {DU<:Union{Tuple,Vector},
-    U<:Union{Tuple,Vector},P<:FFTW.Plan}
+function _spectral_transform!(du, u::AbstractArray{<:AbstractArray}, p::P) where {P<:FFTW.Plan}
     for i in eachindex(u)
-        mul!(du[i], p, u[i])
+        _spectral_transform!(du[i], p, u[i])
+    end
+end
+
+using ComponentArrays
+# TODO move this implementation in extensions
+function _spectral_transform!(du, u::ComponentArray, p::P) where {P<:FFTW.Plan}
+    for k in keys(u)
+        _spectral_transform!(getproperty(du, k), getproperty(u, k), p)
     end
 end
 
@@ -51,6 +61,11 @@ end
 function spectral_transform(U::T, p::P) where {T<:Union{Tuple,Vector},P<:FFTW.Plan}
     map(u -> p * u, U)
 end
+
+# function spectral_transform(U, p::P) where {P<:FFTW.Plan}
+#     allocate_coefficients()
+#     spectral_transform!
+# end
 
 """
     Base.show(io::IO, transformplans::TransformPlans)

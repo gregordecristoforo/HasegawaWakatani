@@ -31,8 +31,8 @@ function radial_flux(u::U, prob::P, t::T; quadrature=nothing) where
 {U<:CuArray,P<:SpectralODEProblem,T<:Number}
     n_hat = @view u[:, :, 1]
     Ω_hat = @view u[:, :, 2]
-    ϕ_hat = solvePhi(Ω_hat, prob.domain)
-    dϕ_hat = diffY(ϕ_hat, prob.domain)
+    ϕ_hat = solve_phi(Ω_hat, prob.domain)
+    dϕ_hat = diff_y(ϕ_hat, prob.domain)
     vx = zeros(size(prob.domain.transform.FT)) # TODO cache these perhaps?
     vx = prob.domain.use_cuda ? CuArray(vx) : vx
     n = similar(vx)

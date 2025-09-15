@@ -274,7 +274,7 @@ function write_attribute(simulation::HDF5.Group, prob::SOP) where {SOP<:Spectral
     write_attribute(simulation, "Nx", prob.domain.Nx)
     write_attribute(simulation, "Ny", prob.domain.Ny)
     write_attribute(simulation, "anti_aliased", prob.domain.anti_aliased)
-    write_attribute(simulation, "realTransform", prob.domain.realTransform)
+    write_attribute(simulation, "real_transform", prob.domain.real_transform)
     for (key, val) in prob.p
         write_attribute(simulation, key, val)
     end
