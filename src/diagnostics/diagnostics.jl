@@ -24,9 +24,9 @@ mutable struct Diagnostic{N<:AbstractString,M<:Function,D<:AbstractArray,T<:Abst
     end
 end
 
-function initialize_diagnostic!(diagnostic::D, U::T, prob::SOP, simulation::S, h5_kwargs::K;
-    store_hdf::Bool=true, store_locally::Bool=true) where {D<:Diagnostic,T<:AbstractArray,
-    SOP<:SpectralODEProblem,S<:Union{HDF5.Group,Nothing},K<:Any}
+function initialize_diagnostic!(diagnostic::D, prob::SOP, u0::T, t0::AbstractFloat,
+    simulation::S, h5_kwargs::K; store_hdf::Bool=true, store_locally::Bool=true) where
+{D<:Diagnostic,SOP<:SpectralODEProblem,T<:AbstractArray,S<:Union{HDF5.Group,Nothing},K<:Any}
 
     # Calculate total number of steps
     N_steps = floor(Int, (last(prob.tspan) - first(prob.tspan)) / prob.dt)
@@ -55,7 +55,7 @@ function initialize_diagnostic!(diagnostic::D, U::T, prob::SOP, simulation::S, h
     if diagnostic.assumesSpectralField
         id = diagnostic.method(prob.u0_hat, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
     else
-        id = diagnostic.method(U, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
+        id = diagnostic.method(u0, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
     end
 
     if diagnostic.storesData

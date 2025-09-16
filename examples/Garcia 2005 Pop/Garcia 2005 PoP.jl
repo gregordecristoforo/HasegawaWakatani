@@ -54,7 +54,7 @@ cd(relpath(@__DIR__, pwd()))
 
 # The output
 output = Output(prob, 21, diagnostics, "output/Garcia 2005 PoP.h5",
-    store_locally=false, simulation_name="test")
+    store_locally=false, simulation_name="new")
 
 ## Solve and plot
 using Profile

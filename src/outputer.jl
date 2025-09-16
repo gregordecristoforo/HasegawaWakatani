@@ -1,7 +1,7 @@
 # ------------------------------------- Outputer -------------------------------------------
 
-mutable struct Output{DV<:AbstractArray,U<:AbstractArray,UB<:AbstractArray,T<:AbstractArray,
-    FN<:AbstractString,F<:Union{HDF5.File,Nothing},S<:Union{HDF5.Group,Nothing},PT<:Function,
+mutable struct Output{DV<:AbstractArray{<:Diagnostic},U<:AbstractArray,UB<:AbstractArray,
+    T<:AbstractArray,F<:Union{HDF5.File,Nothing},S<:Union{HDF5.Group,Nothing},PT<:Function,
     K<:Any} #TODO figure out type of K
 
     stride::Int
@@ -10,8 +10,7 @@ mutable struct Output{DV<:AbstractArray,U<:AbstractArray,UB<:AbstractArray,T<:Ab
     U_buffer::UB
     #v::V
     t::T
-    filename::FN
-    file::F
+    file::F                                 # TODO remove as it is in output.simulation.file
     simulation::S
     physical_transform::PT
     store_hdf::Bool
@@ -24,117 +23,213 @@ mutable struct Output{DV<:AbstractArray,U<:AbstractArray,UB<:AbstractArray,T<:Ab
         h5_kwargs...) where {SOP<:SpectralODEProblem,DV<:AbstractArray,FN<:AbstractString,
         PT<:Function,SN<:Union{AbstractString,Symbol}}
 
-        # Calculate number of total samples
-        N_steps = floor(Int, (last(prob.tspan) - first(prob.tspan)) / prob.dt)
+        # Compute number of samples to be stored and stride distance
+        N_data, stride = prepare_sampling_coverage(prob, N_data)
 
-        # Bound checking
-        if N_data == -1
-            N_data = N_steps + 1
-        elseif N_data <= 1
-            error("N_data must be greater than 2, or use -1 to get all the data")
-        elseif N_data > N_steps
-            N_data = N_steps + 1
-            @warn "N_data and stepsize was not compatible, N_data is instead set to N_data = " * "$N_data"
-        end
+        # Prepare initial state
+        u0, t0 = prepare_initial_state(prob, physical_transform=physical_transform)
 
-        # Calculate number of evolution steps between samples
-        stride = floor(Int, N_steps / (N_data - 1))
+        # Merge h5_kwargs with default kwargs
+        h5_kwargs = merge((blosc=3,), h5_kwargs)
 
-        # Calculate number of samples with rounded sampling rate
-        N = floor(Int, N_steps / stride) + 1
+        # Setup HDF5 storage if wanted
+        file, simulation = setup_hdf5_storage(filename, simulation_name, prob, u0, t0, N_data;
+            store_hdf=store_hdf, h5_kwargs=h5_kwargs)
 
-        # Check if compatible
-        if N != N_data
-            N_data = N
-            @warn "N_data and stepsize was not compatible, N_data is instead set to N_data = " * "$N_data"
-        end
-
-        # Copy initial condition and possibly transform
-        U = copy(prob.u0)
-        physical_transform(U)
-
-        # Store in hdf5 format if user wants
-        if store_hdf
-            # Check for filename extension
-            if splitext(filename)[end] == ""
-                filename = splitext(filename)[1] * ".h5"
-            end
-
-            # Create HDF5 file
-            file = h5open(filename, "cw")
-
-            # Handle simulation_name
-            if simulation_name == :timestamp
-                simulation_name = "$(now())"
-            elseif simulation_name == :parameters
-                simulation_name = parameter_string(prob.p)
-            elseif simulation_name isa String
-                nothing
-            else
-                error("$simulation_name is not a valid input")
-            end
-
-            # Make sure simulation group does not allready exist
-            if !haskey(file, simulation_name)
-                simulation = create_group(file, simulation_name)
-
-                # Default h5 options
-                if isempty(h5_kwargs)
-                    h5_kwargs = (blosc=3,)
-                end
-
-                # Create dataset for fields and time
-                dset = create_dataset(simulation, "fields", datatype(Float64), (size(prob.u0)..., typemax(Int64)),
-                    chunk=(size(prob.u0)..., 1); h5_kwargs...)
-                HDF5.set_extent_dims(dset, (size(prob.u0)..., N_data))
-                dset = create_dataset(simulation, "t", datatype(Float64), (typemax(Int64),),
-                    chunk=(1,); h5_kwargs...)
-                HDF5.set_extent_dims(dset, (N_data,))
-
-                # Store the initial conditions
-                simulation["fields"][fill(:, ndims(U))..., 1] = U
-                simulation["t"][1] = first(prob.tspan)
-
-                # Store attributes
-                write_attribute(simulation, prob)
-            else
-                simulation = open_group(file, simulation_name)
-                # Expand length of fields and t
-                HDF5.set_extent_dims(simulation["fields"], (size(prob.u0)..., N_data))
-                HDF5.set_extent_dims(simulation["t"], (N_data,))
-            end
-        else
-            file = nothing
-            filename = ""
-            simulation = nothing
-        end
-
-        # Store "locally" as in memory
-        if store_locally
-            # Allocate local data for fields
-            u = [zero(prob.u0) for _ in 1:N_data]
-            u[1] .= U
-            t = zeros(N_data)
-            t[1] = first(prob.tspan)
-        else
-            # Do not allocate data for fields locally
-            u = []
-            t = []
-        end
+        # Setup local (in memory) storage if wanted
+        u, t = setup_local_storage(u0, t0, N_data; store_locally=store_locally)
 
         # Allocate data for diagnostics
         for diagnostic in diagnostics
-            initialize_diagnostic!(diagnostic, U, prob, simulation, h5_kwargs,
+            # TODO fix arguments
+            initialize_diagnostic!(diagnostic, prob, u0, t0, simulation, h5_kwargs,
                 store_hdf=store_hdf, store_locally=store_locally)
         end
 
         # Create output
-        new{typeof(diagnostics),typeof(u),typeof(U),typeof(t),typeof(filename),typeof(file),
+        new{typeof(diagnostics),typeof(u),typeof(u0),typeof(t),typeof(file),
             typeof(simulation),typeof(physical_transform),typeof(h5_kwargs)}(stride,
-            diagnostics, u, U, t, filename, file, simulation, physical_transform,
+            diagnostics, u, u0, t, file, simulation, physical_transform,
             store_hdf, store_locally, h5_kwargs)
     end
 end
+
+# ----------------------------------- Helpers ----------------------------------------------
+
+function prepare_sampling_coverage(prob, N_data)
+    # Calculate number of total samples
+    N_steps = floor(Int, (last(prob.tspan) - first(prob.tspan)) / prob.dt)
+
+    # Bound checking
+    if N_data == -1
+        N_data = N_steps + 1
+    elseif N_data <= 1
+        error("N_data must be greater than 2, or use -1 to get all the data")
+    elseif N_data > N_steps
+        N_data = N_steps + 1
+        @warn "N_data and stepsize was not compatible, N_data is instead set to N_data = " * "$N_data"
+    end
+
+    # Calculate number of evolution steps between samples
+    stride = floor(Int, N_steps / (N_data - 1))
+
+    # Calculate number of samples with rounded sampling rate
+    N = floor(Int, N_steps / stride) + 1
+
+    # Check if compatible
+    if N != N_data
+        N_data = N
+        @warn "N_data and stepsize was not compatible, N_data is instead set to N_data = " * "$N_data"
+    end
+
+    return N_data, stride
+end
+
+"""
+"""
+function prepare_initial_state(prob; physical_transform=identity)
+    u0 = physical_transform(copy(prob.u0))
+    t0 = first(prob.tspan)
+    return u0, t0
+end
+
+"""
+"""
+function setup_hdf5_storage(filename, simulation_name, prob, u0, t0, N_data;
+    store_hdf=store_hdf, h5_kwargs=h5_kwargs)
+
+    if store_hdf
+        filename = add_h5_if_missing(filename)
+
+        # Create HDF5 file
+        file = h5open(filename, "cw")
+
+        # Create simulation name
+        simulation_name = handle_simulation_name(simulation_name, prob)
+
+        # Check how to handle simulation group
+        if !haskey(file, simulation_name)
+            simulation = setup_simulation_group(file, simulation_name, prob, u0, t0, N_data;
+                h5_kwargs)
+        else
+            simulation = open_group(file, simulation_name)
+        end
+
+        return file, simulation
+    else
+        return nothing, nothing
+    end
+end
+
+"""
+    add_h5_if_missing(filename)
+  Makes sure the filename has an extension, if not the `.h5` extension is added. 
+"""
+function add_h5_if_missing(filename)
+    splitext(filename)[end] == "" ? splitext(filename)[1] * ".h5" : filename
+end
+
+"""
+    handle_simulation_name(simulation_name)
+  Creates a `simulation_name` string based on the users input. 
+  ### Supported symbols:
+  * `:timestamp` creates a timestamp string using `Dates.now()`.
+  * `:parameters` creates a string with the parameter names and values.
+"""
+function handle_simulation_name(simulation_name, prob)
+    # Handle simulation_name
+    if simulation_name == :timestamp
+        simulation_name = "$(now())"
+    elseif simulation_name == :parameters
+        simulation_name = parameter_string(prob.p)
+    elseif simulation_name isa String
+        nothing
+    else
+        error("$simulation_name is not a valid input")
+    end
+
+    return simulation_name
+end
+
+"""
+"""
+function setup_simulation_group(file, simulation_name, prob, u0, t0, N_data; h5_kwargs)
+
+    # Create simulation group
+    simulation = create_group(file, simulation_name)
+
+    # Create dataset for fields and time
+    dset = create_dataset(simulation, "fields", datatype(eltype(u0)),
+        (size(u0)..., typemax(Int64)), chunk=(size(u0)..., 1); h5_kwargs...)
+    HDF5.set_extent_dims(dset, (size(u0)..., N_data))
+    dset = create_dataset(simulation, "t", datatype(eltype(t0)),
+        (typemax(Int64),), chunk=(1,); h5_kwargs...)
+    HDF5.set_extent_dims(dset, (N_data,))
+
+    # Store the initial conditions
+    write_state(simulation, u0, t0)
+
+    # Store attributes
+    write_attributes(simulation, prob)
+
+    return simulation
+end
+
+"""
+    write_state(simulation, u, t)
+  Writes the state `u` at time `t` to the simulation group `simulation`.
+"""
+function write_state(simulation, u, t)
+    simulation["fields"][fill(:, ndims(u))..., 1] = u #TODO possibly problem is here
+    simulation["t"][1] = t
+end
+
+"""
+    write_attributes(simulation, prob::SpectralODEProblem)
+    write_attributes(simulation, domain::AbstractDomain)
+  Writes the esential attributes of the container to the simulation group `simulation`. The 
+  `SpectralODEProblem` also writes the `domain` properties.
+"""
+function write_attributes(simulation, prob::SpectralODEProblem)
+    write_attribute(simulation, "dt", prob.dt)
+    write_attributes(simulation, prob.domain)
+    # TODO add multiple dispatch to this
+    for (key, val) in pairs(prob.p)
+        write_attribute(simulation, string(key), val)
+    end
+end
+
+function write_attributes(simulation, domain::AbstractDomain)
+    # Construct list of attributes by removing derived attributes
+    attributes = setdiff(fieldnames(typeof(domain)), (:x, :y, :kx, :ky, :SC, :transform, :precision))
+    for attribute in attributes
+        write_attribute(simulation, string(attribute), getproperty(domain, attribute))
+    end
+end
+
+"""
+    setup_local_storage(u0, t0, N_data; store_locally=store_locally)
+  Allocates vectors in memory for storing the fields alongside the time if the user wants it,
+  otherwise empty vectors are returned.
+"""
+function setup_local_storage(u0, t0, N_data; store_locally=store_locally)
+
+    if store_locally
+        # Allocate local data for fields
+        u = [zero(u0) for _ in 1:N_data]
+        u[1] .= u0
+        t = zeros(N_data)
+        t[1] = t0
+    else
+        u, t = [], []
+    end
+
+    return u, t
+end
+
+# TODO fix show method
+
+# ----------------------------------- Handlers ---------------------------------------------
 
 function handle_output!(output::O, step::Integer, u::T, prob::SOP, t::N) where {O<:Output,
     T<:AbstractArray,SOP<:SpectralODEProblem,N<:Number}
@@ -261,27 +356,23 @@ function restore_cache(simulation::HDF5.Group, prob::SOP, scheme::SA) where {
         end
     end
 
+    # TODO move this logic to resuming simulations
+    # Expand length of fields and t
+    #HDF5.set_extent_dims(simulation["fields"], (size(prob.u0)..., N_data))
+    #HDF5.set_extent_dims(simulation["t"], (N_data,))
+
     return cache
 end
 
-import HDF5.write_attribute
-function write_attribute(simulation::HDF5.Group, prob::SOP) where {SOP<:SpectralODEProblem}
-    write_attribute(simulation, "dt", prob.dt)
-    write_attribute(simulation, "dx", prob.domain.dx)
-    write_attribute(simulation, "dy", prob.domain.dy)
-    write_attribute(simulation, "Lx", prob.domain.Lx)
-    write_attribute(simulation, "Ly", prob.domain.Ly)
-    write_attribute(simulation, "Nx", prob.domain.Nx)
-    write_attribute(simulation, "Ny", prob.domain.Ny)
-    write_attribute(simulation, "anti_aliased", prob.domain.anti_aliased)
-    write_attribute(simulation, "real_transform", prob.domain.real_transform)
-    for (key, val) in prob.p
-        write_attribute(simulation, key, val)
-    end
+# -------------------------------------- Utilities -----------------------------------------
+
+function parameter_string(parameters::P) where {P<:AbstractDict}
+    tmp = [string(key, "=", value) for (key, value) in sort(collect(parameters))]
+    join(tmp, ", ")
 end
 
-function parameter_string(parameters::P) where {P<:Dict}
-    tmp = [string(key, "=", value) for (key, value) in sort(collect(parameters))]
+function parameter_string(parameters::P) where {P<:NamedTuple}
+    tmp = [string(key, "=", value) for (key, value) in sort(collect(pairs(parameters)))]
     join(tmp, ", ")
 end
 
