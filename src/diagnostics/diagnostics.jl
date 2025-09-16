@@ -144,6 +144,13 @@ function perform_diagnostic!(diagnostic::D, step::Integer, u::U, prob::SOP, t::N
     end
 end
 
+function Base.show(io::IO, m::MIME"text/plain", diagnostic::Diagnostic)
+    print(io, diagnostic.name, " (stride: ", diagnostic.sampleStep, ", spectral=",
+        diagnostic.assumesSpectralField, ", stores_data=", diagnostic.storesData, ")")
+    length(diagnostic.args) != 0 ? print(io, ", args=", diagnostic.args) : nothing
+    length(diagnostic.kwargs) != 0 ? print(io, ", kwargs=", diagnostic.kwargs) : nothing
+end
+
 #-------------------------------------- Include --------------------------------------------
 
 include("probe.jl")

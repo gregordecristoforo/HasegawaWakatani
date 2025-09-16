@@ -35,18 +35,18 @@ tspan = [0.0, 20.0]
 #FFTW.set_num_threads(16)
 
 # The problem
-prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], tspan, p=parameters, dt=1e-3)
+prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], tspan, p=parameters, dt=2.5e-2)
 
 # Array of diagnostics want
 diagnostics = [
-    #ProbeDensityDiagnostic([(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], N=10),
-    #RadialCOMDiagnostic(1),
-    #PlotDensityDiagnostic(1000),
-    ProgressDiagnostic(1000),
-    #CFLDiagnostic(1),
-    #PlotDensityDiagnostic(1000),
-    #PlotVorticityDiagnostic(1000),
-    #PlotPotentialDiagnostic(1000),
+    ProbeDensityDiagnostic([(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], N=10),
+    RadialCOMDiagnostic(1),
+    PlotDensityDiagnostic(100),
+    ProgressDiagnostic(100),
+    CFLDiagnostic(1),
+    PlotDensityDiagnostic(1000),
+    PlotVorticityDiagnostic(1000),
+    PlotPotentialDiagnostic(1000),
 ]
 
 # Folder path
@@ -54,7 +54,7 @@ cd(relpath(@__DIR__, pwd()))
 
 # The output
 output = Output(prob, 21, diagnostics, "output/Garcia 2005 PoP.h5",
-    store_locally=false, simulation_name="new")
+    store_locally=true, simulation_name=:parameters)
 
 ## Solve and plot
 using Profile
@@ -156,7 +156,7 @@ jldopen("output/blob velocity linear.jld", "w") do file
 end
 
 send_mail("Multiple attachments test", attachment="figures/blob velocity linear.pdf")
-close(output.file)
+close(output)
 
 ##
 fid = h5open("output/Garcia 2005 PoP.h5")

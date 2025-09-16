@@ -46,7 +46,7 @@ function spectral_solve(prob::SOP, scheme::SA=MSS3(), output::O=Output(prob, 100
     # TODO catch edge case
 
     # Write buffer to file
-    output.store_hdf ? flush(output.file) : nothing
+    output.store_hdf ? flush(output.simulation.file) : nothing
 
     # Returns output struct
     return output

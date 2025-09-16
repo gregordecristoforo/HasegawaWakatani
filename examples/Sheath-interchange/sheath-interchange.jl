@@ -98,4 +98,4 @@ end
 gif(anim, "long timeseries.gif", fps=20)
 
 send_mail("Long time series simulation finnished!", attachment="benkadda.gif")
-close(output.file)
+close(output)

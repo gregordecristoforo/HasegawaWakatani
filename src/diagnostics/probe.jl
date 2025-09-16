@@ -57,7 +57,7 @@ function probe_density(u::U, prob::SOP, t::N, positions::P; interpolation::I=not
     I<:Union{Nothing,Function}}
     # Check if all probes are in the domain
     if t == first(prob.tspan)
-        is_in_domain(positions, domain) ? nothing : error("One or more probes are outside the domain")
+        is_in_domain(positions, prob.domain) ? nothing : error("One or more probes are outside the domain")
     end
 
     probe_field(u[:, :, 1], prob.domain, positions; interpolation)
@@ -108,7 +108,7 @@ function probe_potential(u::U, prob::SOP, t::N, positions::P; interpolation::I=n
     I<:Union{Nothing,Function}}
     # Check if all probes are in the domain
     if t == first(prob.tspan)
-        is_in_domain(positions, domain) ? nothing : error("One or more probes are outside the domain")
+        is_in_domain(positions, prob.domain) ? nothing : error("One or more probes are outside the domain")
     end
 
     ϕ_hat = @views solve_phi(u[:, :, 2], prob.domain)
@@ -137,7 +137,7 @@ function probe_radial_velocity(u::U, prob::SOP, t::N, positions::P; interpolatio
     I<:Union{Nothing,Function}}
     # Check if all probes are in the domain
     if t == first(prob.tspan)
-        is_in_domain(positions, domain) ? nothing : error("One or more probes are outside the domain")
+        is_in_domain(positions, prob.domain) ? nothing : error("One or more probes are outside the domain")
     end
 
     ϕ_hat = @views solve_phi(u[:, :, 2], prob.domain)
@@ -168,7 +168,7 @@ function probe_all(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing
     I<:Union{Nothing,Function}}
     # Check if all probes are in the domain
     if t == first(prob.tspan)
-        is_in_domain(positions, domain) ? nothing : error("One or more probes are outside the domain")
+        is_in_domain(positions, prob.domain) ? nothing : error("One or more probes are outside the domain")
     end
 
     # Calculate spectral fields

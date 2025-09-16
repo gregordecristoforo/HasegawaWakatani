@@ -92,4 +92,4 @@ FFTW.set_num_threads(16)
 sol = spectral_solve(prob, MSS3(), output, resume=false)
 
 send_mail("g=1e-2 finnished, go analyse the data!")
-close(output.file)
+close(output)

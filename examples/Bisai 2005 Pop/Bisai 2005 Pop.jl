@@ -90,7 +90,7 @@ sol = spectral_solve(prob, MSS3(), output, resume=true)
 # gif(anim, "long timeseries.gif", fps=20)
 
 send_mail("Bisai simulation finnished!")
-close(output.file)
+close(output)
 
 # bisai_php_19_052509 gives Lₓ = L_y = 160ρₛ, g = 1e-3, 128-modes
 # bisai_php_12_072520 gives dt = \omega_c^{-1}, g = 8e-4
