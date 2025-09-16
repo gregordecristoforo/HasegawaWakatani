@@ -7,20 +7,20 @@ mutable struct Diagnostic{N<:AbstractString,M<:Function,D<:AbstractArray,T<:Abst
     method::M
     data::D
     t::T
-    sampleStep::Int
+    sample_step::Int
     h5group::HG
     label::L
-    assumesSpectralField::Bool
-    storesData::Bool
+    assumes_spectral_field::Bool
+    stores_data::Bool
     args::A
     kwargs::K
 
-    function Diagnostic(name::N, method::M, sampleStep::Int=-1, label::L="", args::A=(),
-        kwargs::K=NamedTuple(); assumesSpectralField::Bool=false, storesData::Bool=true) where {
+    function Diagnostic(name::N, method::M, sample_step::Int=-1, label::L="", args::A=(),
+        kwargs::K=NamedTuple(); assumes_spectral_field::Bool=false, stores_data::Bool=true) where {
         N<:AbstractString,M<:Function,L<:Any,A<:Tuple,K<:NamedTuple}
         new{typeof(name),typeof(method),Vector,Vector,Union{Nothing,HDF5.Group},typeof(label),
-            typeof(args),typeof(kwargs)}(name, method, Vector[], Vector[], sampleStep, nothing,
-            label, assumesSpectralField, storesData, args, kwargs)
+            typeof(args),typeof(kwargs)}(name, method, Vector[], Vector[], sample_step, nothing,
+            label, assumes_spectral_field, stores_data, args, kwargs)
     end
 end
 
@@ -32,9 +32,9 @@ function initialize_diagnostic!(diagnostic::D, prob::SOP, u0::T, t0::AbstractFlo
     N_steps = floor(Int, (last(prob.tspan) - first(prob.tspan)) / prob.dt)
 
     # If user did not specify 
-    if diagnostic.sampleStep == -1
+    if diagnostic.sample_step == -1
         #TODO implement some logic here later
-        diagnostic.sampleStep = 1
+        diagnostic.sample_step = 1
         # N_data = floor(Int, 0.1 * N_steps)
 
         # if N_data > N_steps
@@ -46,24 +46,24 @@ function initialize_diagnostic!(diagnostic::D, prob::SOP, u0::T, t0::AbstractFlo
         # fieldStep = floor(Int, N_steps / (N_data - 1))
     end
 
-    if diagnostic.sampleStep > N_steps
-        diagnostic.sampleStep = N_steps
-        @warn "The sample step was larger than the number of steps and has been set to sampleStep = $N_steps"
+    if diagnostic.sample_step > N_steps
+        diagnostic.sample_step = N_steps
+        @warn "The sample step was larger than the number of steps and has been set to sample_step = $N_steps"
     end
 
     # Take diagnostic of initial field (id = initial diagnostic)
-    if diagnostic.assumesSpectralField
+    if diagnostic.assumes_spectral_field
         id = diagnostic.method(prob.u0_hat, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
     else
         id = diagnostic.method(u0, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
     end
 
-    if diagnostic.storesData
+    if diagnostic.stores_data
         # Calculate number of samples with rounded sampling rate
-        N = floor(Int, N_steps / diagnostic.sampleStep) + 1
+        N = floor(Int, N_steps / diagnostic.sample_step) + 1
 
-        if N_steps % diagnostic.sampleStep != 0
-            @warn "($(diagnostic.name)) Note, there is a $(diagnostic.sampleStep + N_steps%diagnostic.sampleStep) sample step at the end"
+        if N_steps % diagnostic.sample_step != 0
+            @warn "($(diagnostic.name)) Note, there is a $(diagnostic.sample_step + N_steps%diagnostic.sample_step) sample step at the end"
         end
         if store_hdf
             if !haskey(simulation, diagnostic.name)
@@ -115,11 +115,11 @@ end
 function perform_diagnostic!(diagnostic::D, step::Integer, u::U, prob::SOP, t::N;
     store_hdf::Bool=true, store_locally::Bool=true) where {D<:Diagnostic,U<:AbstractArray,
     SOP<:SpectralODEProblem,N<:Number}
-    # u might be real or complex depending on previous handle_output and diagnostic.assumesSpectralField
+    # u might be real or complex depending on previous handle_output and diagnostic.assumes_spectral_field
 
-    if diagnostic.storesData
+    if diagnostic.stores_data
         # Calculate index
-        idx = step ÷ diagnostic.sampleStep + 1
+        idx = step ÷ diagnostic.sample_step + 1
 
         # Perform diagnostic
         data = diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
@@ -145,8 +145,8 @@ function perform_diagnostic!(diagnostic::D, step::Integer, u::U, prob::SOP, t::N
 end
 
 function Base.show(io::IO, m::MIME"text/plain", diagnostic::Diagnostic)
-    print(io, diagnostic.name, " (stride: ", diagnostic.sampleStep, ", spectral=",
-        diagnostic.assumesSpectralField, ", stores_data=", diagnostic.storesData, ")")
+    print(io, diagnostic.name, " (stride: ", diagnostic.sample_step, ", spectral=",
+        diagnostic.assumes_spectral_field, ", stores_data=", diagnostic.stores_data, ")")
     length(diagnostic.args) != 0 ? print(io, ", args=", diagnostic.args) : nothing
     length(diagnostic.kwargs) != 0 ? print(io, ", kwargs=", diagnostic.kwargs) : nothing
 end

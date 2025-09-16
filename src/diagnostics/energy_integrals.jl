@@ -14,7 +14,7 @@ end
 
 function PotentialEnergyDiagnostic(N::Int=10)
     Diagnostic("Potential energy integral", potential_energy_integral, N, "potential energy",
-        assumesSpectralField=true)
+        assumes_spectral_field=true)
 end
 
 # K(t) = ∫1/2(∇_⟂Φ)^2 = ∫dx1/2 U_E^2
@@ -32,7 +32,7 @@ end
 
 function KineticEnergyDiagnostic(N::Int=10)
     Diagnostic("Kinetic energy integral", kinetic_energy_integral, N, "kinetic energy",
-        assumesSpectralField=true)
+        assumes_spectral_field=true)
 end
 
 # E(t) = P(T) + K(T)
@@ -43,7 +43,7 @@ end
 
 function TotalEnergyDiagnostic(N::Int=10)
     Diagnostic("Total energy integral", total_energy_integral, N, "total energy",
-        assumesSpectralField=true)
+        assumes_spectral_field=true)
 end
 
 # U(t) = ∫1/2(∇_⟂^2Φ)^2 = ∫dx1/2 U_E^2
@@ -58,7 +58,7 @@ end
 
 function EnstropyEnergyDiagnostic(N::Int=10)
     Diagnostic("Enstropy energy integral", enstropy_energy_integral, N, "enstropy energy",
-        assumesSpectralField=true)
+        assumes_spectral_field=true)
 end
 
 # Γ_c(t) = C∫(n-ϕ)^2
@@ -74,7 +74,7 @@ end
 
 function ResistiveDissipationDiagnostic(N::Int=10)
     Diagnostic("Resistive dissipation integral", resistive_dissipation_integral, N,
-        "resistive dissipation energy", assumesSpectralField=true)
+        "resistive dissipation energy", assumes_spectral_field=true)
 end
 
 # D^E_N(t) = ν∫n∇⁶_⟂n
@@ -91,7 +91,7 @@ end
 
 function PotentialDissipationDiagnostic(N::Int=10)
     Diagnostic("Potential dissipation integral", potential_dissipation_integral, N,
-        "potential dissipation energy", assumesSpectralField=true)
+        "potential dissipation energy", assumes_spectral_field=true)
 end
 
 # D^E_V(t) = ν∫ϕ∇⁶_⟂Ω = ν∫Ω∇⁴_⟂Ω 
@@ -108,7 +108,7 @@ end
 
 function KineticDissipationDiagnostic(N::Int=10)
     Diagnostic("Kinetic dissipation integral", kinetic_dissipation_integral, N,
-        "kinetic dissipation energy", assumesSpectralField=true)
+        "kinetic dissipation energy", assumes_spectral_field=true)
 end
 
 # D^E(t) = D^E_N(t) + D^E_V(t) 
@@ -119,7 +119,7 @@ end
 
 function ViscousDissipationDiagnostic(N::Int=10)
     Diagnostic("Viscous dissipation integral", viscous_dissipation_integral, N,
-        "viscous dissipation energy", assumesSpectralField=true)
+        "viscous dissipation energy", assumes_spectral_field=true)
 end
 
 # dE/dt(t) = - Γ_c - D^E 
@@ -130,7 +130,7 @@ end
 
 function EnergyEvolutionDiagnostic(N::Int=10)
     Diagnostic("Energy evolution integral", energy_evolution_integral, N,
-        "energy evolution", assumesSpectralField=true)
+        "energy evolution", assumes_spectral_field=true)
 end
 
 # TODO add enstropy dissipation and evolution, more tricky probably

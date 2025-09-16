@@ -309,16 +309,16 @@ function maybe_store_diagnostics!(output, step, u, prob, t)
 
     # Handle diagnostics
     for diagnostic in output.diagnostics
-        if step % diagnostic.sampleStep == 0
+        if step % diagnostic.sample_step == 0
 
             # Check if diagnostic assumes physical field and transform if not yet done
-            if !diagnostic.assumesSpectralField && !output.transformed
+            if !diagnostic.assumes_spectral_field && !output.transformed
                 # Transform state
                 transform_state!(output, u, get_bwd(prob.domain))
             end
 
             # Passes the logic onto perform_diagnostic! to do diagnostic and store data
-            if diagnostic.assumesSpectralField
+            if diagnostic.assumes_spectral_field
                 perform_diagnostic!(diagnostic, step, u, prob, t,
                     store_hdf=output.store_hdf, store_locally=output.store_locally)
             else

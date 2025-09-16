@@ -129,7 +129,7 @@ function ProbePotentialDiagnostic(positions::P; interpolation::I=nothing, N::Int
     args = (positions,)
     kwargs = (interpolation=interpolation,)
 
-    return Diagnostic("Phi probe", probe_potential, N, label, args, kwargs, assumesSpectralField=true)
+    return Diagnostic("Phi probe", probe_potential, N, label, args, kwargs, assumes_spectral_field=true)
 end
 
 function probe_radial_velocity(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
@@ -159,7 +159,7 @@ function ProbeRadialVelocityDiagnostic(positions::P; interpolation::I=nothing, N
     args = (positions,)
     kwargs = (interpolation=interpolation,)
 
-    return Diagnostic("Radial velocity probe", probe_radial_velocity, N, label, args, kwargs, assumesSpectralField=true)
+    return Diagnostic("Radial velocity probe", probe_radial_velocity, N, label, args, kwargs, assumes_spectral_field=true)
 end
 
 # TODO make this optimized for non GPU case
@@ -209,5 +209,5 @@ function ProbeAllDiagnostic(positions::P; interpolation::I=nothing, N::Int=100) 
     args = (positions,)
     kwargs = (interpolation=interpolation,)
 
-    return Diagnostic("All probe", probe_all, N, label, args, kwargs, assumesSpectralField=true)
+    return Diagnostic("All probe", probe_all, N, label, args, kwargs, assumes_spectral_field=true)
 end

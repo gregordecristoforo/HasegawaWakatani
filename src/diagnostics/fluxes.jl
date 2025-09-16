@@ -43,5 +43,5 @@ function radial_flux(u::U, prob::P, t::T; quadrature=nothing) where
 end
 
 function RadialFluxDiagnostic(N::Int=10)
-    Diagnostic("Radial flux", radial_flux, N, "radial flux", assumesSpectralField=true)
+    Diagnostic("Radial flux", radial_flux, N, "radial flux", assumes_spectral_field=true)
 end

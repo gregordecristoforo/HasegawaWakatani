@@ -7,7 +7,7 @@ function plot_density(u::U, prob::P, t::T) where {U<:AbstractArray,P<:SpectralOD
 end
 
 function PlotDensityDiagnostic(N::Int=1000)
-    Diagnostic("Plot density", plot_density, N, "Display density", storesData=false)
+    Diagnostic("Plot density", plot_density, N, "Display density", stores_data=false)
 end
 
 function plot_vorticity(u::U, prob::P, t::T) where {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
@@ -17,7 +17,7 @@ function plot_vorticity(u::U, prob::P, t::T) where {U<:AbstractArray,P<:Spectral
 end
 
 function PlotVorticityDiagnostic(N::Int=1000)
-    Diagnostic("Plot vorticity", plot_vorticity, N, "Display vorticity", storesData=false)
+    Diagnostic("Plot vorticity", plot_vorticity, N, "Display vorticity", stores_data=false)
 end
 
 function plot_potential(u::U, prob::P, t::T) where {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
@@ -29,5 +29,5 @@ function plot_potential(u::U, prob::P, t::T) where {U<:AbstractArray,P<:Spectral
 end
 
 function PlotPotentialDiagnostic(N::Int=1000)
-    Diagnostic("Plot potential", plot_potential, N, "Display potential", assumesSpectralField=true, storesData=false)
+    Diagnostic("Plot potential", plot_potential, N, "Display potential", assumes_spectral_field=true, stores_data=false)
 end

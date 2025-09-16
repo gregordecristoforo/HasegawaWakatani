@@ -5,7 +5,7 @@ function get_modes(u::U, prob::P, t::N) where {U<:AbstractArray,P<:SpectralODEPr
 end
 
 function GetModeDiagnostic(N::Int=100)
-    Diagnostic("Mode diagnostic", get_modes, N, "Modes (Complex)", assumesSpectralField=true)
+    Diagnostic("Mode diagnostic", get_modes, N, "Modes (Complex)", assumes_spectral_field=true)
 end
 
 function get_log_modes(u::U, prob::P, t::N; kx::K=:ky) where {U<:AbstractArray,
@@ -31,7 +31,7 @@ function get_log_modes(u::U, prob::P, t::N; kx::K=:ky) where {U<:AbstractArray,
 end
 
 function GetLogModeDiagnostic(N::Int=100, kx::K=:ky) where {K<:Union{Int,Symbol}}
-    Diagnostic("Log mode diagnostic", get_log_modes, N, "log(|u_k|)", assumesSpectralField=true, (), (kx=kx,))
+    Diagnostic("Log mode diagnostic", get_log_modes, N, "log(|u_k|)", assumes_spectral_field=true, (), (kx=kx,))
 end
 
 function plot_frequencies(u::U) where {U<:AbstractArray}
@@ -47,7 +47,7 @@ end
 
 function RadialPotentialEnergySpectraDiagnostic(N::Int=100)
     Diagnostic("Radial potential energy spectra", radial_potential_energy_spectra, N,
-        "radial potential energy spectra", assumesSpectralField=true)
+        "radial potential energy spectra", assumes_spectral_field=true)
 end
 
 function poloidal_potential_energy_spectra(u::U, prob::P, t::T) where {U<:AbstractArray,
@@ -57,7 +57,7 @@ end
 
 function PoloidalPotentialEnergySpectraDiagnostic(N::Int=100)
     Diagnostic("Poloidal potential energy spectra", poloidal_potential_energy_spectra, N,
-        "poloidal potential energy spectra", assumesSpectralField=true)
+        "poloidal potential energy spectra", assumes_spectral_field=true)
 end
 
 function radial_kinetic_energy_spectra(u::U, prob::P, t::T) where {U<:AbstractArray,
@@ -67,7 +67,7 @@ end
 
 function RadialKineticEnergySpectraDiagnostic(N::Int=100)
     Diagnostic("Radial kinetic energy spectra", radial_kinetic_energy_spectra, N,
-        "radial kinetic energy spectra", assumesSpectralField=true)
+        "radial kinetic energy spectra", assumes_spectral_field=true)
 end
 
 function poloidal_kinetic_energy_spectra(u::U, prob::P, t::T) where {U<:AbstractArray,
@@ -77,7 +77,7 @@ end
 
 function PoloidalKineticEnergySpectraDiagnostic(N::Int=100)
     Diagnostic("Poloidal kinetic energy spectra", poloidal_kinetic_energy_spectra, N,
-        "poloidal kinetic energy spectra", assumesSpectralField=true)
+        "poloidal kinetic energy spectra", assumes_spectral_field=true)
 end
 
 

@@ -8,5 +8,5 @@ function progress(u::U, prob::P, t::T) where {U<:AbstractArray,P<:SpectralODEPro
 end
 
 function ProgressDiagnostic(N::Int=100)
-    Diagnostic("Progress", progress, N, "progress", assumesSpectralField=true, storesData=false)
+    Diagnostic("Progress", progress, N, "progress", assumes_spectral_field=true, stores_data=false)
 end
