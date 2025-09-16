@@ -105,6 +105,31 @@ function expTransform(u::AbstractArray)
     return [exp.(u[:, :, 1]);;; u[:, :, 2]]
 end
 
+#------------------------------ Removal of modes -------------------------------------------
+# TODO perhaps moved to utilitise
+
+function remove_zonal_modes!(u::U, d::D) where {U<:AbstractArray,D<:AbstractDomain}
+    @inbounds u[1, :, :] .= 0
+end
+
+function remove_streamer_modes!(u::U, d::D) where {U<:AbstractArray,D<:AbstractDomain}
+    @inbounds u[:, 1, :] .= 0
+end
+
+function remove_asymmetric_modes!(u::U, domain::D) where {U<:AbstractArray,
+    D<:AbstractDomain}
+    if domain.Nx % 2 == 0
+        @inbounds u[:, domain.Nx÷2+1, :] .= 0
+    end
+    if Ny % 2 == 0
+        @inbounds u[domain.Ny÷2+1, :, :] .= 0
+    end
+end
+
+function remove_nothing(u::U, d::D) where {U<:AbstractArray,D<:AbstractDomain}
+    nothing
+end
+
 # ------------------------------- Convergence testing --------------------------------------
 function test_timestep_convergence(prob, analyticalSolution, timesteps, scheme=MSS3();
     physical_transform=identity, displayResults=true, kwargs...)

@@ -33,12 +33,13 @@ export CFLDiagnostic, RadialCFLDiagnostic, BurgerCFLDiagnostic, RadialCOMDiagnos
     PoloidalKineticEnergySpectraDiagnostic, plot_frequencies
 
 include("outputer.jl")
-export Output, remove_zonal_modes, remove_streamer_modes, remove_asymmetric_modes!, remove_nothing
+export Output
 
 include("spectralSolve.jl")
 export spectral_solve
 
 include("utilities.jl")
-export initial_condition, gaussian, sinusoidal, sinusoidalX, sinusoidalY, gaussianWallX, gaussianWallY
+export initial_condition, gaussian, sinusoidal, sinusoidalX, sinusoidalY, gaussianWallX,
+    gaussianWallY, remove_zonal_modes, remove_streamer_modes, remove_asymmetric_modes!, remove_nothing
 
 end

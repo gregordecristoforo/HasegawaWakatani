@@ -443,31 +443,6 @@ function assert_no_nan(u::CuArray, t)
     end
 end
 
-#------------------------------ Removal of modes -------------------------------------------
-# TODO perhaps moved to utilitise
-
-function remove_zonal_modes!(u::U, d::D) where {U<:AbstractArray,D<:AbstractDomain}
-    @inbounds u[1, :, :] .= 0
-end
-
-function remove_streamer_modes!(u::U, d::D) where {U<:AbstractArray,D<:AbstractDomain}
-    @inbounds u[:, 1, :] .= 0
-end
-
-function remove_asymmetric_modes!(u::U, domain::D) where {U<:AbstractArray,
-    D<:AbstractDomain}
-    if domain.Nx % 2 == 0
-        @inbounds u[:, domain.Nx÷2+1, :] .= 0
-    end
-    if Ny % 2 == 0
-        @inbounds u[domain.Ny÷2+1, :, :] .= 0
-    end
-end
-
-function remove_nothing(u::U, d::D) where {U<:AbstractArray,D<:AbstractDomain}
-    nothing
-end
-
 # -------------------------------------- Old -----------------------------------------------
 
 # Gives a more managable array compared to output.u
