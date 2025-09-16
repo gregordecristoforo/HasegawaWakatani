@@ -167,7 +167,7 @@ function setup_simulation_group(file, simulation_name, prob, u0, t0, N_data; h5_
     HDF5.set_extent_dims(dset, (N_data,))
 
     # Store the initial conditions
-    write_state(simulation, 0, u0, t0)
+    write_state(simulation, 1, u0, t0)
 
     # Store attributes
     write_attributes(simulation, prob)
