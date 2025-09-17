@@ -32,8 +32,8 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
     # Other cache
     phi::PHI
 
-    function SpectralOperatorCache(kx, ky, Nx, Ny; real_transform=true, anti_aliased=true,
-        use_cuda=true, precision=Float64)
+    function SpectralOperatorCache(kx, ky, Nx, Ny; use_cuda=true, precision=Float64,
+        real_transform=true, anti_aliased=true)
 
         # Compute spectral coefficents
         diff_x = transpose(im * kx)

@@ -39,17 +39,17 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
     ky::KY
     SC::SOC
     transform::TP
-    real_transform::Bool
-    anti_aliased::Bool
     use_cuda::Bool
     precision::DataType
+    real_transform::Bool
+    anti_aliased::Bool
     nfields::Int
 
     # TODO rethink constructors interface
     Domain(N) = Domain(N, 1)
     Domain(N, L) = Domain(N, N, L, L)
-    function Domain(Nx, Ny, Lx, Ly; real_transform=true, anti_aliased=true, use_cuda=true,
-        x0=-Lx / 2, y0=-Ly / 2, precision=Float64, nfields=3)
+    function Domain(Nx, Ny, Lx, Ly; use_cuda=true, precision=Float64, real_transform=true,
+        anti_aliased=true, x0=-Lx / 2, y0=-Ly / 2, nfields=3)
 
         # Compute step sizes
         dx = Lx / Nx
@@ -66,23 +66,23 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
         end
 
         # Prepare frequencies
-        kx, ky = prepare_frequencies(Nx, Ny, dx, dy, precision, use_cuda, real_transform)
+        kx, ky = prepare_frequencies(Nx, Ny, dx, dy, use_cuda, precision, real_transform)
 
         # Prepare transform plans
-        transform_plans = prepare_transform_plans(Nx, Ny, precision, use_cuda, real_transform)
+        transform_plans = prepare_transform_plans(Nx, Ny, use_cuda, precision, real_transform)
 
         # Prepare spectral operator cache
-        SC = SpectralOperators.SpectralOperatorCache(kx, ky, Nx, Ny, real_transform=real_transform,
-            anti_aliased=anti_aliased, use_cuda=use_cuda, precision=precision) # TODO clean up argument order
+        SC = SpectralOperators.SpectralOperatorCache(kx, ky, Nx, Ny, use_cuda=use_cuda,
+            precision=precision, real_transform=real_transform, anti_aliased=anti_aliased)
 
         new{typeof(x),typeof(y),typeof(kx),typeof(ky),typeof(SC),typeof(transform_plans),
             precision}(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC,
-            transform_plans, real_transform, anti_aliased, use_cuda, precision, nfields)
+            transform_plans, use_cuda, precision, real_transform, anti_aliased, nfields)
     end
 end
 
 # Helpers
-function prepare_frequencies(Nx, Ny, dx, dy, precision, use_cuda, real_transform)
+function prepare_frequencies(Nx, Ny, dx, dy, use_cuda, precision, real_transform)
 
     # Compute frequencies, impose Hermitian symetry if real_transform
     kx = 2 * π * fftfreq(Nx, 1 / dx)
@@ -101,7 +101,7 @@ function prepare_frequencies(Nx, Ny, dx, dy, precision, use_cuda, real_transform
     return kx, ky
 end
 
-function prepare_transform_plans(Nx, Ny, precision, use_cuda, real_transform)
+function prepare_transform_plans(Nx, Ny, use_cuda, precision, real_transform)
 
     # Temporarly create an array to create the transform plan
     utmp = use_cuda ? CUDA.zeros(precision, Ny, Nx) : zeros(precision, Ny, Nx)
