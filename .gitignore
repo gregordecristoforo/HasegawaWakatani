@@ -5,9 +5,9 @@
 *.png
 *.h5
 *.jlprof
-.env.*
-*.env
-.env
+#.env.*
+#*.env
+#.env
 *.gif
 /Manifest*.toml
 Manifest.toml
