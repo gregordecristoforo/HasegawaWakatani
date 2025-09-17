@@ -79,6 +79,8 @@ function load_env_file!(file_path::AbstractString=@__DIR__)
 end
 
 # Append data into EnvDict
-load_env_file!()
+function __init__()
+    load_env_file!()
+end
 
 end
