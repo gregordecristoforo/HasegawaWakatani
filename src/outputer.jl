@@ -231,7 +231,7 @@ end
     write_local_state(output, idx, u, t)
   Writes the state `u` at time `t` to the local storage in the `Output` struct.
 """
-function write_local_state(output, idx, u, t)
+function write_local_state(output::Output, idx, u, t)
     output.u[idx] .= u
     output.t[idx] = t
 end

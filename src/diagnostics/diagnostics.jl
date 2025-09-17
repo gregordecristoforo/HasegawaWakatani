@@ -80,7 +80,7 @@ function initialize_diagnostic!(diagnostic::D, prob::SOP, u0::T, t0::AbstractFlo
                 HDF5.set_extent_dims(dset, (N,))
 
                 # Add labels
-                create_attribute(diagnostic.h5group, "labels, diagnostic.labels")
+                create_attribute(diagnostic.h5group, "labels", diagnostic.labels)
 
                 # Store initial diagnostic
                 diagnostic.h5group["data"][fill(:, ndims(id))..., 1] = id
@@ -117,31 +117,34 @@ function perform_diagnostic!(diagnostic::D, step::Integer, u::U, prob::SOP, t::N
     SOP<:SpectralODEProblem,N<:Number}
     # u might be real or complex depending on previous handle_output and diagnostic.assumes_spectral_field
 
-    if diagnostic.stores_data
+    # Perform diagnostic
+    data = diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
+
+    if !isnothing(data)
         # Calculate index
         idx = step ÷ diagnostic.sample_step + 1
 
-        # Perform diagnostic
-        data = diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
+        store_hdf ? write_data(diagnostic, idx, data, t) : nothing
 
-        if store_hdf
-            # TODO better check on ndims
-            diagnostic.h5group["data"][fill(:, ndims(data))..., idx] = data
-            diagnostic.h5group["t"][idx] = t
-        end
-
-        if store_locally
-            if isa(data, AbstractArray)
-                diagnostic.data[idx] .= data
-            else
-                diagnostic.data[idx] = copy(data)
-            end
-            diagnostic.t[idx] = t
-        end
-    else
-        # Apply diagnostic
-        diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
+        store_locally ? write_local_data(diagnostic, idx, data, t) : nothing
     end
+end
+
+# TODO perhaps make more like write_state
+function write_data(diagnostic, idx, data, t)
+    # TODO better check on ndims
+    diagnostic.h5group["data"][fill(:, ndims(data))..., idx] = data
+    diagnostic.h5group["t"][idx] = t
+end
+
+# TODO perhaps same name as write_local_state, different dispatch
+function write_local_data(diagnostic::Diagnostic, idx, data, t)
+    if isa(data, AbstractArray)
+        diagnostic.data[idx] .= data
+    else
+        diagnostic.data[idx] = copy(data)
+    end
+    diagnostic.t[idx] = t
 end
 
 function Base.show(io::IO, m::MIME"text/plain", diagnostic::Diagnostic)
