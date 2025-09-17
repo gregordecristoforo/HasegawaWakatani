@@ -9,18 +9,18 @@ mutable struct Diagnostic{N<:AbstractString,M<:Function,D<:AbstractArray,T<:Abst
     t::T
     sample_step::Int
     h5group::HG
-    label::L
+    labels::L
     assumes_spectral_field::Bool
     stores_data::Bool
     args::A
     kwargs::K
 
-    function Diagnostic(name::N, method::M, sample_step::Int=-1, label::L="", args::A=(),
+    function Diagnostic(name::N, method::M, sample_step::Int=-1, labels::L="", args::A=(),
         kwargs::K=NamedTuple(); assumes_spectral_field::Bool=false, stores_data::Bool=true) where {
         N<:AbstractString,M<:Function,L<:Any,A<:Tuple,K<:NamedTuple}
-        new{typeof(name),typeof(method),Vector,Vector,Union{Nothing,HDF5.Group},typeof(label),
+        new{typeof(name),typeof(method),Vector,Vector,Union{Nothing,HDF5.Group},typeof(labels),
             typeof(args),typeof(kwargs)}(name, method, Vector[], Vector[], sample_step, nothing,
-            label, assumes_spectral_field, stores_data, args, kwargs)
+            labels, assumes_spectral_field, stores_data, args, kwargs)
     end
 end
 
@@ -79,8 +79,8 @@ function initialize_diagnostic!(diagnostic::D, prob::SOP, u0::T, t0::AbstractFlo
                     chunk=(1,); h5_kwargs...)
                 HDF5.set_extent_dims(dset, (N,))
 
-                # Add label
-                create_attribute(diagnostic.h5group, "label", diagnostic.label)
+                # Add labels
+                create_attribute(diagnostic.h5group, "labels, diagnostic.labels")
 
                 # Store initial diagnostic
                 diagnostic.h5group["data"][fill(:, ndims(id))..., 1] = id

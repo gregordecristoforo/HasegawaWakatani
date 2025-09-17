@@ -71,13 +71,13 @@ function ProbeDensityDiagnostic(positions::P; interpolation::I=nothing, N::Int=1
         positions = [positions]
     end
 
-    #Create the diagnostic label
-    label = ["Probe " * string(position) for position in positions]
+    #Create the diagnostic labels
+    labels = ["Probe " * string(position) for position in positions]
 
     args = (positions,)
     kwargs = (interpolation=interpolation,)
 
-    return Diagnostic("Density probe", probe_density, N, label, args, kwargs)
+    return Diagnostic("Density probe", probe_density, N, labels, args, kwargs)
 end
 
 function probe_vorticity(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
@@ -94,13 +94,13 @@ function ProbeVorticityDiagnostic(positions::P; interpolation::I=nothing, N::Int
         positions = [positions]
     end
 
-    #Create the diagnostic label
-    label = ["Probe " * string(position) for position in positions]
+    #Create the diagnostic labels
+    labels = ["Probe " * string(position) for position in positions]
 
     args = (positions,)
     kwargs = (interpolation=interpolation,)
 
-    return Diagnostic("Vorticity probe", probe_vorticity, N, label, args, kwargs)
+    return Diagnostic("Vorticity probe", probe_vorticity, N, labels, args, kwargs)
 end
 
 function probe_potential(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
@@ -123,13 +123,13 @@ function ProbePotentialDiagnostic(positions::P; interpolation::I=nothing, N::Int
         positions = [positions]
     end
 
-    #Create the diagnostic label
-    label = ["Probe " * string(position) for position in positions]
+    #Create the diagnostic labels
+    labels = ["Probe " * string(position) for position in positions]
 
     args = (positions,)
     kwargs = (interpolation=interpolation,)
 
-    return Diagnostic("Phi probe", probe_potential, N, label, args, kwargs, assumes_spectral_field=true)
+    return Diagnostic("Phi probe", probe_potential, N, labels, args, kwargs, assumes_spectral_field=true)
 end
 
 function probe_radial_velocity(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
@@ -153,13 +153,13 @@ function ProbeRadialVelocityDiagnostic(positions::P; interpolation::I=nothing, N
         positions = [positions]
     end
 
-    #Create the diagnostic label
-    label = ["Probe " * string(position) for position in positions]
+    #Create the diagnostic labels
+    labels = ["Probe " * string(position) for position in positions]
 
     args = (positions,)
     kwargs = (interpolation=interpolation,)
 
-    return Diagnostic("Radial velocity probe", probe_radial_velocity, N, label, args, kwargs, assumes_spectral_field=true)
+    return Diagnostic("Radial velocity probe", probe_radial_velocity, N, labels, args, kwargs, assumes_spectral_field=true)
 end
 
 # TODO make this optimized for non GPU case
@@ -203,11 +203,11 @@ function ProbeAllDiagnostic(positions::P; interpolation::I=nothing, N::Int=100) 
         positions = [positions]
     end
 
-    #Create the diagnostic label
-    label = ["Probe " * string(position) for position in positions]
+    #Create the diagnostic labels
+    labels = ["Probe " * string(position) for position in positions]
 
     args = (positions,)
     kwargs = (interpolation=interpolation,)
 
-    return Diagnostic("All probe", probe_all, N, label, args, kwargs, assumes_spectral_field=true)
+    return Diagnostic("All probe", probe_all, N, labels, args, kwargs, assumes_spectral_field=true)
 end
