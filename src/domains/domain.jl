@@ -42,14 +42,14 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
     use_cuda::Bool
     precision::DataType
     real_transform::Bool
-    anti_aliased::Bool
+    dealiased::Bool
     nfields::Int
 
     # TODO rethink constructors interface
     Domain(N) = Domain(N, 1)
     Domain(N, L) = Domain(N, N, L, L)
     function Domain(Nx, Ny, Lx, Ly; use_cuda=true, precision=Float64, real_transform=true,
-        anti_aliased=true, x0=-Lx / 2, y0=-Ly / 2, nfields=3)
+        dealiased=true, x0=-Lx / 2, y0=-Ly / 2, nfields=3)
 
         # Compute step sizes
         dx = Lx / Nx
@@ -73,11 +73,11 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
 
         # Prepare spectral operator cache
         SC = SpectralOperators.SpectralOperatorCache(kx, ky, Nx, Ny, use_cuda=use_cuda,
-            precision=precision, real_transform=real_transform, anti_aliased=anti_aliased)
+            precision=precision, real_transform=real_transform, dealiased=dealiased)
 
         new{typeof(x),typeof(y),typeof(kx),typeof(ky),typeof(SC),typeof(transform_plans),
             precision}(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, SC,
-            transform_plans, use_cuda, precision, real_transform, anti_aliased, nfields)
+            transform_plans, use_cuda, precision, real_transform, dealiased, nfields)
     end
 end
 
@@ -124,7 +124,7 @@ function Base.show(io::IO, m::MIME"text/plain", d::AbstractDomain)
         print(io, typename, "(", d.Nx, ",", d.Ny, ",", d.Lx, ",", d.Ly, ")")
     else
         print(io, typename, "(Nx:", d.Nx, ", Ny:", d.Ny, ", Lx:", d.Lx, ", Ly:", d.Ly,
-            ", real_transform:", d.real_transform, ", anti_aliased:", d.anti_aliased, ", CUDA:",
+            ", real_transform:", d.real_transform, ", dealiased:", d.dealiased, ", CUDA:",
             d.use_cuda, ")")
         if first(d.x) != 0.0 || first(d.y) != 0.0
             print(io, " offset by (", first(d.x), ", ", first(d.y), ")")

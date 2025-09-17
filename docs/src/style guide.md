@@ -24,7 +24,7 @@ All arguments that are modified or related to the method goes first. For instanc
 ### Order during construction
 Should follow order of struct fields as close as possible. As for `Bool` flags, they should 
 be in the order of speed-up to the code or (?). In the case of domain that amounts to:
-```use_cuda, precision, real_transform, anti_aliased```
+```use_cuda, precision, real_transform, dealiased```
 
 ### Order of other arguments
 Should follow order of struct construction and or order of struct fields.

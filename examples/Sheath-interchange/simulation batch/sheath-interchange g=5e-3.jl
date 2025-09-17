@@ -2,7 +2,7 @@
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run scheme test for Burgers equation
-domain = Domain(128, 128, 100, 100, anti_aliased=true)
+domain = Domain(128, 128, 100, 100, dealiased=true)
 ic = initial_condition_linear_stability(domain, 1e-3)
 
 # Linear operator

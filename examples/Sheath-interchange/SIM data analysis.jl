@@ -2,7 +2,7 @@
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 cd(relpath(@__DIR__, pwd()))
 
-domain = Domain(256, 256, 48, 48, anti_aliased=true)
+domain = Domain(256, 256, 48, 48, dealiased=true)
 using Statistics
 # Open data file
 fid = h5open("output/sheath-interchange long time series.h5", "r")
@@ -154,7 +154,7 @@ end
 
 ## Thesis images
 fid = h5open("output/gyro-bohm=1e-1 CUDA.h5", "r")
-domain = Domain(256, 256, 48, 48, anti_aliased=true, use_cuda=false)
+domain = Domain(256, 256, 48, 48, dealiased=true, use_cuda=false)
 
 points = [(x, 0) for x in range(-24, 19.2, 10)]
 

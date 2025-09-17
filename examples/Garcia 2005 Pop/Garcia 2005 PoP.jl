@@ -3,7 +3,7 @@ using HasegawaWakatani
 using LaTeXStrings
 using Plots
 
-domain = Domain(256, 256, 50, 50, precision=Float32)
+domain = Domain(1024, 1024, 50, 50, precision=Float32)#, mem=CuArray)
 u0 = gaussian.(domain.x', domain.y, A=1, B=0, l=1)
 
 # Linear operator
@@ -35,7 +35,7 @@ tspan = [0.0, 20.0]
 #FFTW.set_num_threads(16)
 
 # The problem
-prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], tspan, p=parameters, dt=2.5e-2)
+prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], tspan, p=parameters, dt=1e-3)#2.5e-2)
 
 # Array of diagnostics want
 diagnostics = [
@@ -54,10 +54,9 @@ cd(relpath(@__DIR__, pwd()))
 
 # The output
 output = Output(prob, 21, diagnostics, "output/Garcia 2005 PoP.h5",
-    store_locally=true, simulation_name=:parameters)
+    store_locally=true, simulation_name="test 201")
 
-## Solve and plot
-using Profile
+# Solve and plot
 sol = spectral_solve(prob, MSS3(), output, resume=false)
 
 ## Recreate Garcia et al. plots Figure 1.
@@ -155,6 +154,7 @@ jldopen("output/blob velocity linear.jld", "w") do file
     g["max_velocitites"] = max_velocities
 end
 
+using SMTPClient
 send_mail("Multiple attachments test", attachment="figures/blob velocity linear.pdf")
 close(output)
 

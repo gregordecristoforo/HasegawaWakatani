@@ -2,7 +2,7 @@
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run test for Burgers equation
-domain = Domain(1, 1024, 1, 20, anti_aliased=true)
+domain = Domain(1, 1024, 1, 20, dealiased=true)
 u0 = initial_condition(gaussianWallY, domain)
 
 # Diffusion 

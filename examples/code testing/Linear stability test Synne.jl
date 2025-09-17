@@ -2,7 +2,7 @@
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run linear stability test
-domain = Domain(256, 256, 100, 100, anti_aliased=true)
+domain = Domain(256, 256, 100, 100, dealiased=true)
 ic = initial_condition_linear_stability(domain, 1e-6)
 
 # Linear operator (May not be static actually)

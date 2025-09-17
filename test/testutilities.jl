@@ -76,9 +76,9 @@ function test_resolution_convergence(prob, initialField, analyticalSolution, res
 
         # Create higher resolution domain
         if oneDimensional
-            domain = Domain(1, N, od.Lx, od.Ly, real_transform=od.real_transform, anti_aliased=od.anti_aliased)
+            domain = Domain(1, N, od.Lx, od.Ly, real_transform=od.real_transform, dealiased=od.dealiased)
         else
-            domain = Domain(N, N, od.Lx, od.Ly, real_transform=od.real_transform, anti_aliased=od.anti_aliased)
+            domain = Domain(N, N, od.Lx, od.Ly, real_transform=od.real_transform, dealiased=od.dealiased)
         end
         u0 = initial_condition(initialField, domain) #TODO rethink initial condition 
 

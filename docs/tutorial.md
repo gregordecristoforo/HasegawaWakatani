@@ -51,7 +51,7 @@ The operators supported are ``diff_x``, ``diff_xx``, ``diff_y`` and ``diff_yy`` 
 ## Domain
 The ``Domain`` contains the information about the spatial discretization, the ``SpectralOperatorCache`` (explained above) and the transform plans (``FFTPlans`` in the current implementation). The easiest way to initialize a domain is ``Domain(N)`` which assumes a centered unit square domain. One may also use ``Domain(N,L)`` for a square domain with a different size. Both initilizations are optimized for run-time, for full flexibility use
 ```
-Domain(Nx, Ny, Lx, Ly; real_transform=true, anti_aliased=true, use_cuda=true, x0=-Lx / 2, y0=-Ly / 2)
+Domain(Nx, Ny, Lx, Ly; real_transform=true, dealiased=true, use_cuda=true, x0=-Lx / 2, y0=-Ly / 2)
 ```
 where ``x0`` and ``y0`` specify the down-left corner position (origin). The keyword arguments allows for the user to toggle the use of de-aliasing ``anti-aliasing``, realFFT ``real_transform`` and the use of *CUDA* ``use_cuda``,currently only supported in the *cuda* branch. Based on the toggles the program allocates fitting FFTPlans (the ``transform`` field of the ``Domain``) and ``SpectralOperatorCache``. The ``Domain`` discretization is stored in the ``x`` and ``y`` fields with the respective wavenumbers stored in ``kx`` and ``ky``.
 

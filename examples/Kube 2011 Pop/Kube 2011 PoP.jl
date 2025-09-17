@@ -2,8 +2,8 @@
 using HasegawaWakatani
 
 ## Run scheme test for Burgers equation
-domain = Domain(1024, 1024, 50, 50, anti_aliased=false)
-#domain = Domain(256, 256, 50, 50, anti_aliased=false)
+domain = Domain(1024, 1024, 50, 50, dealiased=false)
+#domain = Domain(256, 256, 50, 50, dealiased=false)
 u0 = log.(gaussian.(domain.x', domain.y, A=1e5, B=1, l=1))
 
 # Linear operator

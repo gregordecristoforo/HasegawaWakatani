@@ -33,7 +33,7 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
     phi::PHI
 
     function SpectralOperatorCache(kx, ky, Nx, Ny; use_cuda=true, precision=Float64,
-        real_transform=true, anti_aliased=true)
+        real_transform=true, dealiased=true)
 
         # Compute spectral coefficents
         diff_x = transpose(im * kx)
@@ -53,7 +53,7 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
         phi = zero(qt_left)
 
         # Compute padding length
-        if anti_aliased
+        if dealiased
             N = Nx > 1 ? div(3 * Nx, 2, RoundUp) : 1
             M = Ny > 1 ? div(3 * Ny, 2, RoundUp) : 1
         else
@@ -88,13 +88,12 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
         new{typeof(diff_x),typeof(diff_y),typeof(diff_xx),typeof(diff_yy),typeof(laplacian),
             typeof(up),typeof(U),typeof(qt_right),typeof(dealiasing_coefficient),
             typeof(QT_plans),typeof(phi)}(diff_x, diff_y, diff_xx, diff_yy, laplacian,
-            laplacian_inv, hyper_laplacian, anti_aliased, up, vp, U, V, qt_left, qt_right,
+            laplacian_inv, hyper_laplacian, dealiased, up, vp, U, V, qt_left, qt_right,
             dealiasing_coefficient, QT_plans, phi)
     end
 end
 
 # TODO check if operators like laplacians and diff_xx and diff_yy should be Complex 
-# TODO refactor anti_aliased to dealiased
 
 #------------------------- Quadratic terms interface ---------------------------------------
 function quadratic_term(u::U, v::V, SC::SOC) where {U<:AbstractArray,V<:AbstractArray,

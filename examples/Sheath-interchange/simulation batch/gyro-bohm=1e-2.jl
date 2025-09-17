@@ -2,8 +2,8 @@
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run "Gyro-Bohm model"
-#domain = Domain(128, 128, 32, 32, anti_aliased=true)
-domain = Domain(256, 256, 48, 48, anti_aliased=true)
+#domain = Domain(128, 128, 32, 32, dealiased=true)
+domain = Domain(256, 256, 48, 48, dealiased=true)
 ic = initial_condition_linear_stability(domain, 1e-3)
 
 # Linear operator

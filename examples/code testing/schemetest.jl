@@ -1,12 +1,12 @@
 ## Run all (alt+enter)
-include(relpath(pwd(), @__DIR__)*"/src/HasegawaWakatini.jl")
+include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run scheme test for Burgers equation
-domain = Domain(1, 1, 1, 1, anti_aliased=false)
+domain = Domain(1, 1, 1, 1, dealiased=false)
 u0 = [1.0;;]
 
 function L(u, d, p, t)
-    p["lambda"]*u
+    p["lambda"] * u
 end
 
 function N(u, d, p, t)
@@ -28,7 +28,7 @@ output = Output(prob, -1, [], store_hdf=false)
 
 sol = spectral_solve(prob, MSS2(), output)
 
-plot(stack(sol.u)[1,1,:],xlabel=L"X axis", ylabel=L"Y axis")
+plot(stack(sol.u)[1, 1, :], xlabel=L"X axis", ylabel=L"Y axis")
 
 function analytical_solution(u, domain, p, t)
     [u0 * exp(p["lambda"] * t);;]
@@ -43,12 +43,12 @@ _, convergence3 = test_timestep_convergence(prob, analytical_solution, timesteps
 p = plot(timesteps, convergence1, xaxis=:log, yaxis=:log10, label=" MSS1")
 plot!(timesteps, convergence2, xaxis=:log, yaxis=:log10, label=" MSS2", color="dark green")
 plot!(timesteps, convergence3, xaxis=:log, yaxis=:log10, label=" MSS3", color="orange")
-plot!(timesteps, 0.0002*timesteps, linestyle=:dash, label=" "*L"\mathcal{O}(dt)")
-plot!(timesteps, 0.0001*timesteps.^2, linestyle=:dash, label=" "*L"\mathcal{O}(dt^2)")
-plot!(timesteps, 0.0001*timesteps.^3, linestyle=:dash, label=" "*L"\mathcal{O}(dt^3)") 
-plot!(xlabel=L"dt",ylabel=L"||U-u_a||", title="Timestep convergence (Scheme test)", xticks=timesteps[1:2:end],
-xscale=:log2,legend_positions=:bottomright,size=(3.37*100, 2.5*100),
-minorticks=1,yticks=[1e-20, 1e-17, 1e-14, 1e-11, 1e-8, 1e-5],titlefontsize=10)
+plot!(timesteps, 0.0002 * timesteps, linestyle=:dash, label=" " * L"\mathcal{O}(dt)")
+plot!(timesteps, 0.0001 * timesteps .^ 2, linestyle=:dash, label=" " * L"\mathcal{O}(dt^2)")
+plot!(timesteps, 0.0001 * timesteps .^ 3, linestyle=:dash, label=" " * L"\mathcal{O}(dt^3)")
+plot!(xlabel=L"dt", ylabel=L"||U-u_a||", title="Timestep convergence (Scheme test)", xticks=timesteps[1:2:end],
+    xscale=:log2, legend_positions=:bottomright, size=(3.37 * 100, 2.5 * 100),
+    minorticks=1, yticks=[1e-20, 1e-17, 1e-14, 1e-11, 1e-8, 1e-5], titlefontsize=10)
 savefig("Timestep convergence, exponential test exact.png")
 
 ## Export data
@@ -60,5 +60,5 @@ jldopen("schemetest exact ic.jld", "w") do file
     g["convergence2"] = convergence2
     g["convergence3"] = convergence3
     g["timesteps"] = timesteps
-    g["colors"] = "#".*hex.(getindex.(p.series_list[1:end], :seriescolor))
+    g["colors"] = "#" .* hex.(getindex.(p.series_list[1:end], :seriescolor))
 end

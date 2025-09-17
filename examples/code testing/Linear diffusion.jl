@@ -2,7 +2,7 @@
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run scheme test
-domain = Domain(256, 256, 50, 50, anti_aliased=false)
+domain = Domain(256, 256, 50, 50, dealiased=false)
 u0 = initial_condition(gaussian, domain)
 
 # Diffusion 
