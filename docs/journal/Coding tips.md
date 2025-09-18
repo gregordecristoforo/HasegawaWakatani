@@ -31,3 +31,6 @@ Shift + Delete - Delete all plots
 * Use screen -S <sessionname> to create a screen, which can run a process while disconnected from
 server. Use ctrl+A followed by D to detach from the session before logging off. Use sreen -r <sessionname> 
 to reconnect to the session and continue where left off. Usefull for overnight simulations
+
+# Github tips
+* To track a file ignored by .gitignore do git add -f \<file>

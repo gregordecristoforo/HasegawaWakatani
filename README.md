@@ -23,7 +23,7 @@ with $\Omega = \nabla^2\phi$. The code features:
 * 2/3 Antialiasing on quadratic terms and non-linear functions
 * Diagnostic modules
 
-![Alt Text](assets/vorticity.gif)
+![Alt Text](assets/blob.gif)
 
 The code atempts to be modular and generalizable to be able to solve other spectral problems. 
 
