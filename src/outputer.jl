@@ -2,7 +2,7 @@
 
 mutable struct Output{DV<:AbstractArray{<:Diagnostic},U<:AbstractArray,UB<:AbstractArray,
     T<:AbstractArray,S<:Union{HDF5.Group,Nothing},PT<:Function,
-    K<:Any} #TODO figure out type of K
+    K<:NamedTuple}
 
     stride::Int
     diagnostics::DV
@@ -24,7 +24,7 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},U<:AbstractArray,UB<:Abstr
         PT<:Function,SN<:Union{AbstractString,Symbol}}
 
         # Compute number of samples to be stored and stride distance
-        N_data, stride = prepare_sampling_coverage(prob, N_data)
+        N_data, stride = prepare_sampling_coverage(N_data, prob)
 
         # Prepare initial state
         u0, t0 = prepare_initial_state(prob, physical_transform=physical_transform)
@@ -33,16 +33,16 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},U<:AbstractArray,UB<:Abstr
         h5_kwargs = merge((blosc=3,), h5_kwargs)
 
         # Setup HDF5 storage if wanted
-        simulation = setup_hdf5_storage(filename, simulation_name, prob, u0, t0, N_data;
+
+        simulation = setup_hdf5_storage(filename, simulation_name, N_data, u0, prob, t0;
             store_hdf=store_hdf, h5_kwargs=h5_kwargs)
 
         # Setup local (in memory) storage if wanted
-        u, t = setup_local_storage(u0, t0, N_data; store_locally=store_locally)
+        u, t = setup_local_storage(N_data, u0, t0; store_locally=store_locally)
 
         # Allocate data for diagnostics
         for diagnostic in diagnostics
-            # TODO fix arguments
-            initialize_diagnostic!(diagnostic, prob, u0, t0, simulation, h5_kwargs,
+            initialize_diagnostic!(diagnostic, simulation, h5_kwargs, u0, prob, t0,
                 store_hdf=store_hdf, store_locally=store_locally)
         end
 
@@ -56,7 +56,7 @@ end
 
 # ----------------------------------- Helpers ----------------------------------------------
 
-function prepare_sampling_coverage(prob, N_data)
+function prepare_sampling_coverage(N_data, prob)
     # Calculate number of total samples
     N_steps = floor(Int, (last(prob.tspan) - first(prob.tspan)) / prob.dt)
 
@@ -95,7 +95,7 @@ end
 
 """
 """
-function setup_hdf5_storage(filename, simulation_name, prob, u0, t0, N_data;
+function setup_hdf5_storage(filename, simulation_name, N_data, u0, prob, t0;
     store_hdf=store_hdf, h5_kwargs=h5_kwargs)
 
     if store_hdf
@@ -109,7 +109,7 @@ function setup_hdf5_storage(filename, simulation_name, prob, u0, t0, N_data;
 
         # Check how to handle simulation group
         if !haskey(file, simulation_name)
-            simulation = setup_simulation_group(file, simulation_name, prob, u0, t0, N_data;
+            simulation = setup_simulation_group(file, simulation_name, N_data, u0, prob, t0;
                 h5_kwargs)
         else
             simulation = open_group(file, simulation_name)
@@ -153,7 +153,7 @@ end
 
 """
 """
-function setup_simulation_group(file, simulation_name, prob, u0, t0, N_data; h5_kwargs)
+function setup_simulation_group(file, simulation_name, N_data, u0, prob, t0; h5_kwargs)
 
     # Create simulation group
     simulation = create_group(file, simulation_name)
@@ -212,7 +212,7 @@ end
   Allocates vectors in memory for storing the fields alongside the time if the user wants it,
   otherwise empty vectors are returned.
 """
-function setup_local_storage(u0, t0, N_data; store_locally=store_locally)
+function setup_local_storage(N_data, u0, t0; store_locally=store_locally)
 
     if store_locally
         # Allocate local data for fields
@@ -339,12 +339,13 @@ end
 """
 function transform_state!(output, u_hat, p)
     spectral_transform!(output.U_buffer, u_hat, p)
-    output.physical_transform(output.U_buffer) # TODO perhaps check if identity?
+    output.physical_transform(output.U_buffer)
     output.transformed = true
 end
 
 # ----------------------------------- Cache ------------------------------------------------
 
+# TODO check that signature is "consistent"
 # Perhaps one could look into HDF5 compound types in the future
 function output_cache!(output::O, cache::C, step::Integer, t::N) where {O<:Output,
     C<:AbstractCache,N<:Number}

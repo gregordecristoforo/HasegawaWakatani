@@ -24,9 +24,10 @@ mutable struct Diagnostic{N<:AbstractString,M<:Function,D<:AbstractArray,T<:Abst
     end
 end
 
-function initialize_diagnostic!(diagnostic::D, prob::SOP, u0::T, t0::AbstractFloat,
-    simulation::S, h5_kwargs::K; store_hdf::Bool=true, store_locally::Bool=true) where
-{D<:Diagnostic,SOP<:SpectralODEProblem,T<:AbstractArray,S<:Union{HDF5.Group,Nothing},K<:Any}
+diagnostic, simulation, h5_kwargs, u0, prob, t0
+function initialize_diagnostic!(diagnostic::D, simulation::S, h5_kwargs::K, u0::T, prob::SOP,
+    t0::AbstractFloat; store_hdf::Bool=true, store_locally::Bool=true) where
+{D<:Diagnostic,S<:Union{HDF5.Group,Nothing},T<:AbstractArray,SOP<:SpectralODEProblem,K<:NamedTuple}
 
     # Calculate total number of steps
     N_steps = floor(Int, (last(prob.tspan) - first(prob.tspan)) / prob.dt)
@@ -50,6 +51,8 @@ function initialize_diagnostic!(diagnostic::D, prob::SOP, u0::T, t0::AbstractFlo
         diagnostic.sample_step = N_steps
         @warn "The sample step was larger than the number of steps and has been set to sample_step = $N_steps"
     end
+
+    # Compute timeline
 
     # Take diagnostic of initial field (id = initial diagnostic)
     if diagnostic.assumes_spectral_field
@@ -117,7 +120,7 @@ function perform_diagnostic!(diagnostic::D, step::Integer, u::U, prob::SOP, t::N
     SOP<:SpectralODEProblem,N<:Number}
     # u might be real or complex depending on previous handle_output and diagnostic.assumes_spectral_field
 
-    # Perform diagnostic
+    # Perform diagnostic # TODO make diagnostic.args..., u, prob, t
     data = diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
 
     if !isnothing(data)

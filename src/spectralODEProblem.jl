@@ -23,7 +23,7 @@ struct NullParameters end
    `kwargs` can be stored in the struct, however these are currently unused.
 """
 mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:AbstractDomain,u0Type<:AbstractArray,
-    u0_hatType<:AbstractArray,tType,pType,N<:Number,RMType<:Function,kwargsType}
+    u0_hatType<:AbstractArray,tType,pType,N<:Number,RMType<:Function,kwargsType<:NamedTuple}
 
     L::LType
     N::NType
