@@ -9,9 +9,9 @@ struct NullParameters end
 # TODO add get_velocity=vExB,
 
 """
-    SpectralODEProblem(L::Function, N::Function, domain::AbstractDomain, u0, tspan;
+    SpectralODEProblem(L::Function, N::Function, u0, domain::AbstractDomain, tspan;
         p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing, kwargs...)
-    SpectralODEProblem(N::Function, domain::AbstractDomain, u0, tspan;
+    SpectralODEProblem(N::Function, u0, domain::AbstractDomain, tspan;
         p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing, kwargs...)
   
   Collection of data needed to specify the spectral ODE problem to be solved. The user needs
@@ -22,14 +22,14 @@ struct NullParameters end
    option to add a method `remove_modes` to remove certain modes after each timestep. Other
    `kwargs` can be stored in the struct, however these are currently unused.
 """
-mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:AbstractDomain,u0Type<:AbstractArray,
-    u0_hatType<:AbstractArray,tType,pType,N<:Number,RMType<:Function,K}
+mutable struct SpectralODEProblem{LType<:Function,NType<:Function,u0Type<:AbstractArray,
+    u0_hatType<:AbstractArray,D<:AbstractDomain,tType,pType,N<:Number,RMType<:Function,K}
 
     L::LType
     N::NType
-    domain::D
     u0::u0Type
     u0_hat::u0_hatType
+    domain::D
     tspan::tType
     p::pType
     # TODO add in-place flag?
@@ -38,16 +38,16 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:AbstractDom
     remove_modes::RMType
     kwargs::K
 
-    function SpectralODEProblem(N::Function, domain::AbstractDomain, u0, tspan;
+    function SpectralODEProblem(N::Function, u0, domain::AbstractDomain, tspan;
         p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing, kwargs...)
 
         # If no linear operator given, assume there is non
         L(u, d, p, t) = zero(u)
 
-        SpectralODEProblem(L, N, domain, u0, tspan, p=p, dt=dt, remove_modes=remove_modes, kwargs...)
+        SpectralODEProblem(L, N, u0, domain, tspan, p=p, dt=dt, remove_modes=remove_modes, kwargs...)
     end
 
-    function SpectralODEProblem(L::Function, N::Function, domain::AbstractDomain, u0, tspan;
+    function SpectralODEProblem(L::Function, N::Function, u0, domain::AbstractDomain, tspan;
         p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing, kwargs...)
 
         # Prepare data structures
@@ -63,9 +63,9 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,D<:AbstractDom
 
         #dt = convert(precision, dt)
 
-        new{typeof(L),typeof(N),typeof(domain),typeof(u0),typeof(u0_hat),typeof(tspan),
-            typeof(p),typeof(dt),typeof(remove_modes),typeof(kwargs)}(L, N, domain, u0, u0_hat,
-            tspan, p, dt, remove_modes, kwargs)
+        new{typeof(L),typeof(N),typeof(u0),typeof(u0_hat),typeof(domain),typeof(tspan),
+            typeof(p),typeof(dt),typeof(remove_modes),typeof(kwargs)}(L, N, u0, u0_hat,
+            domain, tspan, p, dt, remove_modes, kwargs)
     end
 end
 

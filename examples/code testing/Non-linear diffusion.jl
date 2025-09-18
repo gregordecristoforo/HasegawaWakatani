@@ -21,7 +21,7 @@ parameters = Dict(
 
 t_span = [0, 2]
 
-prob = SpectralODEProblem(L, N, domain, u0, t_span, p=parameters, dt=0.001)
+prob = SpectralODEProblem(L, N, u0, domain, t_span, p=parameters, dt=0.001)
 
 function inverse_transform!(U::V) where {V<:AbstractArray}
     @views U[:, :, 1] .= exp.(U[:, :, 1]) .- 1

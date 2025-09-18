@@ -21,7 +21,7 @@ parameters = Dict(
 
 t_span = [0, 2]
 
-prob = SpectralODEProblem(L, N, domain, u0, t_span, p=parameters, dt=1e-3)
+prob = SpectralODEProblem(L, N, u0, domain, t_span, p=parameters, dt=1e-3)
 
 cd(relpath(@__DIR__, pwd()))
 output = Output(prob, 21, [ProgressDiagnostic(10)], "output/linear diffusion.h5")#, simulation_name=":parameters")

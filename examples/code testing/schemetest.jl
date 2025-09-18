@@ -20,7 +20,7 @@ parameters = Dict(
 
 t_span = [0, 10]
 
-prob = SpectralODEProblem(L, N, domain, u0, t_span, p=parameters, dt=0.0001)
+prob = SpectralODEProblem(L, N, u0, domain, t_span, p=parameters, dt=0.0001)
 
 ## Solve and plot
 cd(relpath(@__DIR__, pwd()))

@@ -42,7 +42,7 @@ function test_timestep_convergence(prob, analyticalSolution, timesteps, scheme=M
         println("Running dt = $dt")
 
         # Create new spectralODEProblem with new dt
-        newProb = SpectralODEProblem(prob.L, prob.N, prob.domain, prob.u0, prob.tspan, p=prob.p, dt=dt)
+        newProb = SpectralODEProblem(prob.L, prob.N, prob.u0, prob.domain, prob.tspan, p=prob.p, dt=dt)
 
         output = Output(newProb, 2, [], store_hdf=false, physical_transform=physical_transform)
 
@@ -83,7 +83,7 @@ function test_resolution_convergence(prob, initialField, analyticalSolution, res
         u0 = initial_condition(initialField, domain) #TODO rethink initial condition 
 
         # Create new spectralODEProblem but with updated resolution
-        newProb = SpectralODEProblem(prob.L, prob.N, domain, u0, prob.tspan, p=prob.p, dt=prob.dt)
+        newProb = SpectralODEProblem(prob.L, prob.N, u0, domain, prob.tspan, p=prob.p, dt=prob.dt)
         output = Output(newProb, 2, [], store_hdf=false, physical_transform=physical_transform)
 
         println("Running N = $N")

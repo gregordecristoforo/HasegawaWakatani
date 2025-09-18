@@ -41,7 +41,7 @@ parameters = Dict(
 t_span = [0, 500]
 
 # The problem
-prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-3)
+prob = SpectralODEProblem(L, N, ic, domain, t_span, p=parameters, dt=1e-3)
 
 # Array of diagnostics want
 diagnostics = [

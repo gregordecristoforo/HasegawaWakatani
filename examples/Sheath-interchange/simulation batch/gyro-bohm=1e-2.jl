@@ -39,7 +39,7 @@ parameters = Dict(
 
 t_span = [0, 100]
 
-prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-3, remove_modes=remove_zonal_modes!)
+prob = SpectralODEProblem(L, N, ic, domain, t_span, p=parameters, dt=1e-3, remove_modes=remove_zonal_modes!)
 
 # Diagnostics
 diagnostics = [

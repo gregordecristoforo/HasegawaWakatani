@@ -44,7 +44,7 @@ function inverse_transformation(u)
 end
 
 # The problem
-prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], t_span, p=parameters, dt=1e-3)
+prob = SpectralODEProblem(L, N, [u0;;; zero(u0)], domain, t_span, p=parameters, dt=1e-3)
 
 # Array of diagnostics want
 diagnostics = [
@@ -83,7 +83,7 @@ for (i, A) in enumerate(amplitudes[12:end])
     # Update initial initial_condition
     u0 = log.(gaussian.(domain.x', domain.y, A=A, B=1, l=1))
     # Update problem 
-    prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], [0, tends[i]], p=parameters, dt=dts[i],
+    prob = SpectralODEProblem(L, N, [u0;;; zero(u0)], domain, [0, tends[i]], p=parameters, dt=dts[i],
         inverse_transformation=inverse_transformation)
     # Reset diagnostics
     diagnostics = [RadialCOMDiagnostic(10), ProgressDiagnostic(100), PlotDensityDiagnostic(1000),]
@@ -123,7 +123,7 @@ for (i, A) in enumerate(amplitudes)
     # Update initial initial_condition
     u0 = gaussian.(domain.x', domain.y, A=A, B=0, l=1)
     # Update problem 
-    prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], [0, tends[i]], p=parameters, dt=dts[i])
+    prob = SpectralODEProblem(L, N, [u0;;; zero(u0)], domain, [0, tends[i]], p=parameters, dt=dts[i])
     # Reset diagnostics
     diagnostics = [RadialCOMDiagnostic(1), ProgressDiagnostic(100), PlotDensityDiagnostic(1000),]
     # Update output

@@ -28,7 +28,7 @@ t_b = -1 / (minimum(real(domain.transform.iFT * dudy)))
 t_span = [0, 0.8 * t_b]
 
 # Initialize problem
-prob = SpectralODEProblem(L, N, domain, u0, t_span, p=parameters, dt=0.0001)
+prob = SpectralODEProblem(L, N, u0, domain, t_span, p=parameters, dt=0.0001)
 
 # Initialize output
 cd(relpath(@__DIR__, pwd()))

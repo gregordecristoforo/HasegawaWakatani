@@ -60,7 +60,7 @@ parameters = Dict(
 
 t_span = [0, 5000000]
 
-prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-1)
+prob = SpectralODEProblem(L, N, ic, domain, t_span, p=parameters, dt=1e-1)
 
 # Diagnostics
 diagnostics = [

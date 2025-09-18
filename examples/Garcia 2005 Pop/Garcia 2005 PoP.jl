@@ -35,7 +35,7 @@ tspan = [0.0, 20.0]
 #FFTW.set_num_threads(16)
 
 # The problem
-prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], tspan, p=parameters, dt=1e-3)#2.5e-2)
+prob = SpectralODEProblem(L, N, [u0;;; zero(u0)], domain, tspan, p=parameters, dt=1e-3)#2.5e-2)
 
 # Array of diagnostics want
 diagnostics = [
@@ -57,7 +57,7 @@ output = Output(prob, 21, diagnostics, "output/Garcia 2005 PoP.h5",
     store_locally=true, simulation_name="test 201")
 
 # Solve and plot
-sol = spectral_solve(prob, MSS3(), output, resume=false)
+sol = spectral_solve(prob, MSS3(), output, resume=true)
 
 ## Recreate Garcia et al. plots Figure 1.
 savefig(heatmap(domain, sol.u[6][:, :, 1], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600, 280),
@@ -126,10 +126,10 @@ for (i, A) in enumerate(amplitudes)
     # Update initial initial_condition
     u0 = gaussian.(domain.x', domain.y, A=A, B=0, l=1)
     # Update problem 
-    prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], [0, tends[i]], p=parameters, dt=dts[i])
+    prob = SpectralODEProblem(L, N, [u0;;; zero(u0)], domain, [0, tends[i]], p=parameters, dt=dts[i])
     # Reset diagnostics
     diagnostics = [RadialCOMDiagnostic(1), ProgressDiagnostic(100), PlotDensityDiagnostic(1000),]
-    prob = SpectralODEProblem(L, N, domain, [u0;;; zero(u0)], [0, tends[i]], p=parameters, dt=dts[i])
+    prob = SpectralODEProblem(L, N, [u0;;; zero(u0)], domain, [0, tends[i]], p=parameters, dt=dts[i])
     # Reset diagnostics
     diagnostics = [RadialCOMDiagnostic(1), ProgressDiagnostic(100)]#, PlotDensityDiagnostic(1000),]
     # Update output
@@ -193,3 +193,15 @@ end
 
 plot(amplitudes, max_velocities, xaxis=:log, yaxis=:log, marker=:circle, xlabel=L"\Delta n/N", ylabel="max " * L"V", label="")
 savefig("blob velocity linear.pdf")
+
+## ------------------------------ Generate blob GIF ----------------------------------------
+data = Array.(sol.u)
+
+default(legend=false, ylim=[-10, 10])
+anim = @animate for i in 1:201
+    i == 2 ? i = 1 : nothing
+    heatmap(domain, data[i][:, :, 1], aspect_ratio=:equal, size=(600, 280))
+end
+#, size=(600, 280)
+#, 
+gif(anim, "blob.gif", fps=40)
