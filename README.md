@@ -27,9 +27,10 @@ with $\Omega = \nabla^2\phi$. The code features:
 ![Alt Text](assets/blob.gif)
 
 The code atempts to be modular and generalizable to be able to solve other spectral problems. 
-Plasma Biperiodic Odes for Long-time Turbulence (PlasmaBOLT)
+Plasma Biperiodic Ode-solver for Long-time Turbulence (PlasmaBOLT)
 
 Things want to add in future versions:
 * Operators, remediscent of SciMLOperators
 * In-place all the way
 * Rosenbrock-Euler method for first step
+
