@@ -21,11 +21,7 @@ function get_cache(prob::SpectralODEProblem, alg::MSS1)
     dt = prob.dt
     u = copy(prob.u0_hat)
     # Calculate linear differential operator coefficent once to cache it
-    if prob.domain.use_cuda
-        D = prob.L(CUDA.ones(Float64, size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
-    else
-        D = prob.L(ones(size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
-    end
+    D = prob.L(one.(similar(prob.u0_hat)), prob.domain, prob.p, 0)
     c = @. (1 - D * dt)^-1
     MSS1Cache(u, c)
 end
@@ -79,11 +75,7 @@ function get_cache(prob::SpectralODEProblem, alg::MSS2)
     tab = MSS2Tableau()
     dt = prob.dt
     u = copy(prob.u0_hat)
-    if prob.domain.use_cuda
-        D = prob.L(CUDA.ones(Float64, size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
-    else
-        D = prob.L(ones(size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
-    end
+    D = prob.L(one.(similar(prob.u0_hat)), prob.domain, prob.p, 0)
     c = @. (3 / 2 - D * dt)^-1
     u0 = copy(prob.u0_hat)
     u1 = zero(u)
@@ -163,11 +155,7 @@ function get_cache(prob::SpectralODEProblem, alg::MSS3)
     tab = MSS3Tableau()
     dt = prob.dt
     u = copy(prob.u0_hat)
-    if prob.domain.use_cuda
-        D = prob.L(CUDA.ones(Float64, size(prob.domain.transform.iFT)), prob.domain, prob.p, 0) #This controls precision
-    else
-        D = prob.L(ones(size(prob.domain.transform.iFT)), prob.domain, prob.p, 0)
-    end
+    D = prob.L(one.(similar(prob.u0_hat)), prob.domain, prob.p, 0)
     c = @. (tab.g0 - D * dt)^-1
     u0 = copy(prob.u0_hat)
     u1 = zero(u)

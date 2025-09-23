@@ -9,15 +9,15 @@ u0 = gaussian.(domain.x', domain.y, A=1, B=0, l=1)
 # Linear operator
 function L(u, d, p, t)
     @unpack κ, ν = p
-    D_θ = κ * diffusion(u, d)
-    D_Ω = ν * diffusion(u, d)
+    θ, Ω = eachslice(u, dims=3)
+    D_θ = κ * diffusion(θ, d)
+    D_Ω = ν * diffusion(Ω, d)
     cat(D_θ, D_Ω, dims=3)
 end
 
 # Non-linear operator
 function N(u, d, p, t)
-    θ = @view u[:, :, 1]
-    Ω = @view u[:, :, 2]
+    θ, Ω = eachslice(u, dims=3)
     ϕ = solve_phi(Ω, d)
     dθ = -poisson_bracket(ϕ, θ, d)
     dΩ = -poisson_bracket(ϕ, Ω, d)
@@ -58,7 +58,7 @@ output = Output(prob, filename="output/Garcia 2005 PoP.h5", diagnostics=diagnost
     store_locally=true)
 
 # Solve and plot
-sol = spectral_solve(prob, MSS3(), output, resume=true)
+sol = spectral_solve(prob, MSS3(), output, resume=false)
 
 ## Recreate Garcia et al. plots Figure 1.
 savefig(heatmap(domain, sol.u[6][:, :, 1], levels=10, aspect_ratio=:equal, xlabel=L"x", ylim=[-10, 10], size=(600, 280),
