@@ -101,7 +101,7 @@ histogram(ϕ_n', aspect_ratio=:auto, yaxis=:log10)
 histogram(vx_n', aspect_ratio=:auto, yaxis=:log10)
 histogram(Γ_n', aspect_ratio=:auto, yaxis=:log10)
 
-u_hat = sim["cache_backup/u0"][:, :, :]
+u_hat = sim["checkpoint/u0"][:, :, :]
 u_reduced = copy(u_hat)
 u_reduced[60:129, :, :] .= 0
 

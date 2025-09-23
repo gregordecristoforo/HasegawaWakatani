@@ -35,15 +35,15 @@ function initialize_diagnostic!(diagnostic::D, simulation::S, h5_kwargs::K, u0::
     if diagnostic.sample_step == -1
         #TODO implement some logic here later
         diagnostic.sample_step = 1
-        # N_data = floor(Int, 0.1 * N_steps)
+        # N_samples = floor(Int, 0.1 * N_steps)
 
-        # if N_data > N_steps
-        #     N_data = N_steps + 1
-        #     @warn "N_data and stepsize was not compatible, N_data is instead set to N_data = " * "$N_data"
+        # if N_samples > N_steps
+        #     N_samples = N_steps + 1
+        #     @warn "N_samples and stepsize was not compatible, N_samples is instead set to N_samples = " * "$N_samples"
         # end
 
         # # Calculate number of evolution steps between samples
-        # fieldStep = floor(Int, N_steps / (N_data - 1))
+        # fieldStep = floor(Int, N_steps / (N_samples - 1))
     end
 
     if diagnostic.sample_step > N_steps
@@ -154,6 +154,25 @@ function Base.show(io::IO, m::MIME"text/plain", diagnostic::Diagnostic)
         diagnostic.assumes_spectral_field, ", stores_data=", diagnostic.stores_data, ")")
     length(diagnostic.args) != 0 ? print(io, ", args=", diagnostic.args) : nothing
     length(diagnostic.kwargs) != 0 ? print(io, ", kwargs=", diagnostic.kwargs) : nothing
+end
+
+"""
+"""
+function sample_diagnostic!(output, diagnostic, step::Integer, u, prob, t)
+    # Check if diagnostic assumes physical field and transform if not yet done
+    if !diagnostic.assumes_spectral_field && !output.transformed
+        # Transform state
+        transform_state!(output, u, get_bwd(prob.domain))
+    end
+
+    # Passes the logic onto perform_diagnostic! to do diagnostic and store data
+    if diagnostic.assumes_spectral_field
+        perform_diagnostic!(diagnostic, step, u, prob, t,
+            store_hdf=output.store_hdf, store_locally=output.store_locally)
+    else
+        perform_diagnostic!(diagnostic, step, output.U_buffer, prob, t,
+            store_hdf=output.store_hdf, store_locally=output.store_locally)
+    end
 end
 
 #-------------------------------------- Include --------------------------------------------

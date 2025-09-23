@@ -68,9 +68,9 @@ where ``L`` and ``N`` are the aformentioned operators, ``u0`` is the initial con
 ## Output and Diagnostics
 The ``Output`` struct is responsible for sampling the ``Diagnostic``'s specified in the ``diagnostic`` 'list' and outputting it to a ``.h5`` file. To initilize the output use
 ```
-Output(prob, N_data, diagnostics, filename=basename(tempname())*"h5"; physical_transform=identity, simulation_name=:timestamp, store_hdf=true, store_locally=true, h5_kwargs...)
+Output(prob, N_samples, diagnostics, filename=basename(tempname())*"h5"; physical_transform=identity, simulation_name=:timestamp, store_hdf=true, store_locally=true, h5_kwargs...)
 ```
-The ``N_data`` is the number of raw solutions (data) outputed to the file. If ``filename`` is not specified a random string will be generated. A file can hold multiple ``simulation``'s (field of the ``Output`` struct), and the ``simulation_name`` can be user defined, the ``:timestamp`` on startup or a string formed by the ``:parameters``. A ``physical_transform`` can be applied to the solution in physical space before applying diagnostics or storing the fields, such as applying the exponential to the 'density field'. The ``Output`` struct also has the toggles to store the data locally (``store_locally``) and or store the data to a *HDF5* file (``store_hdf``).
+The ``N_samples`` is the number of raw solutions (data) outputed to the file. If ``filename`` is not specified a random string will be generated. A file can hold multiple ``simulation``'s (field of the ``Output`` struct), and the ``simulation_name`` can be user defined, the ``:timestamp`` on startup or a string formed by the ``:parameters``. A ``physical_transform`` can be applied to the solution in physical space before applying diagnostics or storing the fields, such as applying the exponential to the 'density field'. The ``Output`` struct also has the toggles to store the data locally (``store_locally``) and or store the data to a *HDF5* file (``store_hdf``).
 
 Diagnostics is detailed in the master thesis. # TODO add to documentation!
 

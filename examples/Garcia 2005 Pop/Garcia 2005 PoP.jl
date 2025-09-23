@@ -35,7 +35,7 @@ tspan = [0.0, 20.0]
 #FFTW.set_num_threads(16)
 
 # The problem
-prob = SpectralODEProblem(L, N, [u0;;; zero(u0)], domain, tspan, p=parameters, dt=1e-3)#2.5e-2)
+prob = SpectralODEProblem(L, N, [u0;;; zero(u0)], domain, tspan, p=parameters, dt=1e-3)
 
 # Array of diagnostics want
 diagnostics = [
@@ -52,9 +52,10 @@ diagnostics = [
 # Folder path
 cd(relpath(@__DIR__, pwd()))
 
-# The output
-output = Output(prob, 21, diagnostics, "output/Garcia 2005 PoP.h5",
-    store_locally=true, simulation_name="test 201")
+## The output
+output = Output(prob, filename="output/Garcia 2005 PoP.h5", diagnostics=diagnostics,
+    step_stride=-1, simulation_name=:parameters, field_storage_limit="0.5 GB",
+    store_locally=true)
 
 # Solve and plot
 sol = spectral_solve(prob, MSS3(), output, resume=true)

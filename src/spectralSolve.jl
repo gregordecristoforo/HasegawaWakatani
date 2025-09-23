@@ -4,10 +4,10 @@
 function spectral_solve(prob::SOP, scheme::SA=MSS3(), output::O=Output(prob, 100);
     resume::Bool=false) where {SOP<:SpectralODEProblem,SA<:AbstractODEAlgorithm,O<:Output}
     # Initialize cache
-    if resume && output.store_hdf && haskey(output.simulation, "cache_backup")
-        cache = restore_cache(output.simulation, prob, scheme)
-        t = read(output.simulation, "cache_backup/last_t")
-        step = read(output.simulation, "cache_backup/last_step")
+    if resume && output.store_hdf && haskey(output.simulation, "checkpoint")
+        cache = restore_checkpoint(output.simulation, prob, scheme)
+        t = read(output.simulation, "checkpoint/time")
+        step = read(output.simulation, "checkpoint/step")
     else
         cache = get_cache(prob, scheme)
         t = first(prob.tspan)
@@ -28,9 +28,9 @@ function spectral_solve(prob::SOP, scheme::SA=MSS3(), output::O=Output(prob, 100
         while step < total_steps
             perform_step!(cache, prob, t)
 
-            # Increment step and time #TODO fix time tracking
+            # Increment step and time
             step += 1
-            t += dt
+            t = first(prob.tspan) + step * dt
 
             handle_output!(output, step, cache.u, prob, t)
             sleep(1e-10000000000000) #To be able to interupt simulation
@@ -41,7 +41,7 @@ function spectral_solve(prob::SOP, scheme::SA=MSS3(), output::O=Output(prob, 100
     end
 
     # Store the cache to be able to resume simulations
-    output_cache!(output, cache, step, t)
+    save_checkpoint!(output, cache, step, t)
 
     # TODO catch edge case
 

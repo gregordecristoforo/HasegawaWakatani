@@ -15,4 +15,11 @@ function _spectral_transform!(du, u::ComponentArray, p::P) where {P<:FFTW.Plan}
     end
 end
 
+import HasegawaWakatani: assert_no_nan
+function assert_no_nan(u::ComponentArray, t)
+    assert_no_nan(parent(u), t)
+end
+
+# TODO perhaps custom write_state? So that output is easier to read
+
 end

@@ -59,7 +59,7 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,u0Type<:Abstra
 
         # Handle timespan
         length(tspan) != 2 ? throw("tspan should have exactly two elements") : nothing
-        tspan = promote(first(tspan), last(tspan))
+        tspan = promote(first(tspan), last(tspan)) #TODO warn if tspan and dt not compatible
 
         #dt = convert(precision, dt)
 
