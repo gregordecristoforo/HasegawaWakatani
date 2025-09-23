@@ -1,3 +1,22 @@
+# ------------------------------ Initial condition helpers ---------------------------------
+
+# Default trait
+broadcastable_ic(::Function) = Val(true)
+
+# TODO add @nobroadcast macro to make function broadcastable_ic(::typeof(func)) = Val(false)
+
+function initial_condition(f::Function, domain::AbstractDomain, kwargs...)
+    initial_condition(broadcastable_ic(f), f, domain; kwargs...)
+end
+
+function initial_condition(::Val{true}, f::Function, domain::AbstractDomain; kwargs...)
+    f.(domain.x', domain.y; kwargs...)
+end
+
+function initial_condition(::Val{false}, f::Function, domain::AbstractDomain; kwargs...)
+    f(domain; kwargs...)
+end
+
 # ------------------------------- Initial conditions ---------------------------------------
 
 function gaussian(x, y; A=1, B=0, l=1, x0=0, y0=0)
@@ -55,9 +74,14 @@ function random_crossphased(domain::AbstractDomain; value=10^-6, cross_phase=pi 
     [real(ifft(n_hat));;; real(ifft(phi_hat))]
 end
 
-function initial_condition(shape::Function, domain::AbstractDomain; kwargs...)
-    shape.(domain.x', domain.y; kwargs...)
+function isolated_blob(domain::AbstractDomain; kwargs...)
+    u0 = initial_condition(gaussian, domain; kwargs...)
+    cat(u0, zero(u0), dims=3)
 end
+
+broadcastable_ic(::typeof(random_phase)) = Val(false)
+broadcastable_ic(::typeof(random_crossphased)) = Val(false)
+broadcastable_ic(::typeof(isolated_blob)) = Val(false)
 
 # ---------------------- Inverse functions / transforms ------------------------------------
 
@@ -66,7 +90,6 @@ function expTransform(u::AbstractArray)
 end
 
 #------------------------------ Removal of modes -------------------------------------------
-# TODO perhaps moved to utilitise
 
 function remove_zonal_modes!(u::U, d::D) where {U<:AbstractArray,D<:AbstractDomain}
     @inbounds u[1, :, :] .= 0

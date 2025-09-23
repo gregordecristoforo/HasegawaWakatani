@@ -4,7 +4,7 @@ using LaTeXStrings
 using Plots
 
 domain = Domain(1024, 1024, 50, 50, precision=Float32)#, mem=CuArray)
-u0 = gaussian.(domain.x', domain.y, A=1, B=0, l=1)
+ic = initial_condition(isolated_blob, domain)
 
 # Linear operator
 function L(u, d, p, t)
@@ -35,7 +35,7 @@ tspan = [0.0, 20.0]
 #FFTW.set_num_threads(16)
 
 # The problem
-prob = SpectralODEProblem(L, N, [u0;;; zero(u0)], domain, tspan, p=parameters, dt=1e-3)
+prob = SpectralODEProblem(L, N, ic, domain, tspan, p=parameters, dt=1e-3)
 
 # Array of diagnostics want
 diagnostics = [
