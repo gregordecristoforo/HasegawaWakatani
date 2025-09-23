@@ -40,16 +40,7 @@ function randomIC(x, y)
     rand()
 end
 
-function initial_condition(fun::Function, domain::AbstractDomain; kwargs...)
-    fun.(domain.x', domain.y; kwargs...)
-end
-
-function all_modes(domain::AbstractDomain, value=10^-6)
-    n_hat = value * ones(domain.Ny, domain.Nx)
-    real(ifft(n_hat))
-end
-
-function all_modes_with_random_phase(domain::AbstractDomain, value=10^-6)
+function random_phase(domain::AbstractDomain; value=10^-6)
     θ = 2 * π * rand(domain.Ny, domain.Nx)
     n_hat = value * ones(domain.Ny, domain.Nx) .* exp.(im * θ)
     n_hat[:, 1] .= 0
@@ -57,13 +48,15 @@ function all_modes_with_random_phase(domain::AbstractDomain, value=10^-6)
     real(ifft(n_hat))
 end
 
-function initial_condition_linear_stability(domain::AbstractDomain, value=10^-6)
+function random_crossphased(domain::AbstractDomain; value=10^-6, cross_phase=pi / 2)
     θ = 2 * π * rand(domain.Ny, domain.Nx)
     phi_hat = value * ones(domain.Ny, domain.Nx) .* exp.(im * θ)
-    #phi_hat[:, 1] .= 0
-    #phi_hat[1, :] .= 0
-    n_hat = phi_hat .* exp(im * pi / 2)
+    n_hat = phi_hat .* exp(im * cross_phase)
     [real(ifft(n_hat));;; real(ifft(phi_hat))]
+end
+
+function initial_condition(shape::Function, domain::AbstractDomain; kwargs...)
+    shape.(domain.x', domain.y; kwargs...)
 end
 
 # ---------------------- Inverse functions / transforms ------------------------------------
