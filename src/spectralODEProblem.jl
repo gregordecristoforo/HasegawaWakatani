@@ -8,6 +8,8 @@ struct NullParameters end
 
 # TODO add get_velocity=vExB,
 
+abstract type AbstractODEProblem{isinplace} end
+
 """
     SpectralODEProblem(L::Function, N::Function, u0, domain::AbstractDomain, tspan;
         p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing, kwargs...)
@@ -23,7 +25,8 @@ struct NullParameters end
    `kwargs` can be stored in the struct, however these are currently unused.
 """
 mutable struct SpectralODEProblem{LType<:Function,NType<:Function,u0Type<:AbstractArray,
-    u0_hatType<:AbstractArray,D<:AbstractDomain,tType,pType,N<:Number,RMType<:Function,K}
+    u0_hatType<:AbstractArray,D<:AbstractDomain,tType,pType,N<:Number,
+    RMType<:Function,K,iip} <: AbstractODEProblem{iip}
 
     L::LType
     N::NType
@@ -32,7 +35,6 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,u0Type<:Abstra
     domain::D
     tspan::tType
     p::pType
-    # TODO add in-place flag?
 
     dt::N # Passed onto something TODO find out what this something is
     remove_modes::RMType
@@ -41,8 +43,8 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,u0Type<:Abstra
     function SpectralODEProblem(N::Function, u0, domain::AbstractDomain, tspan;
         p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing, kwargs...)
 
-        # If no linear operator given, assume there is non
-        L(u, d, p, t) = zero(u)
+        # If no linear operator given, assume there is non and match signature
+        isinplace(N) ? L(du, u, d, p, t) = (du .= zero(u)) : L(u, d, p, t) = zero(u)
 
         SpectralODEProblem(L, N, u0, domain, tspan, p=p, dt=dt, remove_modes=remove_modes, kwargs...)
     end
@@ -64,8 +66,8 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,u0Type<:Abstra
         #dt = convert(precision, dt)
 
         new{typeof(L),typeof(N),typeof(u0),typeof(u0_hat),typeof(domain),typeof(tspan),
-            typeof(p),typeof(dt),typeof(remove_modes),typeof(kwargs)}(L, N, u0, u0_hat,
-            domain, tspan, p, dt, remove_modes, kwargs)
+            typeof(p),typeof(dt),typeof(remove_modes),typeof(kwargs),isinplace(L, N)}(L, N,
+            u0, u0_hat, domain, tspan, p, dt, remove_modes, kwargs)
     end
 end
 
@@ -75,6 +77,7 @@ function Base.show(io::IO, m::MIME"text/plain", prob::SpectralODEProblem)
     print(io, nameof(typeof(prob)), "(", nameof(prob.L), ",", nameof(prob.N), ";dt=", prob.dt)
     typeof(prob.p) == NullParameters ? nothing : print(io, ",p=", prob.p)
     println(io, "):")
+    println(io, "in-place: ", isinplace(prob) isa Val{true})
     println(io, "remove_modes: ", nameof(prob.remove_modes))
     print(io, "domain: ")
     show(io, m, prob.domain)
@@ -106,6 +109,7 @@ end
 
 """
     allocate_coefficients(u0, transformplans::TransformPlans)
+  
   Recursively iterates trough the initial condition data structure to try to get to the 
   lowest level Array and then allocates the needed shape after applying the fwd transform.
 """
@@ -126,4 +130,42 @@ end
 
 function _allocate_coefficients(u0::AbstractArray{<:AbstractArray}, domain::Domain)
     [_allocate_coefficients(u, domain) for u in u0]
+end
+
+# ---------------------------------- Helpers -----------------------------------------------
+
+"""
+    isinplace(prob::AbstractODEProblem{iip}) where {iip}
+    isinplace(f::Function)
+    isinplace(L::Function, N::Function)
+
+  Checks whether or not the functions are in place. Works like a trait.
+"""
+isinplace(prob::AbstractODEProblem{iip}) where {iip} = iip
+
+function isinplace(L::Function, N::Function)
+    inplace = isinplace(L)
+    inplace == isinplace(N) ? inplace : error("Mismatch in function signatures: Both \
+    `prob.L` and `prob.N` must have the same signature. `prob.L` is 
+    $(inplace ? "in-place" : "out-of-place"), while `prob.N` is 
+    $(!inplace ? "in-place" : "out-of-place").")
+end
+
+# Inspired by https://github.com/SciML/SciMLBase.jl/blob/d1072adfcb061db6617972d4d5b2b6610ab32839/src/utils.jl#L6
+function isinplace(f::Function)
+    nargs = [m.nargs - 1 for m in methods(f)]
+    inplace = any(x -> x == 5, nargs)
+    outofplace = any(x -> x == 4, nargs)
+
+    if inplace
+        return Val(true)
+    elseif outofplace
+        return Val(false)
+    end
+
+    error("The function `$f` must have a valid signature.
+    Expected either:
+        - In-place: `$f(du, u, d, p, t)` (5 arguments, modifies `du` in-place), or
+        - Out-of-place: `$f(u, d, p, t)` (4 arguments, returns a new value).
+    However, no methods of `$f` match these signatures.")
 end
