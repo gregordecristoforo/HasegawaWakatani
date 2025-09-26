@@ -4,21 +4,13 @@
 function spectral_solve(prob::SOP, scheme::SA=MSS3(),
     output::O=Output(prob, step_stride=1000, store_hdf=false);
     resume::Bool=false) where {SOP<:SpectralODEProblem,SA<:AbstractODEAlgorithm,O<:Output}
-    # Initialize cache
-    if resume && output.store_hdf && haskey(output.simulation, "checkpoint")
-        cache = restore_checkpoint(output.simulation, prob, scheme)
-        t = read(output.simulation, "checkpoint/time")
-        step = read(output.simulation, "checkpoint/step")
-    else
-        cache = get_cache(prob, scheme)
-        t = first(prob.tspan)
-        step = 0
-    end
+    # Initialize cache and tracking
+    cache, t, step = initialize_solve(prob, scheme, output, resume)
 
     # Time step
     dt = prob.dt
 
-    # Calculate number of steps
+    # Calculate number of steps #TODO ceil or floor?
     total_steps = floor(Int, (last(prob.tspan) - first(prob.tspan)) / dt)
 
     # Enable CTRL+C from terminal outside of interactive mode
@@ -50,4 +42,18 @@ function spectral_solve(prob::SOP, scheme::SA=MSS3(),
 
     # Returns output struct
     return output
+end
+
+function initialize_solve(prob::SOP, scheme::SA, output::O, resume::Bool) where {
+    SOP<:SpectralODEProblem,SA<:AbstractODEAlgorithm,O<:Output}
+    if resume && output.store_hdf && haskey(output.simulation, "checkpoint")
+        cache = restore_checkpoint(output.simulation, prob, scheme)
+        t = read(output.simulation, "checkpoint/time")
+        step = read(output.simulation, "checkpoint/step")
+    else
+        cache = get_cache(prob, scheme)
+        t = first(prob.tspan)
+        step = 0
+    end
+    return cache, t, step
 end
