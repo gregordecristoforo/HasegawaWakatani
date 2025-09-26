@@ -25,7 +25,7 @@ mutable struct Diagnostic{N<:AbstractString,M<:Function,D<:AbstractArray,T<:Abst
 end
 
 function initialize_diagnostic!(diagnostic::D, simulation::S, h5_kwargs::K, u0::T, prob::SOP,
-    t0::AbstractFloat; store_hdf::Bool=true, store_locally::Bool=true) where
+    t0::Number; store_hdf::Bool=true, store_locally::Bool=true) where
 {D<:Diagnostic,S<:Union{HDF5.Group,Nothing},T<:AbstractArray,SOP<:SpectralODEProblem,K<:NamedTuple}
 
     # Calculate total number of steps

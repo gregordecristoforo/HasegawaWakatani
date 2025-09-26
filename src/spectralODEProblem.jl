@@ -134,6 +134,8 @@ end
 
 # ---------------------------------- Helpers -----------------------------------------------
 
+getprecision(prob::SpectralODEProblem) = prob.domain.precision
+
 """
     isinplace(prob::AbstractODEProblem{iip}) where {iip}
     isinplace(f::Function)
