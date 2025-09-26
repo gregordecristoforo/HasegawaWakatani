@@ -441,7 +441,7 @@ function setup_simulation_group(file, simulation_name, N_samples, u0, prob, t0; 
     dset = create_dataset(simulation, "fields", datatype(eltype(u0)),
         (size(u0)..., typemax(Int64)), chunk=(size(u0)..., 1); h5_kwargs...)
     HDF5.set_extent_dims(dset, (size(u0)..., N_samples))
-    dset = create_dataset(simulation, "t", datatype(eltype(t0)),
+    dset = create_dataset(simulation, "t", datatype(Float64), # TODO eltype(t0)) bug if tspan has Int type
         (typemax(Int64),), chunk=(1,); h5_kwargs...)
     HDF5.set_extent_dims(dset, (N_samples,))
 
