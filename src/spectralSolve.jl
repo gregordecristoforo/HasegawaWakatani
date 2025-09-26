@@ -34,12 +34,10 @@ function spectral_solve(prob::SOP, scheme::SA=MSS3(),
             t = first(prob.tspan) + step * dt
 
             handle_output!(output, step, cache.u, prob, t)
-            sleep(1e-10000000000000) #To be able to interupt simulation
         end
     catch error
         # Interupt the error, so that the code does not halt
         showerror(stdout, error)
-        rethrow(error)
     end
 
     # Store the cache to be able to resume simulations
