@@ -5,7 +5,7 @@ broadcastable_ic(::Function) = Val(true)
 
 # TODO add @nobroadcast macro to make function broadcastable_ic(::typeof(func)) = Val(false)
 
-function initial_condition(f::Function, domain::AbstractDomain, kwargs...)
+function initial_condition(f::Function, domain::AbstractDomain; kwargs...)
     initial_condition(broadcastable_ic(f), f, domain; kwargs...)
 end
 
