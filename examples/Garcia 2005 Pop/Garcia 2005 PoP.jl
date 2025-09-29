@@ -7,22 +7,21 @@ domain = Domain(1024, 1024, 50, 50, precision=Float32)#, mem=CuArray)
 ic = initial_condition(isolated_blob, domain)
 
 # Linear operator
-function L(u, d, p, t)
+function L(du, u, d, p, t)
     @unpack κ, ν = p
     θ, Ω = eachslice(u, dims=3)
-    D_θ = κ * diffusion(θ, d)
-    D_Ω = ν * diffusion(Ω, d)
-    cat(D_θ, D_Ω, dims=3)
+    dθ, dΩ = eachslice(du, dims=3)
+    dθ .= κ .* diffusion(θ, d)
+    dΩ .= ν .* diffusion(Ω, d)
 end
 
 # Non-linear operator
-function N(u, d, p, t)
+function N(du, u, d, p, t)
     θ, Ω = eachslice(u, dims=3)
+    dθ, dΩ = eachslice(du, dims=3)
     ϕ = solve_phi(Ω, d)
-    dθ = -poisson_bracket(ϕ, θ, d)
-    dΩ = -poisson_bracket(ϕ, Ω, d)
-    dΩ .-= diff_y(θ, d)
-    return cat(dθ, dΩ, dims=3)
+    dθ .= -poisson_bracket(ϕ, θ, d)
+    dΩ .= -poisson_bracket(ϕ, Ω, d) .- diff_y(θ, d)
 end
 
 # Parameters
@@ -31,9 +30,6 @@ parameters = (ν=1e-2, κ=1e-2)
 # Time interval
 tspan = [0.0, 20.0]
 
-# Speed up simulation
-#FFTW.set_num_threads(16)
-
 # The problem
 prob = SpectralODEProblem(L, N, ic, domain, tspan, p=parameters, dt=1e-3)
 
@@ -41,7 +37,6 @@ prob = SpectralODEProblem(L, N, ic, domain, tspan, p=parameters, dt=1e-3)
 diagnostics = [
     ProbeDensityDiagnostic([(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], N=10),
     RadialCOMDiagnostic(1),
-    PlotDensityDiagnostic(100),
     ProgressDiagnostic(100),
     CFLDiagnostic(1),
     PlotDensityDiagnostic(1000),

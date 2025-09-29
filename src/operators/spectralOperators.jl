@@ -131,7 +131,6 @@ function spectral_conv(u_hat, v_hat, plans)
     transform(u .* v, plans.FT)
 end
 
-# TODO add in a future push
 function spectral_conv!(out::DU, u::U, v::V, SC::SOC) where {DU<:CuArray,U<:CuArray,
     V<:CuArray,SOC<:SpectralOperatorCache}
 
@@ -239,6 +238,7 @@ end
 #     quadratic_term(diff_x(A, SC), diff_y(B, SC), SC) - quadratic_term(diff_y(A, SC), diff_x(B, SC), SC)
 # end
 
+# TODO make this more in-place
 function poisson_bracket(A::U, B::V, SC::SOC) where {U<:AbstractArray,V<:AbstractArray,
     SOC<:SpectralOperatorCache}
     spectral_conv!(SC.qt_left, diff_x(A, SC), diff_y(B, SC), SC) .-= spectral_conv!(SC.qt_right, diff_y(A, SC), diff_x(B, SC), SC) # TODO fix formatting
