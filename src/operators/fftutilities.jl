@@ -1,10 +1,12 @@
-abstract type TransformPlans end
+abstract type AbstractTransformPlans end
+
+abstract type FourierTransformPlans <: AbstractTransformPlans end
 
 """
     FFTPlans{FT<:FFTW.Plan, iFT<:FFTW.Plan} 
   Collection of transform plans using standard FFT.
 """
-struct FFTPlans{FWD<:FFTW.Plan,BWD<:FFTW.Plan} <: TransformPlans
+struct FFTPlans{FWD<:FFTW.Plan,BWD<:FFTW.Plan} <: FourierTransformPlans
     FT::FWD
     iFT::BWD
 end
@@ -13,7 +15,7 @@ end
     rFFTPlans{FT<:FFTW.Plan, iFT<:FFTW.Plan}
   Collection of transform plans using real FFT (rFFT), utilizing hermitian symmetry.
 """
-struct rFFTPlans{FWD<:FFTW.Plan,BWD<:FFTW.Plan} <: TransformPlans
+struct rFFTPlans{FWD<:FFTW.Plan,BWD<:FFTW.Plan} <: FourierTransformPlans
     FT::FWD
     iFT::BWD
 end
@@ -23,24 +25,24 @@ end
     spectral_transform!(U<:Union{Tuple,Vector}, transformplan<:FFTW.Plan)
   Spectral transform, applies transform plan p to u in-place returning du.
 """
-function spectral_transform!(du, u, p::P) where {P<:FFTW.Plan}
-    _spectral_transform!(du, u, p)
+function spectral_transform!(du, p::P, u) where {P<:FFTW.Plan}
+    _spectral_transform!(du, p, u)
 end
 
-function _spectral_transform!(du, u::AbstractArray{<:Number}, p::P) where {P<:FFTW.Plan}
+function _spectral_transform!(du, p::P, u::AbstractArray{<:Number}) where {P<:FFTW.Plan}
     idx = ntuple(_ -> :, ndims(p))
     for i in axes(u, ndims(p) + 1)
         mul!(view(du, idx..., i), p, u[idx..., i])
     end
 end
 
-function _spectral_transform!(du, u::AbstractArray{<:AbstractArray}, p::P) where {P<:FFTW.Plan}
+function _spectral_transform!(du, p::P, u::AbstractArray{<:AbstractArray}) where {P<:FFTW.Plan}
     for i in eachindex(u)
         _spectral_transform!(du[i], p, u[i])
     end
 end
 
-# TODO optimize spectral_transform methods, maybe use spectral_transform!
+# TODO optimize spectral_transform methods, maybe use spectral_transform! TODO or remove
 """
     spectral_transform(U<:AbstractArray, transformplan<:FFTW.Plan)
     spectral_transform(U<:Union{Tuple,Vector}, transformplan<:FFTW.Plan)
@@ -59,16 +61,24 @@ end
 #     spectral_transform!
 # end
 
-"""
-    Base.show(io::IO, transformplans::TransformPlans)
+# ------------------------------ Helpers ---------------------------------------------------
 
-  Pretty-print `TransformPlans`.
+get_fwd(transformplans::FourierTransformPlans) = transformplans.FT
+const fwd = get_fwd
+
+get_bwd(transformplans::FourierTransformPlans) = transformplans.iFT
+const bwd = get_bwd
+
 """
-function Base.show(io::IO, transformplans::TransformPlans)
+    Base.show(io::IO, transformplans::AbstractTransformPlans)
+
+  Pretty-print `AbstractTransformPlans`.
+"""
+function Base.show(io::IO, transformplans::AbstractTransformPlans)
     typename = nameof(typeof(transformplans))
 
-    fwd = getfield(transformplans, :FT)
-    bwd = getfield(transformplans, :iFT)
+    fwd = get_fwd(transformplans)
+    bwd = get_bwd(transformplans)
 
     # TODO perhaps do a better check if the plan is real
     if transformplans isa rFFTPlans
@@ -83,14 +93,14 @@ function Base.show(io::IO, transformplans::TransformPlans)
 end
 
 """
-    Base.show(io::IO, ::MIME"text/plain", transformplans::TransformPlans)
+    Base.show(io::IO, ::MIME"text/plain", transformplans::AbstractTransformPlans)
 
-  Compact one-line show of TransformPlans for use in arrays and etc.
+  Compact one-line show of AbstractTransformPlans for use in arrays and etc.
 """
-function Base.show(io::IO, ::MIME"text/plain", transformplans::TransformPlans)
+function Base.show(io::IO, ::MIME"text/plain", transformplans::AbstractTransformPlans)
     typename = nameof(typeof(transformplans))
-    fwd = getfield(transformplans, :FT)
-    bwd = getfield(transformplans, :iFT)
+    fwd = get_fwd(transformplans)
+    bwd = get_bwd(transformplans)
 
     print(io, typename, "(fwd: ", fwd, ", bwd: ", bwd, ")")
 end

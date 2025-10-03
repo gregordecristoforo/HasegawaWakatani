@@ -17,9 +17,9 @@ l = 0.01
 Ω = omega.(d.x', d.y, l=l)
 surface(Ω)
 
-Ω_hat = d.transform.FT * Ω
+Ω_hat = d.transforms.FT * Ω
 ϕ_hat = solve_phi(Ω_hat, d)
-ϕ = d.transform.iFT * ϕ_hat
+ϕ = d.transforms.iFT * ϕ_hat
 #Remove the value at boundary since should be zero for periodicity
 ϕ_n = ϕ .- ϕ[1]
 

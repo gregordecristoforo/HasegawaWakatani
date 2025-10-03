@@ -8,8 +8,8 @@ ic = initial_condition_linear_stability(domain, 1e-3)
 
 # Linear operator
 function L(u, d, p, t)
-    D_n = p["D"] .* diffusion(u, d)
-    D_Ω = p["D"] .* diffusion(u, d)
+    D_n = p["D"] .* laplacian(u, d)
+    D_Ω = p["D"] .* laplacian(u, d)
     cat(D_n, D_Ω, dims=3)
 end
 

@@ -20,7 +20,7 @@
   
   # Constructor
   
-    Output(prob::SOP; filename::FN, diagnostics::DV, step_stride::Integer, \
+    Output(prob::SOP; filename::FN, diagnostics::DV, stride::Integer, \
     physical_transform::PT, simulation_name::SN, store_hdf::Bool, store_locally::Bool, \
     field_storage_limit::AbstractString, h5_kwargs...)
 
@@ -30,7 +30,7 @@
   ## Keyword Arguments
   - `filename`: Name of the HDF5 file for output (default: random temporary name).
   - `diagnostics`: Array of diagnostics to compute (default: `DEFAULT_DIAGNOSTICS`).
-  - `step_stride`: Number of steps between samples (default: -1 (lets the program decide)).
+  - `stride`: Number of steps between samples (default: -1 (lets the program decide)).
   - `physical_transform`: Function to transform state in physical space (default: `identity`).
   - `simulation_name`: Name for the simulation group in HDF5 (default: `:timestamp`).
   - `store_hdf`: Store output in HDF5 file (default: `true`).
@@ -61,7 +61,7 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},U<:AbstractArray,UB<:Abstr
 
     function Output(prob::SOP; filename::FN=basename(tempname()) * ".h5",
         diagnostics::DV=DEFAULT_DIAGNOSTICS,
-        step_stride::Integer=-1,
+        stride::Integer=-1,
         physical_transform::PT=identity,
         simulation_name::SN=:timestamp,
         store_hdf::Bool=true,
@@ -72,7 +72,7 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},U<:AbstractArray,UB<:Abstr
         SN<:Union{AbstractString,Symbol}}
 
         # Compute number of samples to be stored and stride distance
-        N_samples, stride = prepare_sampling(step_stride, field_storage_limit, prob)
+        N_samples, stride = prepare_sampling(stride, field_storage_limit, prob)
 
         # Prepare initial state
         u0, t0 = prepare_initial_state(prob, physical_transform=physical_transform)
@@ -104,13 +104,13 @@ end
 # --------------------------- Prepare sampling ---------------------------------------------
 
 """
-    prepare_sampling(step_stride::Int, field_storage_limit, prob::SpectralODEProblem)
+    prepare_sampling(stride::Int, field_storage_limit, prob::SpectralODEProblem)
 
   Prepares the sampling strategy for storing simulation states based on the desired stride 
   and storage limit. Determines the number of samples to store and the stride between samples.
   
   #### Arguments
-  - `step_stride::Int`: The proposed stride between samples. If set to `-1`, the function 
+  - `stride::Int`: The proposed stride between samples. If set to `-1`, the function 
   will automatically recommend an appropriate stride based on the storage limit.
   - `field_storage_limit`: The maximum allowed storage size for the output of fields, as a 
   string (e.g., `"100 MB"`). The limit does not affect the storage size of the Diagnostics! 
@@ -118,34 +118,34 @@ end
   - `prob::SpectralODEProblem`: The `SpectralODEProblem`` containing the size of the fields.
     
   #### Notes
-  - If both `step_stride` and `field_storage_limit` are unspecified, all steps are recorded.
-  - The function validates and adjusts `step_stride` to ensure it is within feasible bounds.
+  - If both `stride` and `field_storage_limit` are unspecified, all steps are recorded.
+  - The function validates and adjusts `stride` to ensure it is within feasible bounds.
   - Issues a warning if the last step has a different stride than the rest.
 """
-function prepare_sampling(step_stride::Int, field_storage_limit, prob::SpectralODEProblem)
+function prepare_sampling(stride::Int, field_storage_limit, prob::SpectralODEProblem)
 
     # Compute total number of simulation steps
     N_steps = compute_number_of_steps(prob)
 
-    # Handle all the different scenarios, step_stride = -1 => let the program decide
+    # Handle all the different scenarios, stride = -1 => let the program decide
     if !isempty(field_storage_limit)
         storage_bytes = parse_storage_limit(field_storage_limit)
-        if step_stride == -1
-            step_stride = recommend_stride(storage_bytes, N_steps, prob)
+        if stride == -1
+            stride = recommend_stride(storage_bytes, N_steps, prob)
         else
-            check_storage_size(storage_bytes, N_steps, step_stride, prob)
+            check_storage_size(storage_bytes, N_steps, stride, prob)
         end
-    elseif step_stride == -1
-        step_stride = 1
+    elseif stride == -1
+        stride = 1
     end
 
-    # Validate step_stride, might change step_stride if too large
-    step_stride = validate_step_stride(N_steps, step_stride)
+    # Validate stride, might change stride if too large
+    stride = validate_step_stride(N_steps, stride)
 
     # Compute number of data points to record and warn if last step has differnt step size
-    N_samples = cld(N_steps, step_stride) + 1
+    N_samples = cld(N_steps, stride) + 1
 
-    return N_samples, step_stride
+    return N_samples, stride
 end
 
 """
@@ -186,64 +186,64 @@ function recommend_stride(storage_limit::Int, N_steps::Int, prob::SpectralODEPro
 end
 
 """
-    check_storage_size(storage_limit::Int, N_steps::Int, step_stride::Int, prob::SpectralODEProblem)
+    check_storage_size(storage_limit::Int, N_steps::Int, stride::Int, prob::SpectralODEProblem)
   
   Checks that the needed storage does not exceed the `storage_limit`, otherwise an error is 
   thrown, which recommends the minimum divisor satisfying the storage limit. In addition the
    error checks of `recommend_stride` are performed, which may trigger before the storage check.
 """
-function check_storage_size(storage_limit::Int, N_steps::Int, step_stride::Int, prob::S) where
+function check_storage_size(storage_limit::Int, N_steps::Int, stride::Int, prob::S) where
 {S<:SpectralODEProblem}
     min_stride = recommend_stride(storage_limit, N_steps, prob)
 
-    storage_need = compute_storage_need(N_steps, step_stride, prob)
+    storage_need = compute_storage_need(N_steps, stride, prob)
     if storage_need > storage_limit
         throw(ArgumentError(
             "The total output requires $(format_bytes(storage_need)), which exceeds the \
             storage limit of $(format_bytes(storage_limit)). Consider increasing the \
-            `step_stride` (minimum recommended: $min_stride) or the `field_storage_limit`."
+            `stride` (minimum recommended: $min_stride) or the `field_storage_limit`."
         ))
     end
 end
 
 """
-    compute_storage_need(N_steps::Int, step_stride::Int, prob::SpectralODEProblem)
+    compute_storage_need(N_steps::Int, stride::Int, prob::SpectralODEProblem)
 
   Computes the storage needed to store `N_steps÷step_stride`samples with `sizeof(prob.u0)`. 
 """
-function compute_storage_need(N_steps::Int, step_stride::Int, prob::SpectralODEProblem)
-    step_stride < 1 ? throw(ArgumentError("step_stride must be ≥ 1, got $step_stride")) : nothing
-    (cld(N_steps, step_stride) + 1) * length(prob.u0) * sizeof(eltype(prob.u0))
+function compute_storage_need(N_steps::Int, stride::Int, prob::SpectralODEProblem)
+    stride < 1 ? throw(ArgumentError("stride must be ≥ 1, got $stride")) : nothing
+    (cld(N_steps, stride) + 1) * length(prob.u0) * sizeof(eltype(prob.u0))
 end
 
 """
-    validate_step_stride(N_steps::Int, step_stride::Int)
+    validate_step_stride(N_steps::Int, stride::Int)
   
-    Validates and adjusts the `step_stride`. If `step_stride`:
+    Validates and adjusts the `stride`. If `stride`:
 
   - exceeds `N_steps`, it is set to `N_steps` and a warning is issued.
   - is less than 1 an `ArgumentError` is thrown.
   - does not evenly divide `N_steps`, a warning is issued and a suggested divisor is provided.
 
-  Returns the validated (and possibly adjusted) `step_stride`.
+  Returns the validated (and possibly adjusted) `stride`.
 """
-function validate_step_stride(N_steps::Int, step_stride::Int)
+function validate_step_stride(N_steps::Int, stride::Int)
 
-    if N_steps < step_stride
-        @warn "step_stride ($step_stride) exceeds total steps ($N_steps). \
-               Adjusting to step_stride = N_steps ($N_steps)."
-        step_stride = N_steps
+    if N_steps < stride
+        @warn "stride ($stride) exceeds total steps ($N_steps). \
+               Adjusting to stride = N_steps ($N_steps)."
+        stride = N_steps
     end
 
-    step_stride < 1 ? throw(ArgumentError("step_stride must be ≥ 1, got $step_stride")) : nothing
+    stride < 1 ? throw(ArgumentError("stride must be ≥ 1, got $stride")) : nothing
 
-    if N_steps % step_stride != 0
-        suggestion = nearest_divisor(N_steps, step_stride)
-        @warn "step_stride ($step_stride) does not evenly divide N_steps ($N_steps). The \
-        final output interval will be shorter. Consider using step_stride = $suggestion instead."
+    if N_steps % stride != 0
+        suggestion = nearest_divisor(N_steps, stride)
+        @warn "stride ($stride) does not evenly divide N_steps ($N_steps). The \
+        final output interval will be shorter. Consider using stride = $suggestion instead."
     end
 
-    return step_stride
+    return stride
 end
 
 """
@@ -482,7 +482,7 @@ end
 
 function write_attributes(simulation, domain::AbstractDomain)
     # Construct list of attributes by removing derived attributes
-    attributes = setdiff(fieldnames(typeof(domain)), (:x, :y, :kx, :ky, :SC, :transform, :precision))
+    attributes = setdiff(fieldnames(typeof(domain)), (:x, :y, :kx, :ky, :SC, :transforms, :precision))
     for attribute in attributes
         write_attribute(simulation, string(attribute), getproperty(domain, attribute))
     end
@@ -646,7 +646,7 @@ end
   the buffer, and the `output.transformed` flag is updated to not transform same field twice.
 """
 function transform_state!(output, u_hat, p)
-    spectral_transform!(output.U_buffer, u_hat, p)
+    spectral_transform!(output.U_buffer, p, u_hat)
     output.physical_transform(output.U_buffer)
     output.transformed = true
 end
@@ -778,6 +778,7 @@ function assert_no_nan(u::AbstractArray, t)
     end
 end
 
+# TODO move to extension
 function assert_no_nan(u::CuArray, t)
     if CUDA.@allowscalar isnan(u[1])
         error("Breakdown occured at t=$t")

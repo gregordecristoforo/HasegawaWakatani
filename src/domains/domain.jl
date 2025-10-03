@@ -25,7 +25,7 @@ abstract type AbstractDomain end
     ``Domain(Nx,Ny,Lx,Ly)``
 """
 struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractArray,
-    SOC<:SpectralOperators.SpectralOperatorCache,TP<:TransformPlans,T<:AbstractFloat} <: AbstractDomain
+    SOC<:SpectralOperators.SpectralOperatorCache,TP<:AbstractTransformPlans,T<:AbstractFloat} <: AbstractDomain
 
     Nx::Int
     Ny::Int
@@ -38,7 +38,7 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
     kx::KX
     ky::KY
     SC::SOC
-    transform::TP
+    transforms::TP
     use_cuda::Bool
     precision::DataType
     real_transform::Bool
@@ -46,9 +46,8 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
     nfields::Int
 
     # TODO rethink constructors interface
-    Domain(N) = Domain(N, 1)
-    Domain(N, L) = Domain(N, N, L, L)
-    function Domain(Nx, Ny, Lx, Ly; use_cuda=true, precision=Float64, real_transform=true,
+    Domain(N) = Domain(N, N, Lx=1, Ly=1)
+    function Domain(Nx, Ny; Lx=1, Ly=1, use_cuda=true, precision=Float64, real_transform=true,
         dealiased=true, x0=-Lx / 2, y0=-Ly / 2, nfields=3)
 
         # Compute step sizes
@@ -92,6 +91,7 @@ function prepare_frequencies(Nx, Ny, dx, dy, use_cuda, precision, real_transform
     kx = Vector{precision}(kx)
     ky = Vector{precision}(ky)
 
+    # TODO make more generalized, perhaps mem=CuArray
     # Transfer wave numbers to GPU if needed
     if use_cuda
         kx = adapt(CuArray, kx)
@@ -133,23 +133,23 @@ function Base.show(io::IO, m::MIME"text/plain", d::AbstractDomain)
 end
 
 # Getters
-get_transform_plans(domain::Domain) = domain.transform
-get_fwd_transform(domain::Domain) = domain.transform.FT
-get_bwd_transform(domain::Domain) = domain.transform.iFT
-get_precision(domain::Domain) = domain.precision
-get_lengths(domain::Domain) = (domain.Lx, domain.Ly)
+get_transform_plans(domain::AbstractDomain) = domain.transforms
+get_fwd(domain::AbstractDomain) = SpectralOperators.get_fwd(get_transform_plans(domain))
+get_bwd(domain::AbstractDomain) = SpectralOperators.get_bwd(get_transform_plans(domain))
+get_precision(domain::AbstractDomain) = domain.precision
+get_lengths(domain::AbstractDomain) = (domain.Lx, domain.Ly)
 
 # Aliases
-get_fwd = get_fwd_transform
-get_bwd = get_bwd_transform
+const fwd = get_fwd
+const bwd = get_bwd
 
 # TODO add docstrings
-spectral_size(domain::Domain) = size(domain.transform.iFT)
-area(domain::Domain) = domain.Lx * domain.Ly
+spectral_size(domain::AbstractDomain) = size(get_bwd(domain))
+area(domain::AbstractDomain) = domain.Lx * domain.Ly
 
 # Overloading
-Base.size(domain::Domain) = (domain.Nx, domain.Ny)
-Base.length(domain::Domain) = prod(size(domain))
+Base.size(domain::AbstractDomain) = (domain.Nx, domain.Ny)
+Base.length(domain::AbstractDomain) = prod(size(domain))
 
 # ----------------------------------- Operators --------------------------------------------
 

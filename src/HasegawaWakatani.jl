@@ -44,4 +44,6 @@ export initial_condition, gaussian, log_gaussian, sinusoidal, sinusoidalX, sinus
     random_crossphased, isolated_blob, remove_zonal_modes, remove_streamer_modes,
     remove_asymmetric_modes!, remove_nothing, send_mail
 
+export get_fwd, get_bwd
+
 end

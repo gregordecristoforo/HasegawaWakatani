@@ -9,8 +9,8 @@ plot(ic[:, :, 1])
 
 # Linear operator
 function L(u, d, p, t)
-    D_n = p["D_n"] .* diffusion(u, d)
-    D_Ω = p["D_Ω"] .* diffusion(u, d)
+    D_n = p["D_n"] .* laplacian(u, d)
+    D_Ω = p["D_Ω"] .* laplacian(u, d)
     [D_n;;; D_Ω]
 end
 

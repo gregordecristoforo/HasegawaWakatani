@@ -2,8 +2,8 @@
 # --------------------------- Analytical solutions -----------------------------------------
 
 function HeatEquationAnalyticalSolution(u0, domain, p, t)
-    u0_hat = (domain.transform.FT * u0) .* exp.(p["nu"] * domain.SC.laplacian * t)
-    domain.transform.iFT * u0_hat
+    u0_hat = (domain.transforms.FT * u0) .* exp.(p["nu"] * domain.SC.laplacian * t)
+    domain.transforms.iFT * u0_hat
 end
 
 function HeatEquationAnalyticalSolution2(u0, domain, p, t)

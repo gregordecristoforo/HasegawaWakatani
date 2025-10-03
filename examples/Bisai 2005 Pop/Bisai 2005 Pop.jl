@@ -10,8 +10,8 @@ heatmap(ic[:, :, 1])
 
 # Linear operator
 function L(u, d, p, t)
-    D_n = p["D_n"] .* diffusion(u, d)
-    D_Ω = p["D_Ω"] .* diffusion(u, d)
+    D_n = p["D_n"] .* laplacian(u, d)
+    D_Ω = p["D_Ω"] .* laplacian(u, d)
     cat(D_n, D_Ω, dims=3)
 end
 
@@ -19,7 +19,7 @@ function source(x, y, S_0, λ_s)
     @. S_0 * exp(-(x / λ_s)^2) + 0 * y
 end
 
-S = domain.transform.FT * CuArray(source(domain.x', domain.y, 5e-4, 5))
+S = domain.transforms.FT * CuArray(source(domain.x', domain.y, 5e-4, 5))
 
 # Non-linear operator, fully non-linear
 function N(u, d, p, t)

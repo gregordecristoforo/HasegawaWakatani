@@ -17,6 +17,7 @@ function get_log_modes(u::U, prob::P, t::N; kx::K=:ky) where {U<:AbstractArray,
             data = zeros(prob.domain.Nx ÷ 2)
         end
 
+        # Make more generalized
         if prob.domain.use_cuda
             data = CuArray(data)
         end

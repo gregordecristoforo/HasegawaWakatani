@@ -112,7 +112,7 @@ function probe_potential(u::U, prob::SOP, t::N, positions::P; interpolation::I=n
     end
 
     ϕ_hat = @views solve_phi(u[:, :, 2], prob.domain)
-    ϕ = prob.domain.transform.iFT * ϕ_hat
+    ϕ = get_bwd(prob) * ϕ_hat
     probe_field(ϕ, prob.domain, positions; interpolation)
 end
 
@@ -142,7 +142,7 @@ function probe_radial_velocity(u::U, prob::SOP, t::N, positions::P; interpolatio
 
     ϕ_hat = @views solve_phi(u[:, :, 2], prob.domain)
     v_x_hat = -diff_y(ϕ_hat, prob.domain)
-    v_x = prob.domain.transform.iFT * v_x_hat
+    v_x = get_bwd(prob) * v_x_hat
     probe_field(v_x, prob.domain, positions; interpolation)
 end
 
@@ -176,20 +176,21 @@ function probe_all(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing
     v_x_hat = -diff_y(ϕ_hat, prob.domain)
 
     # Cache for transformation
-    cache = zeros(size(prob.domain.transform.FT))
+    cache = zeros(spectral_size(prob))
 
+    # TODO make more generalized
     if prob.domain.use_cuda
         cache = CuArray(cache)
     end
 
     # Transform to physical space and probe fields
-    n = mul!(cache, prob.domain.transform.iFT, u[:, :, 1])
+    n = mul!(cache, get_bwd(prob), u[:, :, 1])
     n_p = probe_field(n, prob.domain, positions; interpolation)
-    Ω = mul!(cache, prob.domain.transform.iFT, u[:, :, 2])
+    Ω = mul!(cache, get_bwd(prob), u[:, :, 2])
     Ω_p = probe_field(Ω, prob.domain, positions; interpolation)
-    ϕ = mul!(cache, prob.domain.transform.iFT, ϕ_hat)
+    ϕ = mul!(cache, get_bwd(prob), ϕ_hat)
     ϕ_p = probe_field(ϕ, prob.domain, positions; interpolation)
-    v_x = mul!(cache, prob.domain.transform.iFT, v_x_hat)
+    v_x = mul!(cache, get_bwd(prob), v_x_hat)
     v_x_p = probe_field(v_x, prob.domain, positions; interpolation)
 
     #Combine fields for output (The last field is the flux Γ=nvₓ)

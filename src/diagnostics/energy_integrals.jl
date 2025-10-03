@@ -21,7 +21,7 @@ end
 function kinetic_energy_integral(u::U, prob::P, t::T; quadrature=nothing) where
 {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
     ϕ = @views solve_phi(u[:, :, 2], prob.domain)
-    E_kin = -diffusion(abs.(ϕ) .^ 2, prob.domain)
+    E_kin = -laplacian(abs.(ϕ) .^ 2, prob.domain)
 
     if prob.domain.real_transform
         @views (sum(E_kin[1:end, :]) .- 0.5 * sum(E_kin[1, :])) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
@@ -97,7 +97,7 @@ end
 # D^E_V(t) = ν∫ϕ∇⁶_⟂Ω = ν∫Ω∇⁴_⟂Ω 
 function kinetic_dissipation_integral(u::U, prob::P, t::T; quadrature=nothing) where
 {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    D_Ω_hat = @views prob.p["D_Ω"] * abs.(diffusion(u[:, :, 2], prob.domain)) .^ 2
+    D_Ω_hat = @views prob.p["D_Ω"] * abs.(laplacian(u[:, :, 2], prob.domain)) .^ 2
 
     if prob.domain.real_transform
         @views (2 * sum(D_Ω_hat[1:end, :]) .- sum(D_Ω_hat[1, :])) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)

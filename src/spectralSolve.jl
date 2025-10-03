@@ -2,7 +2,7 @@
 # If custom outputter is not provided, then resort to default
 # First step is stored during initilization of output
 function spectral_solve(prob::SOP, scheme::SA=MSS3(),
-    output::O=Output(prob, step_stride=1000, store_hdf=false);
+    output::O=Output(prob, stride=1000, store_hdf=false);
     resume::Bool=false) where {SOP<:SpectralODEProblem,SA<:AbstractODEAlgorithm,O<:Output}
     # Initialize cache and tracking
     cache, t, step = initialize_solve(prob, scheme, output, resume)

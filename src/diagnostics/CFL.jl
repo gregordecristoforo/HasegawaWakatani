@@ -3,9 +3,9 @@
 # Calculate velocity assuming U_ExB = ̂z×∇Φ   
 function vExB(u::U, domain::D) where {U<:AbstractArray,D<:AbstractDomain}
     W = u[:, :, 2] #Assumption
-    W_hat = domain.transform.FT * W
+    W_hat = get_fwd(domain) * W
     phi_hat = solve_phi(W_hat, domain)
-    domain.transform.iFT * -diff_y(phi_hat, domain), domain.transform.iFT * diff_x(phi_hat, domain)
+    get_bwd(domain) * -diff_y(phi_hat, domain), get_bwd(domain) * diff_x(phi_hat, domain)
 end
 
 #contourf(vExB([u0;;;u0], domain)[1].^2 .+ vExB([u0;;;u0], domain)[2].^2) 

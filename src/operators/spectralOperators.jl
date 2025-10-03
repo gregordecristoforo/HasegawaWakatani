@@ -3,11 +3,11 @@ module SpectralOperators
 using FFTW, CUDA, Base.Threads, LinearAlgebra, Adapt
 
 include("fftutilities.jl")
-export TransformPlans, FFTPlans, rFFTPlans, spectral_transform, spectral_transform!
+export AbstractTransformPlans, FFTPlans, rFFTPlans, spectral_transform, spectral_transform!
 
 struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractArray,
     DYY<:AbstractArray,L<:AbstractArray,SP<:AbstractArray,P<:AbstractArray,DU<:AbstractArray,
-    T<:AbstractFloat,TP<:TransformPlans,PHI<:AbstractArray}
+    T<:AbstractFloat,TP<:AbstractTransformPlans,PHI<:AbstractArray}
 
     # Spectral coefficents
     diff_x::DX
@@ -32,6 +32,7 @@ struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractAr
     # Other cache
     phi::PHI
 
+    # TODO make CuArray an argument
     function SpectralOperatorCache(kx, ky, Nx, Ny; use_cuda=true, precision=Float64,
         real_transform=true, dealiased=true)
 
@@ -122,13 +123,6 @@ function spectral_conv!(out::DU, u::U, v::V, SC::SOC) where {DU<:AbstractArray,
     end
     mul!(SC.padded ? SC.up : out, plans.FT, SC.U)
     SC.padded ? SC.dealiasing_coefficient * unpad!(out, SC.up, plans) : out
-end
-
-# Kept for legacy 
-function spectral_conv(u_hat, v_hat, plans)
-    u = transform(u_hat, plans.iFT)
-    v = transform(v_hat, plans.iFT)
-    transform(u .* v, plans.FT)
 end
 
 function spectral_conv!(out::DU, u::U, v::V, SC::SOC) where {DU<:CuArray,U<:CuArray,
@@ -242,6 +236,14 @@ end
 function poisson_bracket(A::U, B::V, SC::SOC) where {U<:AbstractArray,V<:AbstractArray,
     SOC<:SpectralOperatorCache}
     spectral_conv!(SC.qt_left, diff_x(A, SC), diff_y(B, SC), SC) .-= spectral_conv!(SC.qt_right, diff_y(A, SC), diff_x(B, SC), SC) # TODO fix formatting
+    # left = diff_x(A, SC)
+    # right = diff_y(B, SC)
+    # spectral_conv!(SC.qt_left, left, right, SC)
+    # left .= diff_y(A, SC)
+    # right .= diff_x(B, SC)
+    # spectral_conv!(SC.qt_right, left, right, SC)
+    # #SC.qt_left .-= SC.qt_right
+    # @. SC.qt_left = SC.qt_left - SC.qt_right
 end
 
 #---------------------------------- Other non-linearities ---------------------------------- 

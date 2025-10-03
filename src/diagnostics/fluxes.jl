@@ -6,14 +6,14 @@
 function radial_flux(u::U, prob::P, t::T; quadrature=nothing) where
 {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
 
-    n_hat = @view u[:, :, 1]
-    Ω_hat = @view u[:, :, 2]
-    ϕ_hat = solve_phi(Ω_hat, prob.domain)
-    dϕ_hat = diff_y(ϕ_hat, prob.domain)
-    vx = zeros(size(prob.domain.transform.FT)) # TODO cache these perhaps?
+    domain = prob.domain
+    n_hat, Ω_hat = eachslice(u, dims=3)
+    ϕ_hat = solve_phi(Ω_hat, domain)
+    dϕ_hat = diff_y(ϕ_hat, domain)
+    vx = zeros(size(domain)) # TODO cache these perhaps?
     n = similar(vx)
-    task_vx = Threads.@spawn mul!(vx, prob.domain.transform.iFT, dϕ_hat)
-    task_n = Threads.@spawn mul!(n, prob.domain.transform.iFT, n_hat)
+    task_vx = Threads.@spawn mul!(vx, get_bwd(prob), dϕ_hat)
+    task_n = Threads.@spawn mul!(n, get_bwd(prob), n_hat)
     wait(task_vx)
     wait(task_n)
     @threads for i in eachindex(n)
@@ -26,18 +26,19 @@ function radial_flux(u::U, prob::P, t::T; quadrature=nothing) where
     #sum(u[:,:,1].*v_x)/(prob.domain.Lx*prob.domain.Ly)
 end
 
+# TODO move to ext
 # CuArray variant
 function radial_flux(u::U, prob::P, t::T; quadrature=nothing) where
 {U<:CuArray,P<:SpectralODEProblem,T<:Number}
-    n_hat = @view u[:, :, 1]
-    Ω_hat = @view u[:, :, 2]
-    ϕ_hat = solve_phi(Ω_hat, prob.domain)
-    dϕ_hat = diff_y(ϕ_hat, prob.domain)
-    vx = zeros(size(prob.domain.transform.FT)) # TODO cache these perhaps?
-    vx = prob.domain.use_cuda ? CuArray(vx) : vx
+    domain = prob.domain
+    n_hat, Ω_hat = eachslice(u, dims=3)
+    ϕ_hat = solve_phi(Ω_hat, domain)
+    dϕ_hat = diff_y(ϕ_hat, domain)
+    vx = zeros(size(domain)) # TODO cache these perhaps?
+    vx = domain.use_cuda ? CuArray(vx) : vx
     n = similar(vx)
-    mul!(vx, prob.domain.transform.iFT, dϕ_hat)
-    mul!(n, prob.domain.transform.iFT, n_hat)
+    mul!(vx, get_bwd(prob), dϕ_hat)
+    mul!(n, get_bwd(prob), n_hat)
     vx .*= n
     return -sum(vx) / (prob.domain.Lx * prob.domain.Ly) # This is the flux time density^^
 end

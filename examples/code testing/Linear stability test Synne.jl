@@ -7,8 +7,8 @@ ic = initial_condition_linear_stability(domain, 1e-6)
 
 # Linear operator (May not be static actually)
 function L(u, d, p, t)
-    D_η = p["D_n"] * diffusion(u, d) #.- p["g"]*diff_y(u,d) .- p["sigma_n"]
-    D_Ω = p["D_Omega"] * diffusion(u, d) #.+ p["sigma_Omega"]*solve_phi(u,d)
+    D_η = p["D_n"] * laplacian(u, d) #.- p["g"]*diff_y(u,d) .- p["sigma_n"]
+    D_Ω = p["D_Omega"] * laplacian(u, d) #.+ p["sigma_Omega"]*solve_phi(u,d)
     [D_η;;; D_Ω]
 end
 

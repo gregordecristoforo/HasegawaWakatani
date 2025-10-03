@@ -7,7 +7,7 @@ u0 = initial_condition(quadratic_function, domain)
 
 # Diffusion 
 function L(u, d, p, t)
-    p["nu"] * diffusion(u, d)
+    p["nu"] * laplacian(u, d)
 end
 
 # Burgers equation 
@@ -21,8 +21,8 @@ parameters = Dict(
 )
 
 # Break down time 
-dudy = diff_y(domain.transform.FT * u0, domain)
-t_b = -1 / (minimum(real(domain.transform.iFT * dudy)))
+dudy = diff_y(domain.transforms.FT * u0, domain)
+t_b = -1 / (minimum(real(domain.transforms.iFT * dudy)))
 
 # Time span
 t_span = [0, 0.8 * t_b]

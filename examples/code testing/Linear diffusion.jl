@@ -7,7 +7,7 @@ u0 = initial_condition(gaussian, domain)
 
 # Diffusion 
 function L(u, d, p, t)
-    p["nu"] * diffusion(u, d)
+    p["nu"] * laplacian(u, d)
 end
 
 function N(u, d, p, t)

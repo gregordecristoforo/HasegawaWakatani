@@ -21,8 +21,7 @@ function PlotVorticityDiagnostic(N::Int=1000)
 end
 
 function plot_potential(u::U, prob::P, t::T) where {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    d = prob.domain
-    phi = d.transform.iFT * solve_phi(u[:, :, 2], d)
+    phi = get_bwd(prob) * solve_phi(u[:, :, 2], prob.domain)
     digits = ceil(Int, -log10(prob.dt))
     display(heatmap(prob.domain, Array(phi), aspect_ratio=:equal, xlabel="x", ylabel="y",
         title=L"\Phi" * "(x, t = $(round(t, digits=digits)))"))

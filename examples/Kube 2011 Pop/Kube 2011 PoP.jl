@@ -8,8 +8,8 @@ u0 = log.(gaussian.(domain.x', domain.y, A=1e5, B=1, l=1))
 
 # Linear operator
 function L(u, d, p, t)
-    D_η = p["kappa"] * diffusion(u, d)
-    D_Ω = p["nu"] * diffusion(u, d)
+    D_η = p["kappa"] * laplacian(u, d)
+    D_Ω = p["nu"] * laplacian(u, d)
     cat(D_η, D_Ω, dims=3)
 end
 

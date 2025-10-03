@@ -104,7 +104,7 @@ mutable struct MSS2ConstantCache{U,C,K} <: AbstractCache
 end
 
 function get_cache(prob::SpectralODEProblem, alg::MSS2, ::Val{false})
-    tab = MSS2Tableau{getprecision(prob)}()
+    tab = MSS2Tableau{get_precision(prob)}()
     dt = prob.dt
     u = copy(prob.u0_hat)
     D = prob.L(one.(similar(prob.u0_hat)), prob.domain, prob.p, 0)
@@ -149,7 +149,7 @@ mutable struct MSS2Cache{U,C,K} <: AbstractCache
 end
 
 function get_cache(prob::SpectralODEProblem, alg::MSS2, ::Val{true})
-    tab = MSS2Tableau{getprecision(prob)}()
+    tab = MSS2Tableau{get_precision(prob)}()
     dt = prob.dt
     u = copy(prob.u0_hat)
     D = similar(u)
@@ -227,7 +227,7 @@ mutable struct MSS3ConstantCache{U,C,K} <: AbstractCache
 end
 
 function get_cache(prob::SpectralODEProblem, alg::MSS3, ::Val{false})
-    tab = MSS3Tableau{getprecision(prob)}()
+    tab = MSS3Tableau{get_precision(prob)}()
     dt = prob.dt
     u = copy(prob.u0_hat)
     D = prob.L(one.(similar(prob.u0_hat)), prob.domain, prob.p, 0)
@@ -290,7 +290,7 @@ mutable struct MSS3Cache{U,C,K} <: AbstractCache
 end
 
 function get_cache(prob::SpectralODEProblem, alg::MSS3, ::Val{true})
-    tab = MSS3Tableau{getprecision(prob)}()
+    tab = MSS3Tableau{get_precision(prob)}()
     dt = prob.dt
     u = copy(prob.u0_hat)
     D = similar(u)

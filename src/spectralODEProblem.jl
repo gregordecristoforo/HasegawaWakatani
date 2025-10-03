@@ -87,12 +87,13 @@ function Base.show(io::IO, m::MIME"text/plain", prob::SpectralODEProblem)
     show(io, m, prob.u0)
 end
 
+# TODO make it more generalized
 function prepare_initial_condition(u0, domain::Domain)
     # Transform to CUDA if used
     domain.use_cuda ? u0 = adapt(CuArray{domain.precision}, u0) : nothing
 
     # Used for normal Fourier transform
-    eltype(domain.transform.FT) <: Complex ? u0 = complex(u0) : nothing
+    eltype(fwd(domain)) <: Complex ? u0 = complex(u0) : nothing
 
     return u0
 end
@@ -102,13 +103,13 @@ function prepare_spectral_coefficients(u0, domain::Domain)
     u0_hat = allocate_coefficients(u0, domain)
 
     # Compute spectral initial conditions
-    spectral_transform!(u0_hat, u0, get_fwd_transform(domain))
+    spectral_transform!(u0_hat, get_fwd(domain), u0)
 
     return u0_hat
 end
 
 """
-    allocate_coefficients(u0, transformplans::TransformPlans)
+    allocate_coefficients(u0, transformplans::AbstractTransformPlans)
   
   Recursively iterates trough the initial condition data structure to try to get to the 
   lowest level Array and then allocates the needed shape after applying the fwd transform.
@@ -134,7 +135,11 @@ end
 
 # ---------------------------------- Helpers -----------------------------------------------
 
-getprecision(prob::SpectralODEProblem) = prob.domain.precision
+spectral_size(prob::SpectralODEProblem) = size(prob.u0_hat)
+
+get_precision(prob::SpectralODEProblem) = prob.domain.precision
+get_fwd(prob::SpectralODEProblem) = get_fwd(prob.domain)
+get_bwd(prob::SpectralODEProblem) = get_bwd(prob.domain)
 
 """
     isinplace(prob::AbstractODEProblem{iip}) where {iip}
