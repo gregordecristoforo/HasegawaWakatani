@@ -62,7 +62,7 @@ struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,KY<:AbstractAr
         # Check that CUDA is compatible
         if use_cuda && !CUDA.functional()
             use_cuda = false
-            warn("CUDA is not functional")
+            @warn("CUDA is not functional")
         end
 
         # Prepare frequencies
