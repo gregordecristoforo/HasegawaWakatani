@@ -5,7 +5,8 @@
 # P(t) = ∫dx 1/2n^2
 function potential_energy_integral(u::U, prob::P, t::T; quadrature=nothing) where
 {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    if prob.domain.real_transform
+    domain = prob.domain
+    if domain.real_transform
         @views (sum(abs.(u[1:end, :, 1]) .^ 2) .- 0.5 * sum(abs.(u[1, :, 1]) .^ 2)) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
     else
         @views (sum(abs.(u[:, :, 1]) .^ 2)) / (2.0 * domain.Nx * domain.Ny * domain.Lx * domain.Ly)
@@ -20,10 +21,11 @@ end
 # K(t) = ∫1/2(∇_⟂Φ)^2 = ∫dx1/2 U_E^2
 function kinetic_energy_integral(u::U, prob::P, t::T; quadrature=nothing) where
 {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    ϕ = @views solve_phi(u[:, :, 2], prob.domain)
-    E_kin = -laplacian(abs.(ϕ) .^ 2, prob.domain)
+    domain = prob.domain
+    ϕ = @views solve_phi(u[:, :, 2], domain)
+    E_kin = -laplacian(abs.(ϕ) .^ 2, domain)
 
-    if prob.domain.real_transform
+    if domain.real_transform
         @views (sum(E_kin[1:end, :]) .- 0.5 * sum(E_kin[1, :])) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
     else
         sum(E_kin) / (2.0 * domain.Nx * domain.Ny * domain.Lx * domain.Ly)
@@ -49,7 +51,8 @@ end
 # U(t) = ∫1/2(∇_⟂^2Φ)^2 = ∫dx1/2 U_E^2
 function enstropy_energy_integral(u::U, prob::P, t::T; quadrature=nothing) where
 {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    if prob.domain.real_transform
+    domain = prob.domain
+    if domain.real_transform
         @views (sum(abs.(u[1:end, :, 2]) .^ 2) .- 0.5 * sum(abs.(u[1, :, 2]) .^ 2)) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
     else
         @views (sum(abs.(u[:, :, 2]) .^ 2)) / (2.0 * domain.Nx * domain.Ny * domain.Lx * domain.Ly)
@@ -64,8 +67,9 @@ end
 # Γ_c(t) = C∫(n-ϕ)^2
 function resistive_dissipation_integral(u::U, prob::P, t::T; quadrature=nothing) where
 {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    h = @views u[:, :, 1] .- solve_phi(u[:, :, 2], prob.domain)
-    if prob.domain.real_transform
+    domain = prob.domain
+    h = @views u[:, :, 1] .- solve_phi(u[:, :, 2], domain)
+    if domain.real_transform
         @views prob.p["C"] * (2 * sum(abs.(h[1:end, :]) .^ 2) .- sum(abs.(h[1, :]) .^ 2)) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
     else
         prob.p["C"] * (sum(abs.(h) .^ 2)) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
@@ -80,9 +84,10 @@ end
 # D^E_N(t) = ν∫n∇⁶_⟂n
 function potential_dissipation_integral(u::U, prob::P, t::T; quadrature=nothing) where
 {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    D_n_hat = @views -prob.p["D_n"] * hyper_diffusion(abs.(u[:, :, 1]) .^ 2, prob.domain)
+    domain = prob.domain
+    D_n_hat = @views -prob.p["D_n"] * hyper_diffusion(abs.(u[:, :, 1]) .^ 2, domain)
 
-    if prob.domain.real_transform
+    if domain.real_transform
         @views (2 * sum(D_n_hat[1:end, :]) .- sum(D_n_hat[1, :])) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
     else
         sum(D_n_hat) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
@@ -97,9 +102,10 @@ end
 # D^E_V(t) = ν∫ϕ∇⁶_⟂Ω = ν∫Ω∇⁴_⟂Ω 
 function kinetic_dissipation_integral(u::U, prob::P, t::T; quadrature=nothing) where
 {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    D_Ω_hat = @views prob.p["D_Ω"] * abs.(laplacian(u[:, :, 2], prob.domain)) .^ 2
+    domain = prob.domain
+    D_Ω_hat = @views prob.p["D_Ω"] * abs.(laplacian(u[:, :, 2], domain)) .^ 2
 
-    if prob.domain.real_transform
+    if domain.real_transform
         @views (2 * sum(D_Ω_hat[1:end, :]) .- sum(D_Ω_hat[1, :])) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
     else
         sum(D_Ω_hat) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)

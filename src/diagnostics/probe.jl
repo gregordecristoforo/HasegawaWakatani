@@ -176,7 +176,7 @@ function probe_all(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing
     v_x_hat = -diff_y(ϕ_hat, prob.domain)
 
     # Cache for transformation
-    cache = zeros(spectral_size(prob))
+    cache = zeros(size(prob.domain))
 
     # TODO make more generalized
     if prob.domain.use_cuda
