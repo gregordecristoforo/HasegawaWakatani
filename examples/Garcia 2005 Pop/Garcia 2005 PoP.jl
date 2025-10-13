@@ -60,5 +60,7 @@ output = Output(prob, filename="output/Garcia 2005 PoP.h5", diagnostics=diagnost
     stride=-1, simulation_name=:parameters, field_storage_limit="0.5 GB",
     store_locally=true)
 
+using BenchmarkTools
+
 # Solve and plot
-sol = spectral_solve(prob, MSS3(), output, resume=false)
+@time sol = spectral_solve(prob, MSS3(), output, resume=false)
