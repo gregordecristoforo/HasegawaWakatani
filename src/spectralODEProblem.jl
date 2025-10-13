@@ -89,8 +89,8 @@ end
 
 # TODO make it more generalized
 function prepare_initial_condition(u0, domain::Domain)
-    # Transform to CUDA if used
-    domain.use_cuda ? u0 = adapt(CuArray{domain.precision}, u0) : nothing
+    # Transform to MemoryType
+    u0 = u0 |> domain.MemoryType{domain.precision}
 
     # Used for normal Fourier transform
     eltype(fwd(domain)) <: Complex ? u0 = complex(u0) : nothing
@@ -123,10 +123,7 @@ function _allocate_coefficients(u0::AbstractArray{<:Number}, domain::Domain)
     # Allocate array for spectral modes 
     sz = size(get_bwd(domain))
     allocation_size = (sz..., size(u0)[length(sz)+1:end]...)
-    u0_hat = zeros(eltype(get_bwd(domain)), allocation_size)
-
-    # Transform to CUDA
-    domain.use_cuda ? adapt(CuArray, u0_hat) : u0_hat
+    return zeros(eltype(get_bwd(domain)), allocation_size) |> domain.MemoryType
 end
 
 function _allocate_coefficients(u0::AbstractArray{<:AbstractArray}, domain::Domain)

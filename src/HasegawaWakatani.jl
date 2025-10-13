@@ -7,10 +7,13 @@ export @unpack
 # TODO make ext
 using Plots
 
+include("operators/fftutilities.jl")
 include("domains/domain.jl")
-export Domain, diff_x, diff_xx, diff_y, diff_yy, poisson_bracket, solve_phi, quadratic_term,
-    diffusion, laplacian, Δ, SpectralOperatorCache, reciprocal, spectral_exp, spectral_expm1,
-    spectral_log, hyper_diffusion
+export Domain
+include("operators/spectralOperators.jl")
+export OperatorRecipe # TODO perhaps remove and swap with @op
+# reciprocal, spectral_exp, spectral_expm1,
+# spectral_log, hyper_diffusion
 
 include("spectralODEProblem.jl")
 export SpectralODEProblem
