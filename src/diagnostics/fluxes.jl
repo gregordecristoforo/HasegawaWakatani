@@ -34,8 +34,7 @@ function radial_flux(u::U, prob::P, t::T; quadrature=nothing) where
     n_hat, Ω_hat = eachslice(u, dims=3)
     ϕ_hat = solve_phi(Ω_hat, domain)
     dϕ_hat = diff_y(ϕ_hat, domain)
-    vx = zeros(size(domain)) # TODO cache these perhaps?
-    vx = domain.use_cuda ? CuArray(vx) : vx
+    vx = zeros(size(domain)) |> domain.MemoryType # TODO cache these perhaps?
     n = similar(vx)
     mul!(vx, get_bwd(prob), dϕ_hat)
     mul!(n, get_bwd(prob), n_hat)

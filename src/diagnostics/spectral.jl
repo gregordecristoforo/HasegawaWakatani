@@ -12,14 +12,9 @@ function get_log_modes(u::U, prob::P, t::N; kx::K=:ky) where {U<:AbstractArray,
     P<:SpectralODEProblem,N<:Number,K<:Union{Int,Symbol}}
     if kx == :ky
         if length(size(u)) >= 3
-            data = zeros(prob.domain.Nx ÷ 2, last(size(u)))
+            data = zeros(prob.domain.Nx ÷ 2, last(size(u))) |> prob.domain.MemoryType
         else
-            data = zeros(prob.domain.Nx ÷ 2)
-        end
-
-        # Make more generalized
-        if prob.domain.use_cuda
-            data = CuArray(data)
+            data = zeros(prob.domain.Nx ÷ 2) |> prob.domain.MemoryType
         end
 
         data[:, 1] = log.(abs.(diag(u[:, :, 1])[1:prob.domain.Nx÷2]))
