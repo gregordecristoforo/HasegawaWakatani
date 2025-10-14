@@ -592,7 +592,7 @@ end
   Checks wheter or not to store the state. The spectral state `u` is transformed to the real
   state `U`, with the user defined `physical_transform` applied, before being stored.
 """
-function maybe_store_state!(output, step::Integer, u, prob, t)
+function maybe_store_state!(output, step::Integer, u, prob, t) # TODO Fix so that does not allways transform to physical state!
     # Check whether or not to store state 
     if step % output.stride == 0
 
