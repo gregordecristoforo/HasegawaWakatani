@@ -126,7 +126,7 @@ struct ElwiseOperator{T<:AbstractArray} <: LinearOperator{T}
 end
 
 # Out-of-place operator
-@inline (op::ElwiseOperator)(u::AbstractArray) = op.coeffs .* u
+@views @inline (op::ElwiseOperator)(u::AbstractArray) = op.coeffs .* u
 
 # To be able to use @. without applying LinearOperator to array element
 import Base.Broadcast: broadcasted
@@ -142,7 +142,7 @@ struct MatrixOperator{T<:AbstractArray} <: LinearOperator{T}
 end
 
 # Out-of-place operator # TODO figure out what to do here
-@inline (op::MatrixOperator)(u::AbstractArray) = op.coeffs * u
+@views @inline (op::MatrixOperator)(u::AbstractArray) = op.coeffs * u
 
 """
     Laplacian = -kx' .^ 2 .- ky .^ 2
