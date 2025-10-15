@@ -1,7 +1,7 @@
 name = "HasegawaWakatani"
 uuid = "77b4a5b0-6ed9-4abb-b852-b72faee8deaf"
-authors = ["JohannesMorkrid <johannes.e.morkrid@uit.no>"]
 version = "0.12.0-DEV"
+authors = ["JohannesMorkrid <johannes.e.morkrid@uit.no>"]
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
@@ -29,7 +29,7 @@ HasegawaWakataniSMTPClientExt = "SMTPClient"
 
 [compat]
 Adapt = "4.4.0"
-CUDA = "5.8.5"
+CUDA = "5.9.0"
 ComponentArrays = "0.15.29"
 Dates = "1.11.0"
 Plots = "1.41.1"

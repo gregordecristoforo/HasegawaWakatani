@@ -44,6 +44,7 @@ end
 mutable struct MSS1Cache{U,C,K} <: AbstractCache
     #Coefficents are all 1
     u::U
+    u_prev::U
     c::C
     k::K
 end
@@ -52,22 +53,24 @@ end
 function get_cache(prob::SpectralODEProblem, alg::MSS1, ::Val{true})
     dt = prob.dt
     u = copy(prob.u0_hat)
+    u_prev = copy(u)
     D = similar(u)
     # Calculate linear differential operator coefficent once to cache it
     prob.L(D, one.(similar(prob.u0_hat)), prob.domain, prob.p, 0)
     c = @. (1 - D * dt)^-1
     k = zero(D)
-    MSS1Cache(u, c, k)
+    MSS1Cache(u, u_prev, c, k)
 end
 
 @muladd function perform_step!(cache::MSS1Cache, prob::SpectralODEProblem, t::Number)
-    @unpack u, c, k = cache
+    @unpack u, u_prev, c, k = cache
     @unpack N, p, domain, dt = prob
 
     # Compute difference
-    N(k, u, domain, p, t)
+    N(k, u_prev, domain, p, t)
     # Perform step in-place
-    @. u = c * (u + dt * k)
+    @. u = c * (u_prev + dt * k) # TODO fix lock conflict here!
+    u_prev .= u
 end
 
 # ----------------------------------------- MSS2 -------------------------------------------
