@@ -65,6 +65,13 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,u0Type<:Abstra
 
         #dt = convert(precision, dt)
 
+        # Prepare spectral operator cache
+        # TODO move to SpectralODEProblem
+        #ops = prepare_operators(Domain, operators, (ky, kx), (Ny, Nx), MemoryType=MemoryType,
+        #    precision=precision, real_transform=real_transform, dealiased=dealiased)
+
+        #::Vector{Symbol}=DEFAULT_OPERATORS)
+
         new{typeof(L),typeof(N),typeof(u0),typeof(u0_hat),typeof(domain),typeof(tspan),
             typeof(p),typeof(dt),typeof(remove_modes),typeof(kwargs),isinplace(L, N)}(L, N,
             u0, u0_hat, domain, tspan, p, dt, remove_modes, kwargs)
