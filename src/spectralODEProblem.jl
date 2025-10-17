@@ -24,10 +24,11 @@ abstract type AbstractODEProblem{isinplace} end
    option to add a method `remove_modes` to remove certain modes after each timestep. Other
    `kwargs` can be stored in the struct, however these are currently unused.
 """
-mutable struct SpectralODEProblem{LType<:Function,NType<:Function,u0Type<:AbstractArray,
-    u0_hatType<:AbstractArray,D<:AbstractDomain,tType,pType,N<:Number,
-    RMType<:Function,K,iip} <: AbstractODEProblem{iip}
-
+mutable struct SpectralODEProblem{LType <: Function, NType <: Function,
+                                  u0Type <: AbstractArray, u0_hatType <: AbstractArray,
+                                  D <: AbstractDomain, tType, pType,
+                                  operatorsType <: NamedTuple, N <: Number,
+                                  RMType <: Function, K, iip} <: AbstractODEProblem{iip}
     L::LType
     N::NType
     u0::u0Type
@@ -36,21 +37,27 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,u0Type<:Abstra
     tspan::tType
     p::pType
 
-    dt::N # Passed onto something TODO find out what this something is
+    operators::operatorsType
+    dt::N
     remove_modes::RMType
     kwargs::K
 
     function SpectralODEProblem(N::Function, u0, domain::AbstractDomain, tspan;
-        p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing, kwargs...)
+                                p = NullParameters(), dt = 0.01,
+                                remove_modes::Function = remove_nothing, kwargs...)
 
         # If no linear operator given, assume there is non and match signature
         isinplace(N) ? L(du, u, d, p, t) = (du .= zero(u)) : L(u, d, p, t) = zero(u)
 
-        SpectralODEProblem(L, N, u0, domain, tspan, p=p, dt=dt, remove_modes=remove_modes, kwargs...)
+        SpectralODEProblem(L, N, u0, domain, tspan; p = p, dt = dt,
+                           remove_modes = remove_modes, kwargs...)
     end
 
     function SpectralODEProblem(L::Function, N::Function, u0, domain::AbstractDomain, tspan;
-        p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing, kwargs...)
+                                p = NullParameters(), dt::Number = 0.01,
+                                operators::Symbol = :default, aliases::Vector = [],
+                                additional_operators::Vector{<:OperatorRecipe} = [],
+                                remove_modes::Function = remove_nothing, kwargs...)
 
         # Prepare data structures
         u0 = prepare_initial_condition(u0, domain)
@@ -59,29 +66,26 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,u0Type<:Abstra
         # Remove unwanted modes
         remove_modes(u0_hat, domain)
 
-        # Handle timespan
+        # Handle time related things
         length(tspan) != 2 ? throw("tspan should have exactly two elements") : nothing
-        tspan = promote(first(tspan), last(tspan)) #TODO warn if tspan and dt not compatible
+        tspan = convert.(domain.precision, promote(first(tspan), last(tspan)))
+        dt = convert(domain.precision, dt)
 
-        #dt = convert(precision, dt)
+        # Returns a NamedTuple with `SpectralOperator`s
+        ops = build_operators(domain, operators, aliases, additional_operators, kwargs...)
 
-        # Prepare spectral operator cache
-        # TODO move to SpectralODEProblem
-        #ops = prepare_operators(Domain, operators, (ky, kx), (Ny, Nx), MemoryType=MemoryType,
-        #    precision=precision, real_transform=real_transform, dealiased=dealiased)
-
-        #::Vector{Symbol}=DEFAULT_OPERATORS)
-
-        new{typeof(L),typeof(N),typeof(u0),typeof(u0_hat),typeof(domain),typeof(tspan),
-            typeof(p),typeof(dt),typeof(remove_modes),typeof(kwargs),isinplace(L, N)}(L, N,
-            u0, u0_hat, domain, tspan, p, dt, remove_modes, kwargs)
+        new{typeof(L), typeof(N), typeof(u0), typeof(u0_hat), typeof(domain), typeof(tspan),
+            typeof(p), typeof(ops), typeof(dt), typeof(remove_modes), typeof(kwargs),
+            isinplace(L, N)}(L, N, u0, u0_hat, domain, tspan, p, ops,
+                             dt, remove_modes, kwargs)
     end
 end
 
 #Need to handle kwargs like dt = 0.01, inverse_transformation::F=identity somewhere!
 
 function Base.show(io::IO, m::MIME"text/plain", prob::SpectralODEProblem)
-    print(io, nameof(typeof(prob)), "(", nameof(prob.L), ",", nameof(prob.N), ";dt=", prob.dt)
+    print(io, nameof(typeof(prob)), "(", nameof(prob.L), ",", nameof(prob.N), ";dt=",
+          prob.dt)
     typeof(prob.p) == NullParameters ? nothing : print(io, ",p=", prob.p)
     println(io, "):")
     println(io, "in-place: ", isinplace(prob) isa Val{true})
@@ -95,6 +99,8 @@ function Base.show(io::IO, m::MIME"text/plain", prob::SpectralODEProblem)
 end
 
 # TODO make it more generalized
+"""
+"""
 function prepare_initial_condition(u0, domain::Domain)
     # Transform to MemoryType
     u0 = u0 |> domain.MemoryType{domain.precision}
@@ -105,6 +111,8 @@ function prepare_initial_condition(u0, domain::Domain)
     return u0
 end
 
+"""
+"""
 function prepare_spectral_coefficients(u0, domain::Domain)
     # Allocate data structure for spectral modes
     u0_hat = allocate_coefficients(u0, domain)
@@ -121,15 +129,13 @@ end
   Recursively iterates trough the initial condition data structure to try to get to the 
   lowest level Array and then allocates the needed shape after applying the fwd transform.
 """
-function allocate_coefficients(u0, domain::Domain)
-    _allocate_coefficients(u0, domain)
-end
+allocate_coefficients(u0, domain::Domain) = _allocate_coefficients(u0, domain)
 
 # TODO perhaps clean up this logic
 function _allocate_coefficients(u0::AbstractArray{<:Number}, domain::Domain)
     # Allocate array for spectral modes 
     sz = size(get_bwd(domain))
-    allocation_size = (sz..., size(u0)[length(sz)+1:end]...)
+    allocation_size = (sz..., size(u0)[(length(sz) + 1):end]...)
     return zeros(eltype(get_bwd(domain)), allocation_size) |> domain.MemoryType
 end
 
