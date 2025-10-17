@@ -42,18 +42,19 @@ mutable struct SpectralODEProblem{LType <: Function, NType <: Function,
     remove_modes::RMType
     kwargs::K
 
-    function SpectralODEProblem(N::Function, u0, domain::AbstractDomain, tspan;
+    function SpectralODEProblem(NonLinear::Function, u0, domain::AbstractDomain, tspan;
                                 p = NullParameters(), dt = 0.01,
                                 remove_modes::Function = remove_nothing, kwargs...)
 
         # If no linear operator given, assume there is non and match signature
-        isinplace(N) ? L(du, u, d, p, t) = (du .= zero(u)) : L(u, d, p, t) = zero(u)
+        isinplace(NonLinear) ? L(du, u, d, p, t) = (du .= zero(u)) : L(u, d, p, t) = zero(u)
 
-        SpectralODEProblem(L, N, u0, domain, tspan; p = p, dt = dt,
+        SpectralODEProblem(L, NonLinear, u0, domain, tspan; p = p, dt = dt,
                            remove_modes = remove_modes, kwargs...)
     end
 
-    function SpectralODEProblem(L::Function, N::Function, u0, domain::AbstractDomain, tspan;
+    function SpectralODEProblem(Linear::Function, NonLinear::Function, u0,
+                                domain::AbstractDomain, tspan;
                                 p = NullParameters(), dt::Number = 0.01,
                                 operators::Symbol = :default, aliases::Vector = [],
                                 additional_operators::Vector{<:OperatorRecipe} = [],
@@ -74,10 +75,13 @@ mutable struct SpectralODEProblem{LType <: Function, NType <: Function,
         # Returns a NamedTuple with `SpectralOperator`s
         ops = build_operators(domain, operators, aliases, additional_operators, kwargs...)
 
+        # Makes the rhs follow the signature used by SciML
+        L, N = prepare_functions(Linear, NonLinear, ops)
+
         new{typeof(L), typeof(N), typeof(u0), typeof(u0_hat), typeof(domain), typeof(tspan),
             typeof(p), typeof(ops), typeof(dt), typeof(remove_modes), typeof(kwargs),
-            isinplace(L, N)}(L, N, u0, u0_hat, domain, tspan, p, ops,
-                             dt, remove_modes, kwargs)
+            isinplace(Linear, NonLinear)}(L, N, u0, u0_hat, domain, tspan, p, ops,
+                                          dt, remove_modes, kwargs)
     end
 end
 
@@ -96,6 +100,19 @@ function Base.show(io::IO, m::MIME"text/plain", prob::SpectralODEProblem)
     show(io, prob.tspan)
     print(io, "\nu0: ")
     show(io, m, prob.u0)
+end
+
+"""
+"""
+function prepare_functions(Linear::Function, NonLinear::Function, operators::NamedTuple)
+    if isinplace(Linear, NonLinear) isa Val{true}
+        L = (du, u, p, t) -> Linear(du, u, operators, p, t) # L = (du, u, p, t) -> Linear(du, u, domain, p, t)
+        N = (du, u, p, t) -> NonLinear(du, u, operators, p, t)
+    else
+        L = (u, p, t) -> Linear(u, operators, p, t)
+        N = (u, p, t) -> NonLinear(u, operators, p, t)
+    end
+    return L, N
 end
 
 # TODO make it more generalized
