@@ -6,13 +6,15 @@ Welcome to the documentation page.
     This tutorial just offered a quick glimpse on Julia's built-in documentation system, make sure to read the docs for more.
 
 ```@docs
-HasegawaWakatani.Domain
-HasegawaWakatani.ifftPlot
+HasegawaWakatani.wave_vectors
+HasegawaWakatani.domain_kwargs
+HasegawaWakatani.area
+HasegawaWakatani.lengths
 ```
 
-<!--```@autodocs
-    Modules = [Domain, SpectralOperators]
-    Pages = ["domain.jl", "spectralOperators.jl"]
+```@autodocs
+Modules = [HasegawaWakatani]
 ```
-Includes Domain, diagnostics, utilities, spectralSolve, spectralODEProblem and schemes
+
+<!---Includes Domain, diagnostics, utilities, spectralSolve, spectralODEProblem and schemes
 -->
