@@ -3,11 +3,11 @@
 #Γ_0(t) = 1/(L_xL_y)∫_0^L_x∫_0^L_y nv_x dydx
 # Does not take into account anti-aliasing
 # TODO implement quadrature as bonus
-function radial_flux(u::U, prob::P, t::T; quadrature=nothing) where
-{U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-
+function radial_flux(u::U, prob::P, t::T;
+                     quadrature = nothing) where
+         {U <: AbstractArray, P <: SpectralODEProblem, T <: Number}
     domain = prob.domain
-    n_hat, Ω_hat = eachslice(u, dims=3)
+    n_hat, Ω_hat = eachslice(u; dims = 3)
     ϕ_hat = solve_phi(Ω_hat, domain)
     dϕ_hat = diff_y(ϕ_hat, domain)
     vx = zeros(size(domain)) # TODO cache these perhaps?
@@ -27,11 +27,12 @@ function radial_flux(u::U, prob::P, t::T; quadrature=nothing) where
 end
 
 # TODO move to ext
-# CuArray variant
-function radial_flux(u::U, prob::P, t::T; quadrature=nothing) where
-{U<:CuArray,P<:SpectralODEProblem,T<:Number}
+# AbstractGPUArray variant
+function radial_flux(u::U, prob::P, t::T;
+                     quadrature = nothing) where
+         {U <: AbstractGPUArray, P <: SpectralODEProblem, T <: Number}
     domain = prob.domain
-    n_hat, Ω_hat = eachslice(u, dims=3)
+    n_hat, Ω_hat = eachslice(u; dims = 3)
     ϕ_hat = solve_phi(Ω_hat, domain)
     dϕ_hat = diff_y(ϕ_hat, domain)
     vx = zeros(size(domain)) |> domain.MemoryType # TODO cache these perhaps?
@@ -42,6 +43,6 @@ function radial_flux(u::U, prob::P, t::T; quadrature=nothing) where
     return -sum(vx) / (prob.domain.Lx * prob.domain.Ly) # This is the flux time density^^
 end
 
-function RadialFluxDiagnostic(N::Int=10)
-    Diagnostic("Radial flux", radial_flux, N, "radial flux", assumes_spectral_field=true)
+function RadialFluxDiagnostic(N::Int = 10)
+    Diagnostic("Radial flux", radial_flux, N, "radial flux"; assumes_spectral_field = true)
 end

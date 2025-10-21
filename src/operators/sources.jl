@@ -1,0 +1,3 @@
+struct Source <: SpectralOperator
+    source::AbstractArray
+end

@@ -11,34 +11,27 @@ struct PoissonBracket <: NonLinearOperator
     qt_left::AbstractArray
     qt_right::AbstractArray
 
-    function PoissonBracket(ks, DomainType, MemoryType, precision, dealiased, real_transform, diff_x, diff_y, quadratic_term)
+    function PoissonBracket(domain::AbstractDomain, diff_x::LinearOperator,
+                            diff_y::LinearOperator, quadratic_term::QuadraticTerm)
 
         # Allocate
-        tmp1 = zeros(precision, length.(ks)) |> MemoryType
+        tmp1 = zeros(spectral_size(domain)) |> memory_type(domain)
         tmp2 = similar(tmp1)
-        qt_left = zeros(precision, length.(ks)) |> MemoryType
+        qt_left = zeros(spectral_size(domain)) |> memory_type(domain)
         qt_right = similar(qt_left)
 
         new(diff_x, diff_y, quadratic_term, tmp1, tmp2, qt_left, qt_right)
     end
 end
 
-operator_type(::Val{:poisson_bracket}, ::Type{_}) where {_} = PoissonBracket
-
-function operator_args()
-    @unpack MemoryType, precision, dealiased, real_transform = domain_kwargs
-    return Ns, DomainType, MemoryType, precision, dealiased, real_transform
-end
-
-function operator_dependencies(::Val{T}, ::Type{PoissonBracket}) where {T}
+function operator_dependencies(::Val{:poisson_bracket}, ::Type{_}) where {_}
     [OperatorRecipe(:diff_x), OperatorRecipe(:diff_y), OperatorRecipe(:quadratic_term)]
 end
 
-# Cache alternatives for poisson_bracket
-# 1. vx, vy, tmp, qt_left, qt_right (vx and vy, can be reused in theory)
-# 2. tmp1, tmp2, qt_left, qt_right (takes up less space)
-
-#PoissonBracket(quadratic_term, diff_x, diff_y)
+function build_operator(::Val{:poisson_bracket}, domain::Domain; diff_x, diff_y,
+                        quadratic_term, kwargs...)
+    PoissonBracket(domain, diff_x, diff_y, quadratic_term)
+end
 
 @inline function (op::PoissonBracket)(u_hat::AbstractArray, v_hat::AbstractArray)
     @unpack tmp1, tmp2, qt_left, qt_right, diff_x, diff_y, quadratic_term = op
@@ -51,6 +44,10 @@ end
 
     return qt_left .- qt_right
 end
+
+# Cache alternatives for poisson_bracket
+# 1. vx, vy, tmp, qt_left, qt_right (vx and vy, can be reused in theory)
+# 2. tmp1, tmp2, qt_left, qt_right (takes up less space)
 
 # function (op::PoissonBracket)(A::T, B::T) where {T<:AbstractArray}
 #     @unpack tmp, vx, vy, qt, diff_x, diff_y = op

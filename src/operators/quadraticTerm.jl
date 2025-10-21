@@ -3,8 +3,7 @@
 """
 """
 struct QuadraticTerm{TP<:AbstractTransformPlans,P<:AbstractArray,SP<:AbstractArray,
-    C<:AbstractFloat} <: NonLinearOperator
-
+                     C<:AbstractFloat} <: NonLinearOperator
     transforms::TP
     U::P
     V::P
@@ -13,13 +12,15 @@ struct QuadraticTerm{TP<:AbstractTransformPlans,P<:AbstractArray,SP<:AbstractArr
     padded::Bool
     dealiasing_coefficient::C
 
-    function QuadraticTerm(Ns, DomainType, MemoryType, precision, dealiased, real_transform)
+    function QuadraticTerm(domain::AbstractDomain)
+        precision = get_precision(domain)
+        Ns = size(domain)
 
         # Allocate the physical array, using zero-padding if dealiasing is enabled
-        utmp = zeros(precision, dealiased ? pad_size(Ns) : Ns) |> MemoryType
+        utmp = zeros(precision, domain.dealiased ? pad_size(Ns) : Ns) |> memory_type(domain)
 
         # TODO Utilizing the transform plans method defined in fftutilities?
-        transforms = prepare_transform_plans(utmp, DomainType, Val(real_transform))
+        transforms = prepare_transform_plans(utmp, Domain, Val(domain.real_transform))
 
         # Allocate data for pseudo spectral schemes
         up = fwd(transforms) * zero(utmp)
@@ -30,8 +31,9 @@ struct QuadraticTerm{TP<:AbstractTransformPlans,P<:AbstractArray,SP<:AbstractArr
         # Calculate correct conversion coefficent
         dealiasing_coefficient = precision(length(up) / prod(Ns))
 
-        new{typeof(transforms),typeof(U),typeof(up),typeof(dealiasing_coefficient)}(
-            transforms, U, V, up, vp, dealiased, dealiasing_coefficient)
+        new{typeof(transforms),typeof(U),typeof(up),
+            typeof(dealiasing_coefficient)}(transforms, U, V, up, vp,
+                                            domain.dealiased, dealiasing_coefficient)
     end
 end
 
@@ -40,22 +42,19 @@ end
   
   Computes the zero-pad size for the size Tuple ``Ns`` following the 3/2 rule.
 """
-pad_size(Ns::NTuple{N,Int}) where {N} = ntuple(i -> Ns[i] > 1 ? div(3 * Ns[i], 2, RoundUp) : 1, N)
-
+function pad_size(Ns::NTuple{N,Int}) where {N}
+    ntuple(i -> Ns[i] > 1 ? div(3 * Ns[i], 2, RoundUp) : 1, N)
+end
 # -------------------------------- Constructor related -------------------------------------
 
-operator_type(::Val{:quadratic_term}, ::Type{_}) where {_} = QuadraticTerm
-
-function operator_args(::Val{:quadratic_term}, DomainType, ks, Ns; domain_kwargs...)
-    @unpack MemoryType, precision, dealiased, real_transform = domain_kwargs
-    return Ns, DomainType, MemoryType, precision, dealiased, real_transform
-end
+build_operator(::Val{:quadratic_term}, domain::Domain; kwargs...) = QuadraticTerm(domain)
 
 #------------------------------ Quadratic terms interface ----------------------------------
 
 # In-place operator
 # TODO figure out where the cache should end up!
-@inline function (quadratic_term::QuadraticTerm)(out::T, u::T, v::T) where {T<:CuArray}
+@inline function (quadratic_term::QuadraticTerm)(out::T, u::T,
+                                                 v::T) where {T<:AbstractGPUArray}
     @unpack transforms, U, V, up, vp, padded, dealiasing_coefficient = quadratic_term
 
     mul!(U, bwd(transforms), padded ? pad!(up, u, typeof(transforms)) : u)
@@ -65,12 +64,15 @@ end
     padded ? dealiasing_coefficient * unpad!(out, up, typeof(transforms)) : out
 end
 
-@inline function (quadratic_term::QuadraticTerm)(out::T, u::T, v::T) where {T<:AbstractArray}
+@inline function (quadratic_term::QuadraticTerm)(out::T, u::T,
+                                                 v::T) where {T<:AbstractArray}
     @unpack transforms, U, V, up, vp, padded, dealiasing_coefficient = quadratic_term
 
     # Spawn threads to perform mul! in parallel
-    task_U = Threads.@spawn mul!(U, bwd(transforms), padded ? pad!(up, u, typeof(transforms)) : u)
-    task_V = Threads.@spawn mul!(V, bwd(transforms), padded ? pad!(vp, v, typeof(transforms)) : v)
+    task_U = Threads.@spawn mul!(U, bwd(transforms),
+                                 padded ? pad!(up, u, typeof(transforms)) : u)
+    task_V = Threads.@spawn mul!(V, bwd(transforms),
+                                 padded ? pad!(vp, v, typeof(transforms)) : v)
     # Wait for both tasks to finish
     wait(task_V)
     wait(task_U)
@@ -89,7 +91,8 @@ end
 
 # Specialized for 2D arrays
 # TODO optimize for GPU
-@inline function pad!(up::DU, u::U, ::Type{<:FFTPlans}) where {T,DU<:AbstractArray{T},U<:AbstractArray{T}}
+@inline function pad!(up::DU, u::U,
+                      ::Type{<:FFTPlans}) where {T,DU<:AbstractArray{T},U<:AbstractArray{T}}
     up .= zero.(up)
     Ny, Nx = size(u)
 
@@ -99,14 +102,17 @@ end
     Nyu = div(Nx, 2, RoundDown)
 
     @views @inbounds up[1:Nyl, 1:Nxl] .= u[1:Nyl, 1:Nxl] # Lower left
-    @views @inbounds up[1:Nyl, end-Nxu+1:end] .= u[1:Nyl, end-Nxu+1:end] # Lower right
-    @views @inbounds up[end-Nyu+1:end, 1:Nxl] .= u[end-Nyu+1:end, 1:Nxl] # Upper left
-    @views @inbounds up[end-Nyu+1:end, end-Nxu+1:end] .= u[end-Nyu+1:end, end-Nxu+1:end] # Upper right
+    @views @inbounds up[1:Nyl, (end-Nxu+1):end] .= u[1:Nyl, (end-Nxu+1):end] # Lower right
+    @views @inbounds up[(end-Nyu+1):end, 1:Nxl] .= u[(end-Nyu+1):end, 1:Nxl] # Upper left
+    @views @inbounds up[(end-Nyu+1):end, (end-Nxu+1):end] .= u[(end-Nyu+1):end,
+                                                               (end-Nxu+1):end] # Upper right
     return up
 end
 
 # TODO optimize for GPU
-@inline function pad!(up::DU, u::U, ::Type{<:rFFTPlans}) where {T,DU<:AbstractArray{T},U<:AbstractArray{T}}
+@inline function pad!(up::DU, u::U,
+                      ::Type{<:rFFTPlans}) where {T,DU<:AbstractArray{T},
+                                                  U<:AbstractArray{T}}
     up .= zero.(up)
     Ny, Nx = size(u)
 
@@ -114,12 +120,14 @@ end
     Nxu = div(Nx, 2, RoundDown)
 
     @views @inbounds up[1:Ny, 1:Nxl] .= u[1:Ny, 1:Nxl] # Lower left
-    @views @inbounds up[1:Ny, end-Nxu+1:end] .= u[1:Ny, end-Nxu+1:end] # Lower right
+    @views @inbounds up[1:Ny, (end-Nxu+1):end] .= u[1:Ny, (end-Nxu+1):end] # Lower right
     return up
 end
 
 # TODO optimize for GPU
-@inline function unpad!(u::DU, up::U, ::Type{<:FFTPlans}) where {T,DU<:AbstractArray{T},U<:AbstractArray{T}}
+@inline function unpad!(u::DU, up::U,
+                        ::Type{<:FFTPlans}) where {T,DU<:AbstractArray{T},
+                                                   U<:AbstractArray{T}}
     Ny, Nx = size(u)
 
     Nyl = div(Nx, 2, RoundUp)
@@ -128,21 +136,24 @@ end
     Nxu = div(Nx, 2, RoundDown)
 
     @views @inbounds u[1:Nyl, 1:Nxl] .= up[1:Nyl, 1:Nxl] # Lower left
-    @views @inbounds u[1:Nyl, end-Nxu+1:end] .= up[1:Nyl, end-Nxu+1:end] # Lower right
-    @views @inbounds u[end-Nyu+1:end, 1:Nxl] .= up[end-Nyu+1:end, 1:Nxl] # Upper left
-    @views @inbounds u[end-Nyu+1:end, end-Nxu+1:end] .= up[end-Nyu+1:end, end-Nxu+1:end] # Upper right
+    @views @inbounds u[1:Nyl, (end-Nxu+1):end] .= up[1:Nyl, (end-Nxu+1):end] # Lower right
+    @views @inbounds u[(end-Nyu+1):end, 1:Nxl] .= up[(end-Nyu+1):end, 1:Nxl] # Upper left
+    @views @inbounds u[(end-Nyu+1):end, (end-Nxu+1):end] .= up[(end-Nyu+1):end,
+                                                               (end-Nxu+1):end] # Upper right
     return u
 end
 
 # TODO optimize for GPU
-@inline function unpad!(u::DU, up::U, ::Type{<:rFFTPlans}) where {T,DU<:AbstractArray{T},U<:AbstractArray{T}}
+@inline function unpad!(u::DU, up::U,
+                        ::Type{<:rFFTPlans}) where {T,DU<:AbstractArray{T},
+                                                    U<:AbstractArray{T}}
     Ny, Nx = size(u)
 
     Nxl = div(Nx, 2, RoundUp)
     Nxu = div(Nx, 2, RoundDown)
 
     @views @inbounds u[1:Ny, 1:Nxl] .= up[1:Ny, 1:Nxl] # Lower left
-    @views @inbounds u[1:Ny, end-Nxu+1:end] .= up[1:Ny, end-Nxu+1:end] # Lower right
+    @views @inbounds u[1:Ny, (end-Nxu+1):end] .= up[1:Ny, (end-Nxu+1):end] # Lower right
     return u
 end
 

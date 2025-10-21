@@ -3,8 +3,11 @@
 # probe/high time resolution (fields, velocity etc...)
 
 # TODO improve 
-function probe_field(u::U, domain::D, positions::P; interpolation::I=nothing) where {
-    U<:AbstractArray,D<:AbstractDomain,P<:Union{AbstractArray,Tuple,Number},I<:Union{Nothing,Function}}
+function probe_field(u::U, domain::D, positions::P;
+                     interpolation::I=nothing) where {
+                                                      U<:AbstractArray,D<:AbstractDomain,
+                                                      P<:Union{AbstractArray,Tuple,Number},
+                                                      I<:Union{Nothing,Function}}
     # Check if the user sent in tuple of points or single point
     if isa(positions, Tuple) && isa(positions[1], Number)
         positions = [positions]
@@ -12,10 +15,8 @@ function probe_field(u::U, domain::D, positions::P; interpolation::I=nothing) wh
 
     # Initilize vectors
     data = zeros(length(positions))
-    #data = domain.use_cuda ? CUDA.zeros(length(positions)) : zeros(length(positions))
 
-    # Check for CUDA
-    if domain.use_cuda
+    if memory_type(domain) <: AbstractGPUArray
         u = Array(u)
     end
 
@@ -43,8 +44,10 @@ function is_in_domain(positions, domain::Domain)
         positions = [positions]
     end
 
-    if sum((first.(positions) .- first(domain.x)) .* (first.(positions) .- last(domain.x)) .> 0) != 0 ||
-       sum((last.(positions) .- first(domain.y)) .* (last.(positions) .- last(domain.y)) .> 0) != 0
+    if sum((first.(positions) .- first(domain.x)) .*
+           (first.(positions) .- last(domain.x)) .> 0) != 0 ||
+       sum((last.(positions) .- first(domain.y)) .* (last.(positions) .- last(domain.y)) .>
+           0) != 0
         return false
     else
         return true
@@ -52,20 +55,27 @@ function is_in_domain(positions, domain::Domain)
 end
 
 # TODO move to utilitise
-function probe_density(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
-    U<:AbstractArray,SOP<:SpectralODEProblem,N<:Number,P<:Union{AbstractArray,Tuple,Number},
-    I<:Union{Nothing,Function}}
+function probe_density(u::U, prob::SOP, t::N, positions::P;
+                       interpolation::I=nothing) where {
+                                                        U<:AbstractArray,
+                                                        SOP<:SpectralODEProblem,N<:Number,
+                                                        P<:Union{AbstractArray,Tuple,
+                                                                 Number},
+                                                        I<:Union{Nothing,Function}}
     # Check if all probes are in the domain
     if t == first(prob.tspan)
-        is_in_domain(positions, prob.domain) ? nothing : error("One or more probes are outside the domain")
+        is_in_domain(positions, prob.domain) ? nothing :
+        error("One or more probes are outside the domain")
     end
 
     probe_field(u[:, :, 1], prob.domain, positions; interpolation)
 end
 
 # "Constructor" for density probe
-function ProbeDensityDiagnostic(positions::P; interpolation::I=nothing, N::Int=100) where {
-    P<:Union{AbstractArray,Tuple,Number},I<:Union{Nothing,Function}}
+function ProbeDensityDiagnostic(positions::P; interpolation::I=nothing,
+                                N::Int=100) where {
+                                                   P<:Union{AbstractArray,Tuple,Number},
+                                                   I<:Union{Nothing,Function}}
     # Check if the user sent in tuple of points or single point
     if isa(positions, Tuple) && isa(positions[1], Number)
         positions = [positions]
@@ -80,15 +90,21 @@ function ProbeDensityDiagnostic(positions::P; interpolation::I=nothing, N::Int=1
     return Diagnostic("Density probe", probe_density, N, labels, args, kwargs)
 end
 
-function probe_vorticity(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
-    U<:AbstractArray,SOP<:SpectralODEProblem,N<:Number,P<:Union{AbstractArray,Tuple,Number},
-    I<:Union{Nothing,Function}}
+function probe_vorticity(u::U, prob::SOP, t::N, positions::P;
+                         interpolation::I=nothing) where {
+                                                          U<:AbstractArray,
+                                                          SOP<:SpectralODEProblem,N<:Number,
+                                                          P<:Union{AbstractArray,Tuple,
+                                                                   Number},
+                                                          I<:Union{Nothing,Function}}
     probe_field(u[:, :, 2], prob.domain, positions; interpolation)
 end
 
 # "Constructor" for vorticity probe
-function ProbeVorticityDiagnostic(positions::P; interpolation::I=nothing, N::Int=100) where {
-    P<:Union{AbstractArray,Tuple,Number},I<:Union{Nothing,Function}}
+function ProbeVorticityDiagnostic(positions::P; interpolation::I=nothing,
+                                  N::Int=100) where {
+                                                     P<:Union{AbstractArray,Tuple,Number},
+                                                     I<:Union{Nothing,Function}}
     # Check if the user sent in tuple of points or single point
     if isa(positions, Tuple) && isa(positions[1], Number)
         positions = [positions]
@@ -103,12 +119,17 @@ function ProbeVorticityDiagnostic(positions::P; interpolation::I=nothing, N::Int
     return Diagnostic("Vorticity probe", probe_vorticity, N, labels, args, kwargs)
 end
 
-function probe_potential(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
-    U<:AbstractArray,SOP<:SpectralODEProblem,N<:Number,P<:Union{AbstractArray,Tuple,Number},
-    I<:Union{Nothing,Function}}
+function probe_potential(u::U, prob::SOP, t::N, positions::P;
+                         interpolation::I=nothing) where {
+                                                          U<:AbstractArray,
+                                                          SOP<:SpectralODEProblem,N<:Number,
+                                                          P<:Union{AbstractArray,Tuple,
+                                                                   Number},
+                                                          I<:Union{Nothing,Function}}
     # Check if all probes are in the domain
     if t == first(prob.tspan)
-        is_in_domain(positions, prob.domain) ? nothing : error("One or more probes are outside the domain")
+        is_in_domain(positions, prob.domain) ? nothing :
+        error("One or more probes are outside the domain")
     end
 
     ϕ_hat = @views solve_phi(u[:, :, 2], prob.domain)
@@ -116,8 +137,10 @@ function probe_potential(u::U, prob::SOP, t::N, positions::P; interpolation::I=n
     probe_field(ϕ, prob.domain, positions; interpolation)
 end
 
-function ProbePotentialDiagnostic(positions::P; interpolation::I=nothing, N::Int=100) where {
-    P<:Union{AbstractArray,Tuple,Number},I<:Union{Nothing,Function}}
+function ProbePotentialDiagnostic(positions::P; interpolation::I=nothing,
+                                  N::Int=100) where {
+                                                     P<:Union{AbstractArray,Tuple,Number},
+                                                     I<:Union{Nothing,Function}}
     # Check if the user sent in tuple of points or single point
     if isa(positions, Tuple) && isa(positions[1], Number)
         positions = [positions]
@@ -129,15 +152,22 @@ function ProbePotentialDiagnostic(positions::P; interpolation::I=nothing, N::Int
     args = (positions,)
     kwargs = (interpolation=interpolation,)
 
-    return Diagnostic("Phi probe", probe_potential, N, labels, args, kwargs, assumes_spectral_field=true)
+    return Diagnostic("Phi probe", probe_potential, N, labels, args, kwargs;
+                      assumes_spectral_field=true)
 end
 
-function probe_radial_velocity(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
-    U<:AbstractArray,SOP<:SpectralODEProblem,N<:Number,P<:Union{AbstractArray,Tuple,Number},
-    I<:Union{Nothing,Function}}
+function probe_radial_velocity(u::U, prob::SOP, t::N, positions::P;
+                               interpolation::I=nothing) where {
+                                                                U<:AbstractArray,
+                                                                SOP<:SpectralODEProblem,
+                                                                N<:Number,
+                                                                P<:Union{AbstractArray,
+                                                                         Tuple,Number},
+                                                                I<:Union{Nothing,Function}}
     # Check if all probes are in the domain
     if t == first(prob.tspan)
-        is_in_domain(positions, prob.domain) ? nothing : error("One or more probes are outside the domain")
+        is_in_domain(positions, prob.domain) ? nothing :
+        error("One or more probes are outside the domain")
     end
 
     ϕ_hat = @views solve_phi(u[:, :, 2], prob.domain)
@@ -146,8 +176,11 @@ function probe_radial_velocity(u::U, prob::SOP, t::N, positions::P; interpolatio
     probe_field(v_x, prob.domain, positions; interpolation)
 end
 
-function ProbeRadialVelocityDiagnostic(positions::P; interpolation::I=nothing, N::Int=100) where {
-    P<:Union{AbstractArray,Tuple,Number},I<:Union{Nothing,Function}}
+function ProbeRadialVelocityDiagnostic(positions::P; interpolation::I=nothing,
+                                       N::Int=100) where {
+                                                          P<:Union{AbstractArray,Tuple,
+                                                                   Number},
+                                                          I<:Union{Nothing,Function}}
     # Check if the user sent in tuple of points or single point
     if isa(positions, Tuple) && isa(positions[1], Number)
         positions = [positions]
@@ -159,16 +192,21 @@ function ProbeRadialVelocityDiagnostic(positions::P; interpolation::I=nothing, N
     args = (positions,)
     kwargs = (interpolation=interpolation,)
 
-    return Diagnostic("Radial velocity probe", probe_radial_velocity, N, labels, args, kwargs, assumes_spectral_field=true)
+    return Diagnostic("Radial velocity probe", probe_radial_velocity, N, labels, args,
+                      kwargs; assumes_spectral_field=true)
 end
 
 # TODO make this optimized for non GPU case
-function probe_all(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing) where {
-    U<:AbstractArray,SOP<:SpectralODEProblem,N<:Number,P<:Union{AbstractArray,Tuple,Number},
-    I<:Union{Nothing,Function}}
+function probe_all(u::U, prob::SOP, t::N, positions::P;
+                   interpolation::I=nothing) where {
+                                                    U<:AbstractArray,
+                                                    SOP<:SpectralODEProblem,N<:Number,
+                                                    P<:Union{AbstractArray,Tuple,Number},
+                                                    I<:Union{Nothing,Function}}
     # Check if all probes are in the domain
     if t == first(prob.tspan)
-        is_in_domain(positions, prob.domain) ? nothing : error("One or more probes are outside the domain")
+        is_in_domain(positions, prob.domain) ? nothing :
+        error("One or more probes are outside the domain")
     end
 
     # Calculate spectral fields
@@ -176,12 +214,7 @@ function probe_all(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing
     v_x_hat = -diff_y(ϕ_hat, prob.domain)
 
     # Cache for transformation
-    cache = zeros(size(prob.domain))
-
-    # TODO make more generalized
-    if prob.domain.use_cuda
-        cache = CuArray(cache)
-    end
+    cache = zeros(size(prob.domain)) |> memory_type(prob.domain)
 
     # Transform to physical space and probe fields
     n = mul!(cache, get_bwd(prob), u[:, :, 1])
@@ -197,8 +230,10 @@ function probe_all(u::U, prob::SOP, t::N, positions::P; interpolation::I=nothing
     [n_p;; Ω_p;; ϕ_p;; v_x_p;; n_p .* v_x_p]
 end
 
-function ProbeAllDiagnostic(positions::P; interpolation::I=nothing, N::Int=100) where {
-    P<:Union{AbstractArray,Tuple,Number},I<:Union{Nothing,Function}}
+function ProbeAllDiagnostic(positions::P; interpolation::I=nothing,
+                            N::Int=100) where {
+                                               P<:Union{AbstractArray,Tuple,Number},
+                                               I<:Union{Nothing,Function}}
     # Check if the user sent in tuple of points or single point
     if isa(positions, Tuple) && isa(positions[1], Number)
         positions = [positions]
@@ -210,5 +245,6 @@ function ProbeAllDiagnostic(positions::P; interpolation::I=nothing, N::Int=100) 
     args = (positions,)
     kwargs = (interpolation=interpolation,)
 
-    return Diagnostic("All probe", probe_all, N, labels, args, kwargs, assumes_spectral_field=true)
+    return Diagnostic("All probe", probe_all, N, labels, args, kwargs;
+                      assumes_spectral_field=true)
 end

@@ -56,8 +56,10 @@ mutable struct SpectralODEProblem{LType <: Function, NType <: Function,
     function SpectralODEProblem(Linear::Function, NonLinear::Function, u0,
                                 domain::AbstractDomain, tspan;
                                 p = NullParameters(), dt::Number = 0.01,
-                                operators::Symbol = :default, aliases::Vector = [],
-                                additional_operators::Vector{<:OperatorRecipe} = [],
+                                operators::Symbol = :default,
+                                aliases::Vector{Pair{Symbol, Symbol}} = Pair{Symbol,
+                                                                             Symbol}[],
+                                additional_operators::Vector{<:OperatorRecipe} = OperatorRecipe[],
                                 remove_modes::Function = remove_nothing, kwargs...)
 
         # Prepare data structures
@@ -73,7 +75,8 @@ mutable struct SpectralODEProblem{LType <: Function, NType <: Function,
         dt = convert(domain.precision, dt)
 
         # Returns a NamedTuple with `SpectralOperator`s
-        ops = build_operators(domain, operators, aliases, additional_operators, kwargs...)
+        ops = build_operators(domain; operators = operators, aliases = aliases,
+                              additional_operators = additional_operators, kwargs...)
 
         # Makes the rhs follow the signature used by SciML
         L, N = prepare_functions(Linear, NonLinear, ops)
@@ -106,7 +109,7 @@ end
 """
 function prepare_functions(Linear::Function, NonLinear::Function, operators::NamedTuple)
     if isinplace(Linear, NonLinear) isa Val{true}
-        L = (du, u, p, t) -> Linear(du, u, operators, p, t) # L = (du, u, p, t) -> Linear(du, u, domain, p, t)
+        L = (du, u, p, t) -> Linear(du, u, operators, p, t)
         N = (du, u, p, t) -> NonLinear(du, u, operators, p, t)
     else
         L = (u, p, t) -> Linear(u, operators, p, t)
