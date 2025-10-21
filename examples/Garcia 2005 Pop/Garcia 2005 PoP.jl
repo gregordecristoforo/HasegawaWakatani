@@ -53,15 +53,11 @@ diagnostics = [
     #PlotPotentialDiagnostic(1000),
 ]
 
-# Folder path
-cd(relpath(@__DIR__, pwd()))
-
 # The output
-output = Output(prob; filename = "output/Garcia 2005 PoP.h5", diagnostics = diagnostics,
+output_file_name = joinpath(@__DIR__, "output", "Garcia 2005 PoP.h5")
+output = Output(prob; filename = output_file_name , diagnostics = diagnostics,
                 stride = -1, simulation_name = :parameters, field_storage_limit = "0.5 GB",
                 store_locally = true)
 
-using BenchmarkTools
-
 # Solve and plot
-@time sol = spectral_solve(prob, MSS3(), output; resume = false)
+sol = spectral_solve(prob, MSS3(), output; resume = false)
