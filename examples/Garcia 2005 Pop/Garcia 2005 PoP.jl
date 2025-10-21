@@ -2,7 +2,7 @@
 using HasegawaWakatani
 using CUDA
 
-domain = Domain(1024, 1024; Lx = 50, Ly = 50, MemoryType = CuArray, precision = Float32)
+domain = Domain(1024, 1024; Lx=50, Ly=50, MemoryType=CuArray, precision=Float32)
 
 # Check documentation to see other initial conditions
 ic = initial_condition(isolated_blob, domain)
@@ -10,8 +10,8 @@ ic = initial_condition(isolated_blob, domain)
 # Linear operator
 function Linear(du, u, operators, p, t)
     @unpack κ, ν = p
-    θ, Ω = eachslice(u; dims = 3)
-    dθ, dΩ = eachslice(du; dims = 3)
+    θ, Ω = eachslice(u; dims=3)
+    dθ, dΩ = eachslice(du; dims=3)
     @unpack laplacian = operators
     dθ .= κ .* laplacian(θ)
     dΩ .= ν .* laplacian(Ω)
@@ -19,8 +19,8 @@ end
 
 # Non-linear operator
 function NonLinear(du, u, operators, p, t)
-    θ, Ω = eachslice(u; dims = 3)
-    dθ, dΩ = eachslice(du; dims = 3)
+    θ, Ω = eachslice(u; dims=3)
+    dθ, dΩ = eachslice(du; dims=3)
     @unpack diff_y, poisson_bracket, solve_phi = operators
     ϕ = solve_phi(Ω)
     dθ .= poisson_bracket(θ, ϕ)
@@ -28,16 +28,16 @@ function NonLinear(du, u, operators, p, t)
 end
 
 # Parameters
-parameters = (ν = 1e-2, κ = 1e-2)
+parameters = (ν=1e-2, κ=1e-2)
 
 # Time interval
 tspan = [0.0, 20.0]
 
 # The problem
-prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p = parameters, dt = 1e-3,
-                          boussinesq = true, operators = :default,
-                          aliases = [:∂x => :diff_x],
-                          additional_operators = [OperatorRecipe(:diff_y),
+prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt=1e-3,
+                          boussinesq=true, operators=:default,
+                          aliases=[:∂x => :diff_x],
+                          additional_operators=[OperatorRecipe(:diff_y),
                               OperatorRecipe(:laplacian),
                               OperatorRecipe(:poisson_bracket),
                               OperatorRecipe(:solve_phi)])
@@ -53,15 +53,11 @@ diagnostics = [
     #PlotPotentialDiagnostic(1000),
 ]
 
-# Folder path
-cd(relpath(@__DIR__, pwd()))
-
 # The output
-output = Output(prob; filename = "output/Garcia 2005 PoP.h5", diagnostics = diagnostics,
-                stride = -1, simulation_name = :parameters, field_storage_limit = "0.5 GB",
-                store_locally = true)
-
-using BenchmarkTools
+output_file_name = joinpath(@__DIR__, "output", "Garcia 2005 PoP.h5")
+output = Output(prob; filename=output_file_name, diagnostics=diagnostics,
+                stride=-1, simulation_name=:parameters, field_storage_limit="0.5 GB",
+                store_locally=true)
 
 # Solve and plot
-@time sol = spectral_solve(prob, MSS3(), output; resume = false)
+sol = spectral_solve(prob, MSS3(), output; resume=false)
