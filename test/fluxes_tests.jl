@@ -28,7 +28,6 @@ poloidal_flux = build_diagnostic(Val(:poloidal_flux))
 poloidal_flux(ic_hat, prob, 0.0)
 
 """
-* Test that time = -1 gives different string ending from time != -1
-* Test that can construct all display diagnostics and that they work
-* Test that the number of significant digits work
+* Test that flux works for both GPU and CPU arrays
+* Test that flux is indeed correctly computed
 """
