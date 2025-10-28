@@ -21,6 +21,7 @@ export SpectralODEProblem
 include("schemes.jl")
 export MSS1, MSS2, MSS3
 
+using ProgressMeter, Interpolations
 include("diagnostics/diagnostics.jl")
 export CFLDiagnostic, RadialCFLDiagnostic, BurgerCFLDiagnostic, RadialCOMDiagnostic,
        PlotDensityDiagnostic, PlotPotentialDiagnostic, PlotVorticityDiagnostic,
@@ -29,8 +30,7 @@ export CFLDiagnostic, RadialCFLDiagnostic, BurgerCFLDiagnostic, RadialCOMDiagnos
        PotentialDissipationDiagnostic,
        KineticDissipationDiagnostic, ViscousDissipationDiagnostic,
        EnergyEvolutionDiagnostic,
-       RadialFluxDiagnostic, ProbeDensityDiagnostic, ProbePotentialDiagnostic,
-       ProbeVorticityDiagnostic, ProbeRadialVelocityDiagnostic, ProbeAllDiagnostic,
+       RadialFluxDiagnostic,
        radial_density_profile, poloidal_density_profile, radial_vorticity_profile,
        poloidal_vorticity_profile, poloidal_vorticity_profile, ProgressDiagnostic,
        GetModeDiagnostic, GetLogModeDiagnostic, RadialPotentialEnergySpectraDiagnostic,
