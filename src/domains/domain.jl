@@ -242,6 +242,13 @@ Return a tuple containing the size of the spectral coefficient Array (size in sp
 spectral_size(domain::AbstractDomain) = size(get_bwd(domain))
 
 """
+    spectral_length(domain::AbstractDomain)
+
+Return the number of spectral coefficients. (length in spectral space).
+"""
+spectral_length(domain::AbstractDomain) = prod(spectral_size(domain))
+
+"""
     area(domain::AbstractDomain)
 
 Compute the area of the domain. By default use prod(lengths(domain)).
