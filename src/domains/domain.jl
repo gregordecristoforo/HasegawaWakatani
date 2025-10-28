@@ -258,3 +258,4 @@ memory_type(domain::AbstractDomain) = domain.MemoryType{domain.precision}
 # Overloading
 Base.size(domain::AbstractDomain) = (domain.Ny, domain.Nx)
 Base.length(domain::AbstractDomain) = prod(size(domain))
+Base.ndims(domain) = length(size(domain))
