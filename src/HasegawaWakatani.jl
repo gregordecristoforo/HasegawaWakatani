@@ -29,7 +29,6 @@ export CFLDiagnostic, RadialCFLDiagnostic, BurgerCFLDiagnostic, RadialCOMDiagnos
        PotentialDissipationDiagnostic,
        KineticDissipationDiagnostic, ViscousDissipationDiagnostic,
        EnergyEvolutionDiagnostic,
-       RadialFluxDiagnostic,
        radial_density_profile, poloidal_density_profile, radial_vorticity_profile,
        poloidal_vorticity_profile, poloidal_vorticity_profile, ProgressDiagnostic,
        GetModeDiagnostic, GetLogModeDiagnostic, RadialPotentialEnergySpectraDiagnostic,
