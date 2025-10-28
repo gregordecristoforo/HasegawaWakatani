@@ -1,52 +1,65 @@
-#---------------------------- Display diagnostic -------------------------------------------
+# ------------------------------------------------------------------------------------------
+#                                    Display Diagnostic                                     
+# ------------------------------------------------------------------------------------------
 
 function plot_field(domain, field, time=-1; field_name="", digits=2, kwargs...)
+    ending = (time == -1 ? ")" : ", t = $(round(time, digits=digits)))")
+    title = field_name * "(x, y" * ending
     display(heatmap(domain, field; aspect_ratio=:equal, xlabel="x", ylabel="y",
-                    title=field_name * "(x, y)" *
-                          time == -1 ? "" : "t = $(round(time, digits=digits)))",
-                    kwargs...))
+                    title=title, kwargs...))
 end
 
-# -------------------------------------- Density -------------------------------------------
+# ---------------------------------------- Density -----------------------------------------
 
 function plot_density(state, prob, time; digits=2, kwargs...)
-    n = selectdim(state, ndims(state), 1) |> Array
+    n = selectdim(state, ndims(prob.domain) + 1, 1) |> Array
     plot_field(prob.domain, n, time; field_name=L"n", digits=digits, kwargs...)
 end
 
-function build_diagnostic(::Val{:plot_density}; stride::Int, kwargs...)
-    digits = ceil(Int, -log10(dt))
-    Diagnostic("Plot density", plot_density, N, "Display density"; stores_data=false)
+function build_diagnostic(::Val{:plot_density}; dt, kwargs...)
+    kwargs = (; digits=ceil(Int, -log10(dt)))
+    Diagnostic(; name="Plot density",
+               method=plot_density,
+               metadata="Display density",
+               stores_data=false,
+               kwargs=kwargs)
 end
 
-# ------------------------------------ Vorticity -------------------------------------------
+# --------------------------------------- Vorticity ----------------------------------------
 
-function plot_vorticity(u::U, prob::P,
-                        t::T) where {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    Ω = selectdim(state, ndims(state), 2) |> Array
+function plot_vorticity(state, prob, time; digits=2, kwargs...)
+    Ω = selectdim(state, ndims(prob.domain) + 1, 2) |> Array
     plot_field(prob.domain, Ω, time; field_name=L"\Omega",
                digits=digits, color=:jet, kwargs...)
 end
 
-function build_diagnostic(::Val{:plot_density}; stride::Int, kwargs...)
-    digits = ceil(Int, -log10(dt))
-    Diagnostic("Plot vorticity", plot_vorticity, N, "Display vorticity"; stores_data=false)
+function build_diagnostic(::Val{:plot_vorticity}; dt, kwargs...)
+    kwargs = (; digits=ceil(Int, -log10(dt)))
+    Diagnostic(; name="Plot vorticity",
+               method=plot_vorticity,
+               metadata="Display vorticity",
+               stores_data=false,
+               kwargs=kwargs)
 end
 
-# ----------------------------------- Potential --------------------------------------------
+# --------------------------------------- Potential ----------------------------------------
 
 function plot_potential(state, prob, time; kwargs...)
-    @unpack operators, domain, dt = prob
+    @unpack operators, domain = prob
     @unpack solve_phi = operators
-    Ω = selectdim(state, ndims(state), 2)
+    Ω = selectdim(state, ndims(domain) + 1, 2)
     ϕ = bwd(domain) * solve_phi(Ω) |> Array
     plot_field(domain, ϕ, time; field_name=L"\phi", digits=digits, kwargs...)
 end
 
-function build_diagnostic(::Val{:display_potential}, initial_data, prob, t0; stride::Int,
-                          kwargs...)
-    kwargs = (; digits=ceil(Int, -log10(prob.dt)))
-    Diagnostic(initial_data; name="Display potential", method=plot_potential, stride=stride,
-               metadata="Displays the potential", assumes_spectral_field=true,
-               stores_data=false, kwargs=kwargs)
+requires_operator(::Val{:plot_potential}) = [OperatorRecipe(:solve_phi)]
+
+function build_diagnostic(::Val{:plot_potential}; dt, kwargs...)
+    kwargs = (; digits=ceil(Int, -log10(dt)))
+    Diagnostic(; name="Display potential",
+               method=plot_potential,
+               metadata="Displays the potential",
+               assumes_spectral_state=true,
+               stores_data=false,
+               kwargs=kwargs)
 end

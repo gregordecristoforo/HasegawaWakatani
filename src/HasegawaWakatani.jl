@@ -24,7 +24,6 @@ export MSS1, MSS2, MSS3
 using ProgressMeter, Interpolations
 include("diagnostics/diagnostics.jl")
 export CFLDiagnostic, RadialCFLDiagnostic, BurgerCFLDiagnostic, RadialCOMDiagnostic,
-       PlotDensityDiagnostic, PlotPotentialDiagnostic, PlotVorticityDiagnostic,
        PotentialEnergyDiagnostic, KineticEnergyDiagnostic, TotalEnergyDiagnostic,
        EnstropyEnergyDiagnostic, ResistiveDissipationDiagnostic,
        PotentialDissipationDiagnostic,
