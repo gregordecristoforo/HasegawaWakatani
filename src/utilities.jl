@@ -27,37 +27,21 @@ function log_gaussian(x, y; A=1, B=1, l=1, x0=0, y0=0)
     log(gaussian(x, y; A=A, B=B, l=l, x0=x0, y0=y0))
 end
 
-function sinusoidal(x, y; Lx=1, Ly=1, n=1, m=1)
-    sin(2 * π * n * x / Lx) * cos(2 * π * m * y / Ly)
-end
+sinusoidal(x, y; Lx=1, Ly=1, n=1, m=1) = sin(2 * π * n * x / Lx) * cos(2 * π * m * y / Ly)
 
-function sinusoidalX(x, y; L=1, N=1)
-    sin(2 * π * N * x / L)
-end
+sinusoidalX(x, y; L=1, N=1) = sin(2 * π * N * x / L)
 
-function sinusoidalY(x, y; L=1, N=1)
-    sin(2 * π * N * y / L)
-end
+sinusoidalY(x, y; L=1, N=1) = sin(2 * π * N * y / L)
 
-function gaussianWallX(x, y; A=1, l=1)
-    A * exp(-x^2 / (2 * l^2))
-end
+gaussianWallX(x, y; A=1, l=1) = A * exp(-x^2 / (2 * l^2))
 
-function gaussianWallY(x, y; A=1, l=1)
-    A * exp(-y^2 / (2 * l^2))
-end
+gaussianWallY(x, y; A=1, l=1) = A * exp(-y^2 / (2 * l^2))
 
-function exponential_background(x, y; kappa=1)
-    exp(-kappa * x)
-end
+exponential_background(x, y; kappa=1) = exp(-kappa * x)
 
-function quadratic_function(x, y; kappa=1)
-    abs(y) <= 1 ? 1 - y .^ 2 : 0.0
-end
+quadratic_function(x, y; kappa=1) = abs(y) <= 1 ? 1 - y .^ 2 : 0.0
 
-function randomIC(x, y)
-    rand()
-end
+randomIC(x, y) = rand()
 
 function random_phase(domain::AbstractDomain; value=10^-6)
     θ = 2 * π * rand(domain.Ny, domain.Nx)
@@ -76,7 +60,7 @@ end
 
 function isolated_blob(domain::AbstractDomain; kwargs...)
     u0 = initial_condition(gaussian, domain; kwargs...)
-    cat(u0, zero(u0), dims=3)
+    cat(u0, zero(u0); dims=3)
 end
 
 broadcastable_ic(::typeof(random_phase)) = Val(false)
@@ -85,9 +69,7 @@ broadcastable_ic(::typeof(isolated_blob)) = Val(false)
 
 # ---------------------- Inverse functions / transforms ------------------------------------
 
-function expTransform(u::AbstractArray)
-    return [exp.(u[:, :, 1]);;; u[:, :, 2]]
-end
+expTransform(u::AbstractArray) = [exp.(u[:, :, 1]);;; u[:, :, 2]]
 
 #------------------------------ Removal of modes -------------------------------------------
 
@@ -99,8 +81,9 @@ function remove_streamer_modes!(u::U, d::D) where {U<:AbstractArray,D<:AbstractD
     @inbounds u[:, 1, :] .= 0
 end
 
-function remove_asymmetric_modes!(u::U, domain::D) where {U<:AbstractArray,
-    D<:AbstractDomain}
+function remove_asymmetric_modes!(u::U,
+                                  domain::D) where {U<:AbstractArray,
+                                                    D<:AbstractDomain}
     if domain.Nx % 2 == 0
         @inbounds u[:, domain.Nx÷2+1, :] .= 0
     end
@@ -109,16 +92,12 @@ function remove_asymmetric_modes!(u::U, domain::D) where {U<:AbstractArray,
     end
 end
 
-function remove_nothing(u::U, d::D) where {U<:AbstractArray,D<:AbstractDomain}
-    nothing
-end
+remove_nothing(u::U, d::D) where {U<:AbstractArray,D<:AbstractDomain} = nothing
 
 # ------------------------------------ Other -----------------------------------------------
 
 # For parameter scans
-function logspace(start, stop, length)
-    10 .^ range(start, stop, length)
-end
+logspace(start, stop, length) = 10 .^ range(start, stop, length)
 
 # TODO move to ext
 # Extend plotting to allow domain as input
@@ -126,6 +105,13 @@ import Plots.plot
 function plot(domain::AbstractDomain, args...; kwargs...)
     plot(domain.x, domain.y, args...; kwargs...)
 end
+
+"""
+frequencies(state)
+
+  Displays a heatmap of the mode-amplitudes in logscale.
+"""
+frequencies(state::AbstractArray) = heatmap(log10.(abs.(state)); title="Frequencies")
 
 # --------------------------------------- Mailing ------------------------------------------
 
