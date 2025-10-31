@@ -57,7 +57,7 @@ function radial_flux(state_hat::AbstractGPUArray, prob, time; quadrature=nothing
     return sum(Γ) / area(domain)
 end
 
-function requires_operator(::Val{:radial_flux})
+function requires_operator(::Val{:radial_flux}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_y)]
 end
 
@@ -86,7 +86,7 @@ function poloidal_flux(state_hat::AbstractGPUArray, prob, time; quadrature=nothi
     return sum(Γ) / area(domain)
 end
 
-function requires_operator(::Val{:poloidal_flux})
+function requires_operator(::Val{:poloidal_flux}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_x)]
 end
 

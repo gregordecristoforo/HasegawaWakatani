@@ -52,7 +52,7 @@ function plot_potential(state, prob, time; kwargs...)
     plot_field(domain, ϕ, time; field_name=L"\phi", digits=digits, kwargs...)
 end
 
-requires_operator(::Val{:plot_potential}) = [OperatorRecipe(:solve_phi)]
+requires_operator(::Val{:plot_potential}; kwargs...) = [OperatorRecipe(:solve_phi)]
 
 function build_diagnostic(::Val{:plot_potential}; dt, kwargs...)
     kwargs = (; digits=ceil(Int, -log10(dt)))

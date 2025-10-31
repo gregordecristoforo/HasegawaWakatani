@@ -262,7 +262,7 @@ function probe_potential(state, prob, time, positions; interpolation=nothing)
     probe_field(ϕ, domain, positions, interpolation)
 end
 
-requires_operator(::Val{:probe_potential}) = [OperatorRecipe(:solve_phi)]
+requires_operator(::Val{:probe_potential}; kwargs...) = [OperatorRecipe(:solve_phi)]
 
 function build_diagnostic(::Val{:probe_potential}; domain, positions,
                           interpolation=nothing, kwargs...)
@@ -291,7 +291,7 @@ function probe_radial_velocity(state, prob, time, positions; interpolation=nothi
     probe_field(v_x, domain, positions, interpolation)
 end
 
-function requires_operator(::Val{:probe_radial_velocity})
+function requires_operator(::Val{:probe_radial_velocity}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_y)]
 end
 
@@ -342,7 +342,9 @@ function probe_all(state, prob, time, positions; interpolation=nothing)
     cat(n_p, Ω_p, ϕ_p, v_x_p, n_p .* v_x_p; dims=3)
 end
 
-requires_operator(::Val{:probe_all}) = [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_y)]
+function requires_operator(::Val{:probe_all}; kwargs...)
+    [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_y)]
+end
 
 function build_diagnostic(::Val{:probe_all}; domain, positions,
                           interpolation=nothing, kwargs...)
