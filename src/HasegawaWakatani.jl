@@ -1,15 +1,18 @@
 module HasegawaWakatani
 
 using FFTW, HDF5, H5Zblosc, LinearAlgebra, LaTeXStrings, MuladdMacro, UnPack, Base.Threads,
-      Dates, Printf, GPUArrays, Adapt
+      Dates, Printf, GPUArrays, Adapt, Statistics
 export @unpack
 
 # TODO make ext
 using Plots
 
 include("operators/fftutilities.jl")
+export spectral_transform, spectral_transform!, get_fwd, get_bwd
+
 include("domains/domain.jl")
-export Domain
+export Domain, wave_vectors, get_points, spectral_size, spectral_length, get_transform_plans
+
 include("operators/spectralOperators.jl")
 export OperatorRecipe, build_operators # TODO perhaps remove and swap with @op
 # reciprocal, spectral_exp, spectral_expm1,
@@ -31,9 +34,7 @@ export CFLDiagnostic, RadialCFLDiagnostic, BurgerCFLDiagnostic, RadialCOMDiagnos
        EnergyEvolutionDiagnostic,
        radial_density_profile, poloidal_density_profile, radial_vorticity_profile,
        poloidal_vorticity_profile, poloidal_vorticity_profile, ProgressDiagnostic,
-       GetModeDiagnostic, GetLogModeDiagnostic, RadialPotentialEnergySpectraDiagnostic,
-       PoloidalPotentialEnergySpectraDiagnostic, RadialKineticEnergySpectraDiagnostic,
-       PoloidalKineticEnergySpectraDiagnostic, plot_frequencies
+       plot_frequencies
 
 include("outputer.jl")
 export Output
@@ -45,8 +46,6 @@ include("utilities.jl")
 export initial_condition, gaussian, log_gaussian, sinusoidal, sinusoidalX, sinusoidalY,
        gaussianWallX, gaussianWallY, exponential_background, randomIC, random_phase,
        random_crossphased, isolated_blob, remove_zonal_modes, remove_streamer_modes,
-       remove_asymmetric_modes!, remove_nothing, send_mail
-
-export get_fwd, get_bwd
+       remove_asymmetric_modes!, remove_nothing, frequencies, send_mail
 
 end
