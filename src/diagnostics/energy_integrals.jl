@@ -267,7 +267,7 @@ end
 function requires_operator(::Val{:energy_evolution_integral}; kwargs...)
     vcat(requires_operator(Val(:radial_flux); kwargs...),
          requires_operator(Val(:resistive_dissipation_integral); kwargs...),
-         requires_operator(:viscous_dissipation_integral); kwargs...)
+         requires_operator(Val(:viscous_dissipation_integral); kwargs...))
 end
 
 function build_diagnostic(::Val{:energy_evolution_integral}; adiabaticity_symbol=:C,
@@ -294,7 +294,7 @@ end
 
 function requires_operator(::Val{:enstropy_evolution_integral}; kwargs...)
     vcat(requires_operator(Val(:radial_flux); kwargs...),
-         requires_operator(:enstropy_dissipation_integral); kwargs...)
+         requires_operator(Val(:enstropy_dissipation_integral); kwargs...))
 end
 
 function build_diagnostic(::Val{:enstropy_evolution_integral}; diffusivity_symbol=:ν,
