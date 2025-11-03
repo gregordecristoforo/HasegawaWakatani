@@ -33,7 +33,18 @@ parameters = (ν=1e-2, κ=1e-2)
 # Time interval
 tspan = [0.0, 20.0]
 
-# The problem
+# Array of diagnostics want
+diagnostics = @diagnostics [
+    probe_density(; positions=[(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], stride=10),
+    radial_COM(; stride=1),
+    progress(; stride=100),
+    cfl(; stride=1),
+    plot_density(; stride=1000),
+    plot_vorticity(; stride=1000),
+    plot_potential(; stride=1000)
+]
+
+# Collect of specification defining the problem to be solved
 prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt=1e-3,
                           boussinesq=true, operators=:default,
                           aliases=[:∂x => :diff_x],
@@ -41,17 +52,6 @@ prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt
                               OperatorRecipe(:laplacian),
                               OperatorRecipe(:poisson_bracket),
                               OperatorRecipe(:solve_phi)])
-
-# Array of diagnostics want
-diagnostics = [
-    #ProbeDensityDiagnostic([(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], N=10),
-    #RadialCOMDiagnostic(1),
-    #ProgressDiagnostic(100),
-    #CFLDiagnostic(1),
-    PlotDensityDiagnostic(1000),
-    PlotVorticityDiagnostic(1000)
-    #PlotPotentialDiagnostic(1000),
-]
 
 # The output
 output_file_name = joinpath(@__DIR__, "output", "Garcia 2005 PoP.h5")

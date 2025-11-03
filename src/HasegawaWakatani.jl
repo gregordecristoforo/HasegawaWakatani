@@ -28,7 +28,7 @@ using ProgressMeter, Interpolations
 include("diagnostics/diagnostics.jl")
 export radial_density_profile, poloidal_density_profile, radial_vorticity_profile,
        poloidal_vorticity_profile, poloidal_vorticity_profile, ProgressDiagnostic,
-       plot_frequencies
+       plot_frequencies, @diagnostics
 
 include("outputer.jl")
 export Output

@@ -175,22 +175,87 @@ function sample_diagnostic!(output, diagnostic, step::Integer, u, prob, t)
     end
 end
 
-#-------------------------------------- Include --------------------------------------------
+# ---------------------------------- Diagnostics Recipe ------------------------------------
 
-include("probe.jl")
-include("COM.jl")
+struct DiagnosticRecipe
+    name::Symbol
+    stride::Int
+    storage_limit::String
+    kwargs::NamedTuple
+
+    function DiagnosticRecipe(name::Symbol; stride::Int=1, storage_limit="", kwargs...)
+        new(name, stride, storage_limit, NamedTuple(kwargs))
+    end
+end
+
+macro diagnostics(expr)
+    if expr.head == :vect  # Vector literal
+        return :([$(map(parse_diagnostic_expr, expr.args)...)])
+    elseif expr.head != :block
+        return :([$(parse_diagnostic_expr(expr))])
+    end
+
+    # Multiple expressions in a block
+    configs = Expr[]
+    for line in expr.args
+        line isa LineNumberNode && continue
+        isnothing(line) && continue
+
+        # Handle tuple expressions (when commas are used)
+        if line isa Expr && line.head == :tuple
+            for item in line.args
+                push!(configs, parse_diagnostic_expr(item))
+            end
+        else
+            push!(configs, parse_diagnostic_expr(line))
+        end
+    end
+
+    # Return a vector expression directly
+    return Expr(:vect, configs...)
+end
+
+"""
+
+Allows for single method()
+"""
+function parse_diagnostic_expr(expr)
+    if expr isa Symbol
+        return :(DiagnosticRecipe($(QuoteNode(expr))))
+    elseif expr isa Expr && expr.head == :call
+        name = expr.args[1]
+
+        kwargs = []
+        for arg in expr.args[2:end]
+            if arg isa Expr && arg.head == :parameters
+                # Unwrap the parameters block (from semicolon syntax)
+                append!(kwargs, arg.args)
+            else
+                # Regular keyword argument
+                push!(kwargs, arg)
+            end
+        end
+
+        return :(DiagnosticRecipe($(QuoteNode(name)); $(kwargs...)))
+    elseif expr.head == :(=)
+        error("Aliases, alias = method(kwargs...), is not supported for diagnostics.")
+    else
+        error("Invalid diagnostic syntax: $expr")
+    end
+end
+
+# ---------------------------- Include Implemented Diagnostics -----------------------------
+
 include("CFL.jl")
+include("COM.jl")
 include("display.jl")
-#include("spectral.jl")
-#include("progress.jl")
-include("profiles.jl")
 include("energy_integrals.jl")
 include("fluxes.jl")
+include("probe.jl")
+include("profiles.jl")
+include("progress.jl")
+include("spectral.jl")
 
-# Default diagnostic
-#cflDiagnostic = Diagnostic(CFLExB, 100, "cfl")
-const DEFAULT_DIAGNOSTICS = [ProgressDiagnostic()]
+# ---------------------------------- Default Diagnostics -----------------------------------
 
-# ---------------------------------- Other -------------------------------------------------
-
-# Enstrophy dissipation
+const DEFAULT_DIAGNOSTICS = @diagnostics [progress]
