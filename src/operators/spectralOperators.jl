@@ -11,132 +11,6 @@ abstract type SpectralOperator end
 # For broadcasting the operators for composite operators
 Base.broadcastable(op::SpectralOperator) = Ref(op)
 
-# ------------------------------------ Operator Recipe -------------------------------------
-
-struct OperatorRecipe{KwargsType<:NamedTuple}
-    op::Symbol
-    alias::Symbol
-    kwargs::KwargsType
-
-    function OperatorRecipe(op; alias=op, kwargs...)
-        # TODO check that op is valid
-        nt = NamedTuple(kwargs)
-        new{typeof(nt)}(op, alias, nt)
-    end
-end
-
-Base.hash(oprecipe::OperatorRecipe, h::UInt) = hash((oprecipe.op, oprecipe.kwargs), h)
-function Base.:(==)(or1::OperatorRecipe, or2::OperatorRecipe)
-    or1.op == or2.op && or1.kwargs == or2.kwargs
-end
-
-# function Base.get(oprecipe::OperatorRecipe, key, default)
-#     hasproperty(oprecipe, key) ? getproperty(oprecipe, key) : default
-# end
-
-# ------------------------------------- Constructors ---------------------------------------
-
-# TODO add @op for each operator
-
-# Catch all method, can be overwritten with specilization
-operator_dependencies(::Val{_}, ::Type{__}) where {_,__} = ()
-
-function get_operator_recipes(operators::Symbol)
-    if operators == :default
-        return [OperatorRecipe(:diff_x; order=1),
-                OperatorRecipe(:diff_y; order=1),
-                OperatorRecipe(:laplacian; order=1),
-                OperatorRecipe(:solve_phi),
-                OperatorRecipe(:poisson_bracket)]
-    elseif operators == :SOL
-        return [OperatorRecipe(:diff_x),
-                OperatorRecipe(:diff_y),
-                OperatorRecipe(:laplacian),
-                OperatorRecipe(:solve_phi),
-                OperatorRecipe(:poisson_bracket),
-                OperatorRecipe(:quadratic_term)]
-    elseif operators == :all
-        return [OperatorRecipe(:diff_x; order=1),
-                OperatorRecipe(:diff_y; order=1),
-                OperatorRecipe(:laplacian; order=1),
-                OperatorRecipe(:solve_phi),
-                OperatorRecipe(:poisson_bracket),
-                OperatorRecipe(:quadratic_term),
-                OperatorRecipe(:spectral_log),
-                OperatorRecipe(:spectral_exp),
-                OperatorRecipe(:spectral_expm1),
-                OperatorRecipe(:reciprocal)]
-    else
-        error()
-    end
-end
-
-"""
-    prepare_operator_recipes(operators::Symbol, additional_operators::Vector{<:OperatorRecipe})
-
-  Use switches to get a list of `OperatorRecipe`s and append the `additional_operators` to it.
-"""
-function prepare_operator_recipes(operators::Symbol,
-                                  additional_operators::Vector{<:OperatorRecipe})
-    # Determine operators trough switches
-    recipes = get_operator_recipes(operators)
-
-    # Combine with additional_operators 
-    recipes = vcat(recipes, additional_operators)
-
-    return recipes
-end
-
-# function add_aliases!(operators, aliases, cache)
-#     for alias in aliases
-#         # Get last, as thats whats being aliases
-#         operator = last(alias)
-
-#         cache[]
-#     end
-#     vcat()
-# end
-
-function build_operators(domain::AbstractDomain; operators::Symbol=:default,
-                         aliases::Vector{Pair{Symbol,Symbol}}=Pair{Symbol,Symbol}[],
-                         additional_operators::Vector{<:OperatorRecipe}=OperatorRecipe[],
-                         problem_kwargs...)
-    # Collects all recipes needed to be built
-    recipes = prepare_operator_recipes(operators, additional_operators)
-
-    # Used to only have to build each operator once
-    cache = Dict{OperatorRecipe,SpectralOperator}()
-
-    function ensure!(cache, recipe, domain, problem_kwargs)
-        # To not construct the same operator twice
-        if haskey(cache, recipe)
-            return cache[recipe]
-        end
-
-        # Makes the code more readable
-        operator = recipe.op
-
-        # Get dependencies and construct recursively
-        dependencies = [dependency.op => ensure!(cache, dependency, domain, problem_kwargs)
-                        for dependency in operator_dependencies(Val(operator), Domain)]
-
-        # Collect kwargs from recipe, problem and combine with dependency references
-        kwargs = (; recipe.kwargs..., problem_kwargs..., dependencies...)
-
-        # Build operator and add to cache
-        cache[recipe] = build_operator(Val(operator), domain; kwargs...)
-    end
-
-    # Sort out aliases
-
-    # Construct NamedTuple
-    spectral_operators = (;
-                          [recipe.op => ensure!(cache, recipe, domain, problem_kwargs)
-                           for recipe in recipes]...)
-
-    return spectral_operators
-end
-
 # ----------------------------------- Linear Operators -------------------------------------
 
 # Abstract type that all Linear operators inherit from
@@ -193,6 +67,68 @@ include("poissonBracket.jl")
 include("solvePhi.jl")
 include("spectralFunctions.jl")
 #include("sources.jl")
+
+# ------------------------------------ Operator Recipe -------------------------------------
+
+struct OperatorRecipe{KwargsType<:NamedTuple}
+    op::Symbol
+    alias::Symbol
+    kwargs::KwargsType
+
+    function OperatorRecipe(op; alias=op, kwargs...)
+        # TODO check that op is valid
+        nt = NamedTuple(kwargs)
+        new{typeof(nt)}(op, alias, nt)
+    end
+end
+
+Base.hash(oprecipe::OperatorRecipe, h::UInt) = hash((oprecipe.op, oprecipe.kwargs), h)
+function Base.:(==)(or1::OperatorRecipe, or2::OperatorRecipe)
+    or1.op == or2.op && or1.kwargs == or2.kwargs
+end
+
+# function Base.get(oprecipe::OperatorRecipe, key, default)
+#     hasproperty(oprecipe, key) ? getproperty(oprecipe, key) : default
+# end
+
+# ------------------------------------- Constructors ---------------------------------------
+
+# TODO add @op for each operator
+
+# Catch all method, can be overwritten with specilization
+operator_dependencies(::Val{_}, ::Type{__}) where {_,__} = ()
+
+function get_operator_recipes(operators::Symbol)
+    if operators == :default
+        return [OperatorRecipe(:diff_x; order=1),
+                OperatorRecipe(:diff_y; order=1),
+                OperatorRecipe(:laplacian; order=1),
+                OperatorRecipe(:solve_phi),
+                OperatorRecipe(:poisson_bracket)]
+    elseif operators == :SOL
+        return [OperatorRecipe(:diff_x),
+                OperatorRecipe(:diff_y),
+                OperatorRecipe(:laplacian),
+                OperatorRecipe(:solve_phi),
+                OperatorRecipe(:poisson_bracket),
+                OperatorRecipe(:quadratic_term)]
+    elseif operators == :all
+        return [OperatorRecipe(:diff_x; order=1),
+                OperatorRecipe(:diff_y; order=1),
+                OperatorRecipe(:laplacian; order=1),
+                OperatorRecipe(:solve_phi),
+                OperatorRecipe(:poisson_bracket),
+                OperatorRecipe(:quadratic_term),
+                OperatorRecipe(:spectral_log),
+                OperatorRecipe(:spectral_exp),
+                OperatorRecipe(:spectral_expm1),
+                OperatorRecipe(:reciprocal)]
+    elseif operators == :none
+        OperatorRecipe[]
+    else
+        error()
+    end
+end
 
 # --------------------------------- OperatorRecipe Macro -----------------------------------
 

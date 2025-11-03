@@ -152,6 +152,81 @@ function _allocate_coefficients(u0::AbstractArray{<:AbstractArray}, domain::Doma
     [_allocate_coefficients(u, domain) for u in u0]
 end
 
+# --------------------------------- Building Of Operators ----------------------------------
+
+"""
+    prepare_operator_recipes(operators::Symbol,
+                                  additional_operators::Vector{<:OperatorRecipe},
+                                  diagnostics::Vector{<:DiagnosticRecipe})
+
+  Use switches to get a list of `OperatorRecipe`s and append the `additional_operators` and
+  `required_operators` by the `diagnostics` to it.
+"""
+function prepare_operator_recipes(operators::Symbol,
+                                  additional_operators::Vector{<:OperatorRecipe},
+                                  diagnostics::Vector{<:DiagnosticRecipe})
+    # Determine operators trough switches
+    recipes = get_operator_recipes(operators)
+    # Determine which operators are required by the diagnostics
+    required = required_operators(diagnostics)
+    # Combine with additional_operators 
+    return vcat(recipes, additional_operators, required)
+end
+
+function ensure!(cache, recipe, domain, problem_kwargs)
+    # To not construct the same operator twice
+    if haskey(cache, recipe)
+        return cache[recipe]
+    end
+
+    # Makes the code more readable
+    operator = recipe.op
+
+    # Get dependencies and construct recursively
+    dependencies = [dependency.op => ensure!(cache, dependency, domain, problem_kwargs)
+                    for dependency in operator_dependencies(Val(operator), Domain)]
+
+    # Collect kwargs from recipe, problem and combine with dependency references
+    kwargs = (; recipe.kwargs..., problem_kwargs..., dependencies...)
+
+    # Build operator and add to cache
+    cache[recipe] = build_operator(Val(operator), domain; kwargs...)
+end
+
+# TODO fix aliases method
+function add_aliases!(operators, aliases, cache)
+    #for alias in aliases
+    #    # Get last, as thats whats being aliases
+    #    operator = last(alias)
+    #    cache[]
+    #end
+    #vcat()
+    #[first(alias) => cache[last(aliases)] for alias in aliases]
+    return operators
+end
+
+function build_operators(domain::AbstractDomain; operators::Symbol=:default,
+                         aliases::Vector{Pair{Symbol,Symbol}}=Pair{Symbol,Symbol}[],
+                         additional_operators::Vector{<:OperatorRecipe}=OperatorRecipe[],
+                         diagnostics::Vector{<:DiagnosticRecipe}=DiagnosticRecipe[],
+                         problem_kwargs...)
+    # Collects all recipes needed to be built
+    recipes = prepare_operator_recipes(operators, additional_operators, diagnostics)
+
+    # Used to only have to build each operator once
+    cache = Dict{OperatorRecipe,SpectralOperator}()
+
+    # Construct NamedTuple
+    spectral_operators = (;
+                          [recipe.alias => ensure!(cache, recipe, domain, problem_kwargs)
+                           for recipe in recipes]...)
+
+    # Sort out aliases
+    spectral_operators = add_aliases!(spectral_operators, aliases, cache)
+
+    return spectral_operators
+end
+
 # ---------------------------------------- Helpers -----------------------------------------
 
 spectral_size(prob::SpectralODEProblem) = size(prob.u0_hat)
