@@ -26,11 +26,7 @@ export MSS1, MSS2, MSS3
 
 using ProgressMeter, Interpolations
 include("diagnostics/diagnostics.jl")
-export RadialCOMDiagnostic, PotentialEnergyDiagnostic, KineticEnergyDiagnostic,
-       TotalEnergyDiagnostic, EnstropyEnergyDiagnostic, ResistiveDissipationDiagnostic,
-       PotentialDissipationDiagnostic, KineticDissipationDiagnostic,
-       ViscousDissipationDiagnostic, EnergyEvolutionDiagnostic,
-       radial_density_profile, poloidal_density_profile, radial_vorticity_profile,
+export radial_density_profile, poloidal_density_profile, radial_vorticity_profile,
        poloidal_vorticity_profile, poloidal_vorticity_profile, ProgressDiagnostic,
        plot_frequencies
 
