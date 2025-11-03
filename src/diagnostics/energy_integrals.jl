@@ -284,7 +284,7 @@ end
 
 # ------------------------------- Enstropy Energy Integral ---------------------------------
 
-dU / dt(t) = Γ_n - D^U
+#dU / dt(t) = Γ_n - D^U
 function enstropy_evolution_integral(state, prob, time; diffusivity_symbol=:ν,
                                      viscosity_symbol=:μ, quadrature=nothing)
     radial_flux(state, prob, time; quadrature=quadrature) .-
