@@ -65,7 +65,7 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},U<:AbstractArray,UB<:Abstr
                     simulation_name::SN=:timestamp,
                     store_hdf::Bool=true,
                     store_locally::Bool=true,
-                    field_storage_limit::AbstractString="",
+                    storage_limit::AbstractString="",
                     h5_kwargs...) where {SOP<:SpectralODEProblem,DV<:AbstractArray,
                                          FN<:AbstractString,PT<:Function,
                                          SN<:Union{AbstractString,Symbol}}
