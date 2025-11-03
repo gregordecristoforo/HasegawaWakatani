@@ -1,6 +1,8 @@
-# ------------------------------ Spectral functions ----------------------------------------
+# ------------------------------------------------------------------------------------------
+#                                    Spectral Functions                                     
+# ------------------------------------------------------------------------------------------
 
-# ---------------------------------- Construction ------------------------------------------
+# ------------------------------------- Construction ---------------------------------------
 
 struct SpectralFunction{F<:Function} <: SpectralOperator
     f::F
@@ -40,7 +42,7 @@ function build_operator(::Val{:spectral_log}, domain::AbstractDomain; quadratic_
     SpectralFunction(log, domain, quadratic_term)
 end
 
-# ------------------------------------ Apply function --------------------------------------
+# -------------------------------------- Main Method ---------------------------------------
 
 @inline function (op::SpectralFunction)(u::AbstractArray)
     out = op.out

@@ -1,5 +1,9 @@
+# ------------------------------------------------------------------------------------------
+#                                    Solve Phi Operator                                     
+# ------------------------------------------------------------------------------------------
+
 # TODO make mutable? Or rethink alltogether
-struct SolvePhi{T <: AbstractArray} <: SpectralOperator
+struct SolvePhi{T<:AbstractArray} <: SpectralOperator
     laplacian_inv::T
     phi::T
 
@@ -12,7 +16,7 @@ struct SolvePhi{T <: AbstractArray} <: SpectralOperator
     end
 end
 
-function build_operator(::Val{:solve_phi}, domain::AbstractDomain; boussinesq = true,
+function build_operator(::Val{:solve_phi}, domain::AbstractDomain; boussinesq=true,
                         kwargs...)
     _build_operator(Val(:solve_phi), domain, Val(boussinesq); kwargs...)
 end
@@ -20,6 +24,8 @@ end
 function _build_operator(::Val{:solve_phi}, domain::Domain, ::Val{true}; kwargs...)
     SolvePhi(domain)
 end
+
+# ------------------------------------- Main Methods ---------------------------------------
 
 # TODO implement Non-Bousinesq method issue [#24](https://github.com/JohannesMorkrid/HasegawaWakatani.jl/issues/24)
 function _build_operator(::Val{:solve_phi}, domain::Domain, ::Val{false}; kwargs...)

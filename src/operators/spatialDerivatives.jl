@@ -1,6 +1,8 @@
-# ----------------------------------- Spatial Derivatives ----------------------------------
+# ------------------------------------------------------------------------------------------
+#                                    Spatial Derivatives                                    
+# ------------------------------------------------------------------------------------------
 
-# ------------------------------------- Fourier Domain -------------------------------------
+# ------------------------------------ Fourier Domain --------------------------------------
 
 # function operator_type(::Union{Val{:diff_x}, Val{:diff_y}, Val{:laplacian}},
 #                        ::Type{_}) where {_}
@@ -9,18 +11,18 @@
 
 # TODO check if operators like laplacians and diff_xx and diff_yy should be Complex 
 
-# ---------------------------------- Construction interface --------------------------------
+# -------------------------------- Construction Interface ----------------------------------
 
-function build_operator(::Val{:diff_x}, domain::Domain; order = 1, kwargs...)
-    ElwiseOperator(im .* transpose(domain.kx); order = order)
+function build_operator(::Val{:diff_x}, domain::Domain; order=1, kwargs...)
+    ElwiseOperator(im .* transpose(domain.kx); order=order)
 end
 
 # function build_operator(::Val{:diff_xx}, domain::Domain; order=1, kwargs...)
 #     build_operator(Val(:diff_x), domain; order = 2 * order)
 # end
 
-function build_operator(::Val{:diff_y}, domain::Domain; order = 1, kwargs...)
-    ElwiseOperator(im .* domain.ky; order = order)
+function build_operator(::Val{:diff_y}, domain::Domain; order=1, kwargs...)
+    ElwiseOperator(im .* domain.ky; order=order)
 end
 
 # function build_operator(::Val{:diff_yy}, domain::Domain; order=1, kwargs...)
@@ -35,11 +37,11 @@ function get_laplacian(domain::Domain)
     return -mapreduce(k -> k .^ 2, (a, b) -> a .+ b, reshaped)
 end
 
-function build_operator(::Val{:laplacian}, domain::Domain; order = 1, kwargs...)
-    ElwiseOperator(get_laplacian(domain); order = order)
+function build_operator(::Val{:laplacian}, domain::Domain; order=1, kwargs...)
+    ElwiseOperator(get_laplacian(domain); order=order)
 end
 
-# ------------------------------- Chebyshev Domain -----------------------------------------
+# ----------------------------------- Chebyshev Domain -------------------------------------
 
 # Chebyshev
 # function chebyshev_differentiation_matrix(x::AbstractVector)

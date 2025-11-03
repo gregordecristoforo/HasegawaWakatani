@@ -1,4 +1,8 @@
-# ------------------------------- Spectral Operators ---------------------------------------
+# ------------------------------------------------------------------------------------------
+#                                    Spectral Operators                                     
+# ------------------------------------------------------------------------------------------
+
+# ---------------------------------------- General -----------------------------------------
 
 # Abstract class that may inherit from a more abstract one
 abstract type SpectralOperator end
@@ -7,14 +11,14 @@ abstract type SpectralOperator end
 # For broadcasting the operators for composite operators
 Base.broadcastable(op::SpectralOperator) = Ref(op)
 
-# --------------------------------- Operator declaration -----------------------------------
+# ------------------------------------ Operator Recipe -------------------------------------
 
-struct OperatorRecipe{KwargsType <: NamedTuple}
+struct OperatorRecipe{KwargsType<:NamedTuple}
     op::Symbol
     alias::Symbol
     kwargs::KwargsType
 
-    function OperatorRecipe(op; alias = op, kwargs...)
+    function OperatorRecipe(op; alias=op, kwargs...)
         # TODO check that op is valid
         nt = NamedTuple(kwargs)
         new{typeof(nt)}(op, alias, nt)
@@ -30,18 +34,18 @@ end
 #     hasproperty(oprecipe, key) ? getproperty(oprecipe, key) : default
 # end
 
-# ---------------------------------- Constructors ------------------------------------------
+# ------------------------------------- Constructors ---------------------------------------
 
 # TODO add @op for each operator
 
 # Catch all method, can be overwritten with specilization
-operator_dependencies(::Val{_}, ::Type{__}) where {_, __} = ()
+operator_dependencies(::Val{_}, ::Type{__}) where {_,__} = ()
 
 function get_operator_recipes(operators::Symbol)
     if operators == :default
-        return [OperatorRecipe(:diff_x; order = 1),
-                OperatorRecipe(:diff_y; order = 1),
-                OperatorRecipe(:laplacian; order = 1),
+        return [OperatorRecipe(:diff_x; order=1),
+                OperatorRecipe(:diff_y; order=1),
+                OperatorRecipe(:laplacian; order=1),
                 OperatorRecipe(:solve_phi),
                 OperatorRecipe(:poisson_bracket)]
     elseif operators == :SOL
@@ -52,9 +56,9 @@ function get_operator_recipes(operators::Symbol)
                 OperatorRecipe(:poisson_bracket),
                 OperatorRecipe(:quadratic_term)]
     elseif operators == :all
-        return [OperatorRecipe(:diff_x; order = 1),
-                OperatorRecipe(:diff_y; order = 1),
-                OperatorRecipe(:laplacian; order = 1),
+        return [OperatorRecipe(:diff_x; order=1),
+                OperatorRecipe(:diff_y; order=1),
+                OperatorRecipe(:laplacian; order=1),
                 OperatorRecipe(:solve_phi),
                 OperatorRecipe(:poisson_bracket),
                 OperatorRecipe(:quadratic_term),
@@ -93,15 +97,15 @@ end
 #     vcat()
 # end
 
-function build_operators(domain::AbstractDomain; operators::Symbol = :default,
-                         aliases::Vector{Pair{Symbol, Symbol}} = Pair{Symbol, Symbol}[],
-                         additional_operators::Vector{<:OperatorRecipe} = OperatorRecipe[],
+function build_operators(domain::AbstractDomain; operators::Symbol=:default,
+                         aliases::Vector{Pair{Symbol,Symbol}}=Pair{Symbol,Symbol}[],
+                         additional_operators::Vector{<:OperatorRecipe}=OperatorRecipe[],
                          problem_kwargs...)
     # Collects all recipes needed to be built
     recipes = prepare_operator_recipes(operators, additional_operators)
 
     # Used to only have to build each operator once
-    cache = Dict{OperatorRecipe, SpectralOperator}()
+    cache = Dict{OperatorRecipe,SpectralOperator}()
 
     function ensure!(cache, recipe, domain, problem_kwargs)
         # To not construct the same operator twice
@@ -133,7 +137,7 @@ function build_operators(domain::AbstractDomain; operators::Symbol = :default,
     return spectral_operators
 end
 
-# -------------------------------- Linear operators ----------------------------------------
+# ----------------------------------- Linear Operators -------------------------------------
 
 # Abstract type that all Linear operators inherit from
 abstract type LinearOperator{T} <: SpectralOperator end
@@ -148,13 +152,13 @@ import Base: *, +, -, ^
 -(a::LinearOperator, b::LinearOperator) = typeof(op)(a.coeffs .- b.coeffs)
 ^(op::LinearOperator, power::Number) = typeof(op)(op.coeffs .^ power)
 
-# ----------------------------- Elementwise operator ---------------------------------------
+# --------------------------------- Elementwise Operator -----------------------------------
 
-struct ElwiseOperator{T <: AbstractArray} <: LinearOperator{T}
+struct ElwiseOperator{T<:AbstractArray} <: LinearOperator{T}
     coeffs::T
     order::Number
 
-    ElwiseOperator(coeffs; order = 1) = new{typeof(coeffs)}(coeffs .^ order, order)
+    ElwiseOperator(coeffs; order=1) = new{typeof(coeffs)}(coeffs .^ order, order)
 end
 
 # Out-of-place operator
@@ -164,9 +168,9 @@ end
 import Base.Broadcast: broadcasted
 broadcasted(op::ElwiseOperator, x) = broadcasted(*, op.coeffs, x)
 
-# -------------------------------- Matrix operator -----------------------------------------
+# ------------------------------------ Matrix Operator -------------------------------------
 
-struct MatrixOperator{T <: AbstractArray} <: LinearOperator{T}
+struct MatrixOperator{T<:AbstractArray} <: LinearOperator{T}
     coeffs::T
     order::Number
 end
@@ -176,7 +180,7 @@ end
 
 include("spatialDerivatives.jl")
 
-# --------------------------- Non-Linear operators -----------------------------------------
+# --------------------------------- Non-Linear Operators -----------------------------------
 
 # Abstract type that all NonLinear operators inherit from
 abstract type NonLinearOperator <: SpectralOperator end
@@ -184,13 +188,13 @@ abstract type NonLinearOperator <: SpectralOperator end
 include("quadraticTerm.jl")
 include("poissonBracket.jl")
 
-# -------------------------------------- Others --------------------------------------------
+# ---------------------------------------- Others ------------------------------------------
 
 include("solvePhi.jl")
 include("spectralFunctions.jl")
 #include("sources.jl")
 
-# ----------------------------- OperatorRecipe macro ----------------------------------
+# --------------------------------- OperatorRecipe Macro -----------------------------------
 
 # TODO implement
 macro op()
