@@ -44,20 +44,15 @@ diagnostics = @diagnostics [
     plot_potential(; stride=1000)
 ]
 
-# Collect of specification defining the problem to be solved
+# Collection of specifications defining the problem to be solved
 prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt=1e-3,
-                          boussinesq=true, operators=:default,
-                          aliases=[:∂x => :diff_x],
-                          additional_operators=[OperatorRecipe(:diff_y),
-                              OperatorRecipe(:laplacian),
-                              OperatorRecipe(:poisson_bracket),
-                              OperatorRecipe(:solve_phi)])
+                          boussinesq=true, aliases=[:∂x => :diff_x],
+                          diagnostics=diagnostics)
 
 # The output
 output_file_name = joinpath(@__DIR__, "output", "Garcia 2005 PoP.h5")
-output = Output(prob; filename=output_file_name, diagnostics=diagnostics,
-                stride=-1, simulation_name=:parameters, field_storage_limit="0.5 GB",
-                store_locally=true)
+output = Output(prob; filename=output_file_name, stride=-1, simulation_name=:parameters,
+                storage_limit="0.5 GB", store_locally=true)
 
 # Solve and plot
 sol = spectral_solve(prob, MSS3(), output; resume=false)
