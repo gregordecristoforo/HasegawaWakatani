@@ -255,6 +255,13 @@ Compute the area of the domain. By default use prod(lengths(domain)).
 """
 area(domain::AbstractDomain) = prod(lengths(domain))
 
+"""
+    differential_area(domain::AbstractDomain)
+
+Compute the differential area of the domain. By default use prod(differential_area(domain)).
+"""
+differential_area(domain::AbstractDomain) = prod(differential_elements(domain))
+
 # Getters
 get_transform_plans(domain::AbstractDomain) = domain.transforms
 get_fwd(domain::AbstractDomain) = get_fwd(get_transform_plans(domain))
