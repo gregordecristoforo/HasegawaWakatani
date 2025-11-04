@@ -80,7 +80,7 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},U<:AbstractArray,UB<:Abstr
         h5_kwargs = merge((blosc=3,), h5_kwargs)
 
         # Setup HDF5 storage if wanted
-        simulation = setup_hdf5_storage(filename, simulation_name, N_samples, u0, prob, t0;
+        simulation = setup_hdf5_storage(filename, simulation_name, u0, prob, t0;
                                         store_hdf=store_hdf, h5_kwargs=h5_kwargs)
 
         # Setup local (in memory) storage if wanted
@@ -126,8 +126,8 @@ end
   refered to as a `simulation` group. If the simulation group does not exists, the `h5_kwargs` 
   are applied to the `"fields"` and `"t"` datasets. The opened `simulation` is returned.
 """
-function setup_hdf5_storage(filename, simulation_name, N_samples::Int, u0, prob, t0;
-                            store_hdf=store_hdf, h5_kwargs=h5_kwargs)
+function setup_hdf5_storage(filename, simulation_name, u0, prob, t0; store_hdf=store_hdf,
+                            h5_kwargs=h5_kwargs)
     if store_hdf
         filename = add_h5_if_missing(filename)
 
@@ -137,14 +137,14 @@ function setup_hdf5_storage(filename, simulation_name, N_samples::Int, u0, prob,
         # Create simulation name
         simulation_name = handle_simulation_name(simulation_name, prob)
 
-        # TODO check if new dim of fields, in that case probably should re-create simulation group
         # Checks how to handle simulation group
         if !haskey(file, simulation_name)
-            simulation = setup_simulation_group(file, simulation_name, N_samples, u0, prob,
-                                                t0;
-                                                h5_kwargs)
+            # Create simulation group
+            simulation = create_group(file, simulation_name)
+            # Store attributes
+            write_attributes(simulation, prob)
         else
-            simulation = reopen_simulation_group!(file, simulation_name, N_samples, u0)
+            simulation = open_group(file, simulation_name)
         end
 
         return simulation
@@ -152,6 +152,8 @@ function setup_hdf5_storage(filename, simulation_name, N_samples::Int, u0, prob,
         return nothing
     end
 end
+
+# ------------------------------------- HDF5 Helpers ---------------------------------------
 
 """
     add_h5_if_missing(filename::AbstractString)
@@ -186,46 +188,6 @@ function handle_simulation_name(simulation_name, prob)
 end
 
 """
-    setup_simulation_group(file, simulation_name, N_samples, u0, prob, t0; h5_kwargs)
-
-  Creates a *HDF5* group with `simulation_name` (a "simulation"), and allocates the correct 
-  sizes based on `N_samples` with the fields being chunked with additinal `h5_kwargs` applied.
-  In addition the inital condition is written along with the attributes of the `prob`.
-""" # TODO specialize arguments?
-function setup_simulation_group(file, simulation_name, N_samples, u0, prob, t0; h5_kwargs)
-
-    # Create simulation group
-    simulation = create_group(file, simulation_name)
-
-    # Create dataset for fields and time
-    dset = create_dataset(simulation, "fields", datatype(eltype(u0)),
-                          (size(u0)..., typemax(Int64)); chunk=(size(u0)..., 1),
-                          h5_kwargs...)
-    HDF5.set_extent_dims(dset, (size(u0)..., N_samples))
-    dset = create_dataset(simulation, "t", datatype(Float64), # TODO eltype(t0)) bug if tspan has Int type
-                          (typemax(Int64),); chunk=(1,), h5_kwargs...)
-    HDF5.set_extent_dims(dset, (N_samples,))
-
-    # Store the initial conditions
-    write_state(simulation, 1, u0, t0)
-
-    # Store attributes
-    write_attributes(simulation, prob)
-
-    return simulation
-end
-
-"""
-    write_state(simulation, idx::Int, u, t)
-
-  Writes the state `u` at time `t` to the simulation group `simulation` (HDF5).
-"""
-function write_state(simulation, idx::Int, u, t)
-    simulation["fields"][fill(:, ndims(u))..., idx] = u
-    simulation["t"][idx] = t
-end
-
-"""
     write_attributes(simulation, prob::SpectralODEProblem)
     write_attributes(simulation, domain::AbstractDomain)
 
@@ -248,20 +210,6 @@ function write_attributes(simulation, domain::AbstractDomain)
     for attribute in attributes
         write_attribute(simulation, string(attribute), getproperty(domain, attribute))
     end
-end
-
-"""
-    reopen_simulation_group!(file, simulation_name, N_samples::Int, u0)
-
-  Reopens an existing `simulation` group and extends its datasets if needed to accommodate 
-  a different `size(u0)` and/or `N_samples`.
-"""
-function reopen_simulation_group!(file, simulation_name, N_samples::Int, u0)
-    simulation = open_group(file, simulation_name)
-    # Expand length of fields and t
-    HDF5.set_extent_dims(simulation["fields"], (size(u0)..., N_samples))
-    HDF5.set_extent_dims(simulation["t"], (N_samples,))
-    return simulation
 end
 
 # ------------------------------ Setup local storage ---------------------------------------
@@ -294,6 +242,62 @@ end
 function write_local_state(output::Output, idx, u, t)
     output.u[idx] .= u
     output.t[idx] = t
+end
+
+# ------------------------------ DIAGNOSTIC BUILDING RELATED -------------------------------
+
+# TODO check if new dim of fields, in that case probably should re-create simulation group
+#simulation = setup_simulation_group(file, simulation_name, N_samples, u0, prob,
+#                                    t0; h5_kwargs)
+"""
+    setup_simulation_group(file, simulation_name, N_samples, u0, prob, t0; h5_kwargs)
+
+  Creates a *HDF5* group with `simulation_name` (a "simulation"), and allocates the correct 
+  sizes based on `N_samples` with the fields being chunked with additinal `h5_kwargs` applied.
+  In addition the inital condition is written along with the attributes of the `prob`.
+""" # TODO move logic elsewhere
+function setup_simulation_group(file, simulation_name, N_samples, u0, prob, t0; h5_kwargs)
+
+    # Create simulation group
+    simulation = create_group(file, simulation_name)
+
+    # Create dataset for fields and time
+    dset = create_dataset(simulation, "fields", datatype(eltype(u0)),
+                          (size(u0)..., typemax(Int64)); chunk=(size(u0)..., 1),
+                          h5_kwargs...)
+    HDF5.set_extent_dims(dset, (size(u0)..., N_samples))
+    dset = create_dataset(simulation, "t", datatype(Float64), # TODO eltype(t0)) bug if tspan has Int type
+                          (typemax(Int64),); chunk=(1,), h5_kwargs...)
+    HDF5.set_extent_dims(dset, (N_samples,))
+
+    # Store the initial conditions
+    write_state(simulation, 1, u0, t0)
+
+    return simulation
+end
+
+"""
+    write_state(simulation, idx::Int, u, t)
+
+  Writes the state `u` at time `t` to the simulation group `simulation` (HDF5).
+""" # TODO merge with writing of the data
+function write_state(simulation, idx::Int, u, t)
+    simulation["fields"][fill(:, ndims(u))..., idx] = u
+    simulation["t"][idx] = t
+end
+
+"""
+    reopen_simulation_group!(file, simulation_name, N_samples::Int, u0)
+
+  Reopens an existing `simulation` group and extends its datasets if needed to accommodate 
+  a different `size(u0)` and/or `N_samples`.
+""" # TODO remove this function and instead add functionality elsewhere
+function reopen_simulation_group!(file, simulation_name, N_samples::Int, u0)
+    simulation = open_group(file, simulation_name)
+    # Expand length of fields and t
+    HDF5.set_extent_dims(simulation["fields"], (size(u0)..., N_samples))
+    HDF5.set_extent_dims(simulation["t"], (N_samples,))
+    return simulation
 end
 
 # --------------------------- Prepare sampling ---------------------------------------------
