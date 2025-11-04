@@ -54,13 +54,13 @@ end
 # ---------------------------------- Diagnostics Recipe ------------------------------------
 
 struct DiagnosticRecipe
-    name::Symbol
+    method::Function
     stride::Int
     storage_limit::String
     kwargs::NamedTuple
 
-    function DiagnosticRecipe(name::Symbol; stride::Int=-1, storage_limit="", kwargs...)
-        new(name, stride, storage_limit, NamedTuple(kwargs))
+    function DiagnosticRecipe(method::Function; stride::Int=-1, storage_limit="", kwargs...)
+        new(method, stride, storage_limit, NamedTuple(kwargs))
     end
 end
 
@@ -97,9 +97,9 @@ end
 """
 function parse_diagnostic_expr(expr)
     if expr isa Symbol
-        return :(DiagnosticRecipe($(QuoteNode(expr))))
+        return :(DiagnosticRecipe($expr))
     elseif expr isa Expr && expr.head == :call
-        name = expr.args[1]
+        method = expr.args[1]
 
         kwargs = []
         for arg in expr.args[2:end]
@@ -112,7 +112,7 @@ function parse_diagnostic_expr(expr)
             end
         end
 
-        return :(DiagnosticRecipe($(QuoteNode(name)); $(kwargs...)))
+        return :(DiagnosticRecipe($method; $(kwargs...)))
     elseif expr.head == :(=)
         error("Aliases, alias = method(kwargs...), is not supported for diagnostics.")
     else
@@ -139,6 +139,6 @@ const DEFAULT_DIAGNOSTICS = @diagnostics [progress]
 requires_operator(::Val{method}; kwargs...) where {method} = OperatorRecipe[]
 
 function required_operators(diagnostic_recipes::Vector{<:DiagnosticRecipe})
-    vcat([requires_operator(Val(recipe.name); recipe.kwargs...)
+    vcat([requires_operator(Val(Symbol(recipe.method)); recipe.kwargs...)
           for recipe in diagnostic_recipes]...)
 end
