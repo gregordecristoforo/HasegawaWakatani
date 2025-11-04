@@ -335,7 +335,7 @@ function prepare_sampling(stride::Int, field_storage_limit, prob::SpectralODEPro
     end
 
     # Validate stride, might change stride if too large
-    stride = validate_step_stride(N_steps, stride)
+    stride = validate_stride(N_steps, stride)
 
     # Compute number of data points to record and warn if last step has differnt step size
     N_samples = cld(N_steps, stride) + 1
@@ -403,7 +403,7 @@ end
 """
     compute_storage_need(N_steps::Int, stride::Int, prob::SpectralODEProblem)
 
-  Computes the storage needed to store `N_steps÷step_stride`samples with `sizeof(prob.u0)`. 
+  Computes the storage needed to store `N_steps÷stride`samples with `sizeof(prob.u0)`. 
 """
 function compute_storage_need(N_steps::Int, stride::Int, prob::SpectralODEProblem)
     stride < 1 ? throw(ArgumentError("stride must be ≥ 1, got $stride")) : nothing
@@ -411,7 +411,7 @@ function compute_storage_need(N_steps::Int, stride::Int, prob::SpectralODEProble
 end
 
 """
-    validate_step_stride(N_steps::Int, stride::Int)
+    validate_stride(N_steps::Int, stride::Int)
   
     Validates and adjusts the `stride`. If `stride`:
 
@@ -421,7 +421,7 @@ end
 
   Returns the validated (and possibly adjusted) `stride`.
 """
-function validate_step_stride(N_steps::Int, stride::Int)
+function validate_stride(N_steps::Int, stride::Int)
     if N_steps < stride
         @warn "stride ($stride) exceeds total steps ($N_steps). \
                Adjusting to stride = N_steps ($N_steps)."
@@ -760,6 +760,7 @@ assert_no_nan(u::AbstractArray, t) =
 function assert_no_nan(u::AbstractGPUArray, t)
     @allowscalar isnan(u[1]) ? error("Breakdown occured at t=$t") : nothing
 end
+
 """
     create_or_open_group(parent::Union{HDF5.File,HDF5.Group}, path::AbstractString; properties...)
 
