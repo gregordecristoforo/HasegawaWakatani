@@ -36,44 +36,6 @@ end
     diagnostic.method(state, prob, time, diagnostic.args...; diagnostic.kwargs...)
 end
 
-# Take diagnostic of initial field (id = initial diagnostic)
-# if diagnostic.assumes_spectral_state
-#   id = diagnostic.method(prob.u0_hat, prob, first(prob.tspan), diagnostic.args...;
-#                          diagnostic.kwargs...)
-#   else
-#       id = diagnostic.method(u0, prob, first(prob.tspan), diagnostic.args...;
-#                              diagnostic.kwargs...)
-#   end
-
-# -------------------------------- Building Of Diagnostics ---------------------------------
-
-function build_diagnostic(method::Function; kwargs...)
-    build_diagnostic(Val(Symbol(method)); kwargs...)
-end
-
-# function perform_diagnostic!(diagnostic::D, step::Integer, u::U, prob::SOP, t::N;
-#                              store_hdf::Bool=true,
-#                              store_locally::Bool=true) where {D<:Diagnostic,
-#                                                               U<:AbstractArray,
-#                                                               SOP<:SpectralODEProblem,
-#                                                               N<:Number}
-#     # u might be real or complex depending on previous handle_output and diagnostic.assumes_spectral_state
-
-#     # Perform diagnostic # TODO make diagnostic.args..., u, prob, t
-#     data = diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
-
-#     if !isnothing(data)
-#         # Calculate index
-#         idx = step ÷ diagnostic.sample_step + 1
-
-#         store_hdf ? write_data(diagnostic, idx, data, t) : nothing
-
-#         store_locally ? write_local_data(diagnostic, idx, data, t) : nothing
-#     end
-# end
-
-"""
-"""
 function Base.show(io::IO, m::MIME"text/plain", diagnostic::Diagnostic)
     print(io, diagnostic.name, ": (spectral=", diagnostic.assumes_spectral_state,
           ", stores_data=", diagnostic.stores_data, ")")
@@ -81,42 +43,10 @@ function Base.show(io::IO, m::MIME"text/plain", diagnostic::Diagnostic)
     length(diagnostic.kwargs) != 0 ? print(io, ", kwargs=", diagnostic.kwargs) : nothing
 end
 
-# TODO REMOVE OR REWRITE THE THREE METHODS BELOW
+# -------------------------------- Building Of Diagnostics ---------------------------------
 
-# TODO perhaps make more like write_state
-function write_data(diagnostic, idx, data, t)
-    # TODO better check on ndims
-    diagnostic.h5group["data"][fill(:, ndims(data))..., idx] = data
-    diagnostic.h5group["t"][idx] = t
-end
-
-# TODO perhaps same name as write_local_state, different dispatch
-function write_local_data(diagnostic::Diagnostic, idx, data, t)
-    if isa(data, AbstractArray)
-        diagnostic.data[idx] .= data
-    else
-        diagnostic.data[idx] = copy(data)
-    end
-    diagnostic.t[idx] = t
-end
-
-"""
-"""
-function sample_diagnostic!(output, diagnostic, step::Integer, u, prob, t)
-    # Check if diagnostic assumes physical field and transform if not yet done
-    if !diagnostic.assumes_spectral_state && !output.transformed
-        # Transform state
-        transform_state!(output, u, get_bwd(prob.domain))
-    end
-
-    # Passes the logic onto perform_diagnostic! to do diagnostic and store data
-    if diagnostic.assumes_spectral_state
-        perform_diagnostic!(diagnostic, step, u, prob, t;
-                            store_hdf=output.store_hdf, store_locally=output.store_locally)
-    else
-        perform_diagnostic!(diagnostic, step, output.U_buffer, prob, t;
-                            store_hdf=output.store_hdf, store_locally=output.store_locally)
-    end
+function build_diagnostic(method::Function; kwargs...)
+    build_diagnostic(Val(Symbol(method)); kwargs...)
 end
 
 # ---------------------------------- Diagnostics Recipe ------------------------------------
