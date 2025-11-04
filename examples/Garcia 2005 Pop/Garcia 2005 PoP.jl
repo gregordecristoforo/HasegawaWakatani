@@ -51,7 +51,7 @@ prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt
 
 # The output
 output_file_name = joinpath(@__DIR__, "output", "Garcia 2005 PoP.h5")
-output = Output(prob; filename=output_file_name, stride=-1, simulation_name=:parameters,
+output = Output(prob; filename=output_file_name, simulation_name=:parameters,
                 storage_limit="0.5 GB", store_locally=true)
 
 # Solve and plot
