@@ -1,26 +1,29 @@
-# ----------------------------------- Diagnostics ------------------------------------------
+# ------------------------------------------------------------------------------------------
+#                                        Diagnostics                                        
+# ------------------------------------------------------------------------------------------
 
-mutable struct Diagnostic{N<:AbstractString,M<:Function,D<:AbstractArray,T<:AbstractArray,
-    HG<:Union{Nothing,HDF5.Group},L<:Any,A<:Tuple,K<:NamedTuple}
+# ---------------------------------- Main Functionality ------------------------------------
 
+struct Diagnostic{N<:AbstractString,M<:Function,L<:AbstractString,A<:Tuple,
+                  K<:NamedTuple}
     name::N
     method::M
-    data::D
-    t::T
-    sample_step::Int
-    h5group::HG
-    labels::L
-    assumes_spectral_field::Bool
+    metadata::L
+    assumes_spectral_state::Bool
     stores_data::Bool
     args::A
     kwargs::K
 
-    function Diagnostic(name::N, method::M, sample_step::Int=-1, labels::L="", args::A=(),
-        kwargs::K=NamedTuple(); assumes_spectral_field::Bool=false, stores_data::Bool=true) where {
-        N<:AbstractString,M<:Function,L<:Any,A<:Tuple,K<:NamedTuple}
-        new{typeof(name),typeof(method),Vector,Vector,Union{Nothing,HDF5.Group},typeof(labels),
-            typeof(args),typeof(kwargs)}(name, method, Vector[], Vector[], sample_step, nothing,
-            labels, assumes_spectral_field, stores_data, args, kwargs)
+    function Diagnostic(; name::AbstractString,
+                        method::Function,
+                        metadata::String="",
+                        assumes_spectral_state::Bool=false,
+                        stores_data::Bool=true,
+                        args::Tuple=(),
+                        kwargs=NamedTuple())
+        new{typeof(name),typeof(method),typeof(metadata),typeof(args),
+            typeof(kwargs)}(name, method, metadata, assumes_spectral_state, stores_data,
+                            args, kwargs)
     end
 end
 
