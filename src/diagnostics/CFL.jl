@@ -159,13 +159,12 @@ function requires_operator(::Val{cfl}; velocity_method, kwargs...)
     end
 end
 
-function build_diagnostic(::Val{:cfl}; stride::Int=-1, velocity=:ExB, component=:magnitude,
+function build_diagnostic(::Val{:cfl}; velocity=:ExB, component=:magnitude,
                           silent=false, kwargs...)
     context = isuppercase(string(velocity)[1]) ? string(velocity) :
               titlecase(string(velocity))
     Diagnostic(; name="$context CFL",
                method=cfl,
-               stride=stride,
                metadata=cfl_metadata(context, component),
                assumes_spectral_state=assumes_spectral(Val(velocity)),
                args=(Val(velocity), Val(component)),

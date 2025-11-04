@@ -16,11 +16,10 @@ function plot_density(state, prob, time; digits=2, kwargs...)
     plot_field(prob.domain, n, time; field_name=L"n", digits=digits, kwargs...)
 end
 
-function build_diagnostic(::Val{:plot_density}; stride::Int=-1, dt, kwargs...)
+function build_diagnostic(::Val{:plot_density}; dt, kwargs...)
     kwargs = (; digits=ceil(Int, -log10(dt)))
     Diagnostic(; name="Plot density",
                method=plot_density,
-               stride=stride,
                metadata="Display density",
                stores_data=false,
                kwargs=kwargs)
@@ -34,11 +33,10 @@ function plot_vorticity(state, prob, time; digits=2, kwargs...)
                digits=digits, color=:jet, kwargs...)
 end
 
-function build_diagnostic(::Val{:plot_vorticity}; stride::Int=-1, dt, kwargs...)
+function build_diagnostic(::Val{:plot_vorticity}; dt, kwargs...)
     kwargs = (; digits=ceil(Int, -log10(dt)))
     Diagnostic(; name="Plot vorticity",
                method=plot_vorticity,
-               stride=stride,
                metadata="Display vorticity",
                stores_data=false,
                kwargs=kwargs)
@@ -56,11 +54,10 @@ end
 
 requires_operator(::Val{:plot_potential}; kwargs...) = [OperatorRecipe(:solve_phi)]
 
-function build_diagnostic(::Val{:plot_potential}; stride::Int=-1, dt, kwargs...)
+function build_diagnostic(::Val{:plot_potential}; dt, kwargs...)
     kwargs = (; digits=ceil(Int, -log10(dt)))
     Diagnostic(; name="Display potential",
                method=plot_potential,
-               stride=stride,
                metadata="Displays the potential",
                assumes_spectral_state=true,
                stores_data=false,

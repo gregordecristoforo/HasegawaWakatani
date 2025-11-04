@@ -8,7 +8,6 @@ struct Diagnostic{N<:AbstractString,M<:Function,L<:AbstractString,A<:Tuple,
                   K<:NamedTuple}
     name::N
     method::M
-    stride::Int
     metadata::L
     assumes_spectral_state::Bool
     stores_data::Bool
@@ -17,15 +16,14 @@ struct Diagnostic{N<:AbstractString,M<:Function,L<:AbstractString,A<:Tuple,
 
     function Diagnostic(; name::AbstractString,
                         method::Function,
-                        stride::Int=-1,
                         metadata::String="",
                         assumes_spectral_state::Bool=false,
                         stores_data::Bool=true,
                         args::Tuple=(),
                         kwargs=NamedTuple())
         new{typeof(name),typeof(method),typeof(metadata),typeof(args),
-            typeof(kwargs)}(name, method, stride, metadata, assumes_spectral_state,
-                            stores_data, args, kwargs)
+            typeof(kwargs)}(name, method, metadata, assumes_spectral_state, stores_data,
+                            args, kwargs)
     end
 end
 

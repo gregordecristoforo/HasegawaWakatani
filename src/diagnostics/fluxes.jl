@@ -61,10 +61,9 @@ function requires_operator(::Val{:radial_flux}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_y)]
 end
 
-function build_diagnostic(::Val{:radial_flux}; stride::Int=-1, kwargs...)
+function build_diagnostic(::Val{:radial_flux}; kwargs...)
     Diagnostic(; name="Radial flux",
                method=radial_flux,
-               stride=stride,
                metadata="Average radial flux",
                assumes_spectral_state=true)
 end
@@ -91,10 +90,9 @@ function requires_operator(::Val{:poloidal_flux}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_x)]
 end
 
-function build_diagnostic(::Val{:poloidal_flux}; stride::Int=-1, kwargs...)
+function build_diagnostic(::Val{:poloidal_flux}; kwargs...)
     Diagnostic(; name="Poloidal flux",
                method=poloidal_flux,
-               stride=stride,
                metadata="Average poloidal flux",
                assumes_spectral_state=true)
 end

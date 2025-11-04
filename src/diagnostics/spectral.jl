@@ -41,10 +41,9 @@ function get_modes(state_hat::AbstractArray, prob, time, ::Val{:diag})
     end
 end
 
-function build_diagnostic(::Val{:get_modes}; stride::Int=-1, axis=:both, kwargs...)
+function build_diagnostic(::Val{:get_modes}; axis=:both, kwargs...)
     Diagnostic(; name="Modes",
                method=get_modes,
-               stride=stride,
                metadata="Modes (Complex) along $axis axis",
                assumes_spectral_state=true,
                args=(Val(axis),))
@@ -64,10 +63,9 @@ function get_log_modes(state_hat, prob, time, axis::Val{T}) where {T}
     log.(abs.(modes))
 end
 
-function build_diagnostic(::Val{:get_log_modes}; stride::Int=-1, axis=:diag, kwargs...)
+function build_diagnostic(::Val{:get_log_modes}; axis=:diag, kwargs...)
     Diagnostic(; name="Log modes",
                method=get_log_modes,
-               stride=stride,
                metadata="log(|modes|) along $axis axis",
                assumes_spectral_state=true,
                args=(Val(axis),))
@@ -149,14 +147,13 @@ function potential_energy_spectrum(state_hat::AbstractArray, prob, time;
     potential_energy_spectrum(state_hat::AbstractArray, prob, time, Val(spectrum))
 end
 
-function build_diagnostic(::Val{:potential_energy_spectrum}; stride::Int=-1,
-                          spectrum::Symbol=:wavenumber, kwargs...)
+function build_diagnostic(::Val{:potential_energy_spectrum}; spectrum::Symbol=:wavenumber,
+                          kwargs...)
     start = spectrum == :wavenumber ? "Potential" :
             titlecase(string(spectrum)) * " potential"
     metadata = wavenumber_metadata(Val(spectrum)) * " Potential energy spectrum ($spectrum)"
     Diagnostic(; name=start * " energy spectrum",
                method=potential_energy_spectrum,
-               stride=stride,
                metadata=metadata,
                assumes_spectral_state=true,
                args=(Val(spectrum),))
@@ -182,13 +179,12 @@ function kinetic_energy_spectrum(state_hat, prob, time; spectrum=:radial)
     kinetic_energy_spectrum(state_hat, prob, time, Val(spectrum))
 end
 
-function build_diagnostic(::Val{:kinetic_energy_spectrum}; stride::Int=-1,
-                          spectrum::Symbol=:wavenumber, kwargs...)
+function build_diagnostic(::Val{:kinetic_energy_spectrum}; spectrum::Symbol=:wavenumber,
+                          kwargs...)
     start = spectrum == :wavenumber ? "Kinetic" : titlecase(string(spectrum)) * " kinetic"
     metadata = wavenumber_metadata(Val(spectrum)) * " Kinetic energy spectrum ($spectrum)"
     Diagnostic(; name=start * " energy spectrum",
                method=kinetic_energy_spectrum,
-               stride=stride,
                metadata=metadata,
                assumes_spectral_state=true,
                args=(Val(spectrum),))
