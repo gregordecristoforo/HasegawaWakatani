@@ -199,7 +199,7 @@ macro diagnostics(expr)
     end
 
     # Multiple expressions in a block
-    configs = Expr[]
+    recipes = Expr[]
     for line in expr.args
         line isa LineNumberNode && continue
         isnothing(line) && continue
@@ -207,15 +207,15 @@ macro diagnostics(expr)
         # Handle tuple expressions (when commas are used)
         if line isa Expr && line.head == :tuple
             for item in line.args
-                push!(configs, parse_diagnostic_expr(item))
+                push!(recipes, parse_diagnostic_expr(item))
             end
         else
-            push!(configs, parse_diagnostic_expr(line))
+            push!(recipes, parse_diagnostic_expr(line))
         end
     end
 
     # Return a vector expression directly
-    return Expr(:vect, configs...)
+    return Expr(:vect, recipes...)
 end
 
 """
