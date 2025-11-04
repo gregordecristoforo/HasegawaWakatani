@@ -1,4 +1,6 @@
-# ------------------------------------- Outputer -------------------------------------------
+# ------------------------------------------------------------------------------------------
+#                                         Outputer                                          
+# ------------------------------------------------------------------------------------------
 
 """
     Output{DV, U, UB, T, S, PT, K}
@@ -46,7 +48,6 @@
 mutable struct Output{DV<:AbstractArray{<:Diagnostic},U<:AbstractArray,UB<:AbstractArray,
                       T<:AbstractArray,S<:Union{HDF5.Group,Nothing},PT<:Function,
                       K<:NamedTuple}
-    stride::Int
     diagnostics::DV
     u::U
     U_buffer::UB
@@ -60,7 +61,6 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},U<:AbstractArray,UB<:Abstr
 
     function Output(prob::SOP; filename::FN=basename(tempname()) * ".h5",
                     diagnostics::DV=DEFAULT_DIAGNOSTICS,
-                    stride::Integer=-1,
                     physical_transform::PT=identity,
                     simulation_name::SN=:timestamp,
                     store_hdf::Bool=true,
@@ -69,9 +69,6 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},U<:AbstractArray,UB<:Abstr
                     h5_kwargs...) where {SOP<:SpectralODEProblem,DV<:AbstractArray,
                                          FN<:AbstractString,PT<:Function,
                                          SN<:Union{AbstractString,Symbol}}
-
-        # Compute number of samples to be stored and stride distance
-        N_samples, stride = prepare_sampling(stride, field_storage_limit, prob)
 
         # Prepare initial state
         u0, t0 = prepare_initial_state(prob; physical_transform=physical_transform)
@@ -84,7 +81,7 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},U<:AbstractArray,UB<:Abstr
                                         store_hdf=store_hdf, h5_kwargs=h5_kwargs)
 
         # Setup local (in memory) storage if wanted
-        u, t = setup_local_storage(N_samples, u0, t0; store_locally=store_locally)
+        u, t = setup_local_storage(u0, t0; store_locally=false) # Currently disabled TODO re-enable
 
         # Allocate data for diagnostics
         for diagnostic in diagnostics
@@ -93,10 +90,9 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},U<:AbstractArray,UB<:Abstr
         end
 
         # Create output
-        new{typeof(diagnostics),typeof(u),typeof(u0),typeof(t),typeof(simulation),
-            typeof(physical_transform),typeof(h5_kwargs)}(stride,
-                                                          diagnostics, u, u0, t, simulation,
-                                                          physical_transform,
+        new{typeof(built_diagnostics),typeof(u),typeof(u0),typeof(t),typeof(simulation),
+            typeof(physical_transform),typeof(h5_kwargs)}(built_diagnostics, u, u0, t,
+                                                          simulation, physical_transform,
                                                           store_hdf, store_locally, true,
                                                           h5_kwargs)
     end
@@ -221,7 +217,7 @@ end
   Allocates vectors in memory for storing the fields alongside the time if the user wants it,
   otherwise empty vectors are returned.
 """
-function setup_local_storage(N_samples, u0, t0; store_locally=store_locally)
+function setup_local_storage(u0, t0; store_locally=store_locally)
     if store_locally
         # Allocate local memory for fields
         u = [zero(u0) for _ in 1:N_samples]
@@ -541,7 +537,7 @@ end
 
 # ---------------------------------- Main Builder Method -----------------------------------
 
-function build_diagnostics(prob, diagnostic, simulation, h5_kwargs, u0, prob, t0;
+function build_diagnostics(prob, diagnostic, simulation, h5_kwargs, u0, t0;
                            store_hdf=store_hdf, store_locally=store_locally)
     @unpack diagnostic_recipes, tspan, u0_hat = prob
     # TODO make this into a method
@@ -566,6 +562,9 @@ function build_diagnostics(prob, diagnostic, simulation, h5_kwargs, u0, prob, t0
         # Compute number of samples to be stored and stride distance
         # Compute output size and predict storage need, compare against own storage limit
         N_samples, stride = prepare_sampling(stride, storage_limit, prob)
+        # Compute number of samples to be stored and stride distance
+        N_samples, stride = prepare_sampling(stride, field_storage_limit, prob)
+
         storage_shape = (size(sample)..., N_samples)
         storage_requirements[name] = 0 # TODO figure out what
 
@@ -651,9 +650,56 @@ end
 #     end
 # end
 
+# function apply_diagnostic!(diagnostic::D, step::Integer, u::U, prob::SOP, t::N;
+#                              store_hdf::Bool=true,
+#                              store_locally::Bool=true) where {D<:Diagnostic,
+#                                                               U<:AbstractArray,
+#                                                               SOP<:SpectralODEProblem,
+#                                                               N<:Number}
+#     # u might be real or complex depending on previous handle_output and diagnostic.assumes_spectral_state
+
+#     data = diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
+
+#     if !isnothing(data)
+#         # Calculate index
+#         idx = step ÷ diagnostic.sample_step + 1
+
+#         store_hdf ? write_data(diagnostic, idx, data, t) : nothing
+
+#         store_locally ? write_local_data(diagnostic, idx, data, t) : nothing
+#     end
+# end
+
+# TODO REMOVE OR REWRITE THE THREE METHODS BELOW
+
+# TODO perhaps make more like write_state
+function write_data(diagnostic, idx, data, t)
+    # TODO better check on ndims
+    diagnostic.h5group["data"][fill(:, ndims(data))..., idx] = data
+    diagnostic.h5group["t"][idx] = t
+end
+
+# TODO perhaps same name as write_local_state, different dispatch
+function write_local_data(diagnostic::Diagnostic, idx, data, t)
+    if isa(data, AbstractArray)
+        diagnostic.data[idx] .= data
+    else
+        diagnostic.data[idx] = copy(data)
+    end
+    diagnostic.t[idx] = t
+end
+
+function apply_diagnostic(diagnostic, state, prob, time)
+    # Take diagnostic of initial field (id = initial diagnostic)
+    #if diagnostic.assumes_spectral_state
+    #  id = diagnostic(prob.u0_hat, prob, first(prob.tspan))
+    #else
+    #  id = diagnostic(u0, prob, first(prob.tspan))
+    #end
+end
+
 """
   # Initialization
-  prepare_initial_state
   prepare_sampling
 
   # Storage size magic 
@@ -674,19 +720,15 @@ end
   create_or_open_group 
   reopen_simulation_group
   rewrite_dataset
-  parameter_string
   setup_simulation_group
 
   # Sampling
   handle_output!
-  maybe_store_state!
   maybe_sample_diagnostics!
   transform_state!
 
   # Writing
-  store_state
   write_state
-  write_attributes
   write_local_state
 """
 
@@ -699,49 +741,81 @@ end
   sampling, and mode removal. Ensures the spectral state is only transformed once per step. 
   In addition a check is performed to detect breakdowns, to throw an error. 
 """
-function handle_output!(output::O, step::Integer, u::T, prob::SOP,
-                        t::N) where {O<:Output,
-                                     T<:AbstractArray,SOP<:SpectralODEProblem,N<:Number}
+function handle_output!(output::O, step::Integer, state::T, prob::SOP,
+                        time::N) where {O<:Output,T<:AbstractArray,SOP<:
+                                        SpectralODEProblem,N<:Number}
 
     # Keeps track such that state only transformed once
     output.transformed = false
 
     # Remove modes after each step using user defined function
-    prob.remove_modes(u, prob.domain)
-
-    # Handle state
-    maybe_store_state!(output, step, u, prob, t)
+    prob.remove_modes(state, prob.domain)
 
     # Handle diagnostics
-    maybe_sample_diagnostics!(output, step, u, prob, t)
+    maybe_sample_diagnostics!(output, step, state, prob, time)
 
-    # TODO remove? or atleast make less arbitrary and no magic number!
+    # TODO make it time based
     if step % 1000 == 0
         output.store_hdf ? flush(output.simulation.file) : nothing
     end
 
     # Check if first value is NaN, if one value is NaN the whole Array will turn NaN after FFT
-    assert_no_nan(u, t)
+    assert_no_nan(state, time)
 end
 
 """
-    maybe_store_state!(output, step::Integer, u, prob, t)
+    maybe_sample_diagnostics!(output, step::Integer, u, prob, t)
 
-  Checks wheter or not to store the state. The spectral state `u` is transformed to the real
-  state `U`, with the user defined `physical_transform` applied, before being stored.
+  Iterates through the list of diagnostics (`output.diagnostics`) and determines whether or
+  not to sample the diagnostic.
 """
-function maybe_store_state!(output, step::Integer, u, prob, t) # TODO Fix so that does not allways transform to physical state!
-    # Check whether or not to store state 
-    if step % output.stride == 0
-
-        # Transform state
-        transform_state!(output, u, get_bwd(prob.domain))
-
-        # Store state
-        store_state(output, step, output.U_buffer, t)
+function maybe_sample_diagnostics!(output, step::Integer, state, prob, time)
+    # Handle diagnostics
+    for diagnostic in output.diagnostics
+        if step % diagnostic.stride == 0
+            sample_diagnostic!(output, diagnostic, step, u, prob, t)
+        end
     end
 end
 
+"""
+   TODO write actuall string: The spectral state `u` is transformed to the real
+  state `U`, with the user defined `physical_transform` applied, before being stored.
+"""
+function sample_diagnostic!(output, diagnostic, step::Integer, u, prob, t)
+    # Check if diagnostic assumes physical field and transform if not yet done
+    if !diagnostic.assumes_spectral_state && !output.transformed
+        # Transform state
+        transform_state!(output, u, get_bwd(prob.domain))
+    end
+
+    # Passes the logic onto perform_diagnostic! to do diagnostic and store data
+    if diagnostic.assumes_spectral_state
+        perform_diagnostic!(diagnostic, step, u, prob, t;
+                            store_hdf=output.store_hdf, store_locally=output.store_locally)
+    else
+        perform_diagnostic!(diagnostic, step, output.U_buffer, prob, t;
+                            store_hdf=output.store_hdf, store_locally=output.store_locally)
+    end
+
+    # Store state
+    #store_state(output, step, output.U_buffer, t)
+end
+
+"""
+    transform_state!(output, u, p)
+
+  Transforms spectral coefficients `u_hat` into real fields by applying `spectral_transform!` 
+  to the `output.U_buffer` buffer. The user defined `physical_transform` is also applied to 
+  the buffer, and the `output.transformed` flag is updated to not transform same field twice.
+"""
+function transform_state!(output, u_hat, p)
+    spectral_transform!(output.U_buffer, p, u_hat)
+    output.physical_transform(output.U_buffer)
+    output.transformed = true
+end
+
+# TODO remove
 """
     store_state(output, step::Integer, U, t)
 
@@ -757,35 +831,6 @@ function store_state(output, step::Integer, U, t)
 
     # Store in memory if user wants
     output.store_locally ? write_local_state(output, idx, U, t) : nothing
-end
-
-"""
-    maybe_sample_diagnostics!(output, step::Integer, u, prob, t)
-
-  Iterates through the list of diagnostics (`output.diagnostics`) and determines whether or
-  not to sample the diagnostic.
-"""
-function maybe_sample_diagnostics!(output, step::Integer, u, prob, t)
-
-    # Handle diagnostics
-    for diagnostic in output.diagnostics
-        if step % diagnostic.sample_step == 0
-            sample_diagnostic!(output, diagnostic, step, u, prob, t) # In diagsnostics.jl
-        end
-    end
-end
-
-"""
-    transform_state!(output, u, p)
-
-  Transforms spectral coefficients `u_hat` into real fields by applying `spectral_transform!` 
-  to the `output.U_buffer` buffer. The user defined `physical_transform` is also applied to 
-  the buffer, and the `output.transformed` flag is updated to not transform same field twice.
-"""
-function transform_state!(output, u_hat, p)
-    spectral_transform!(output.U_buffer, p, u_hat)
-    output.physical_transform(output.U_buffer)
-    output.transformed = true
 end
 
 """
@@ -811,13 +856,13 @@ end
   Creates or opens a `checkpoint` and stors the `cache`at time `t` corresponding to step=`step`.
 """
 function save_checkpoint!(output::O, cache::C, step::Integer,
-                          t::N) where {O<:Output,
-                                       C<:AbstractCache,N<:Number}
+                          time::N) where {O<:Output,
+                                          C<:AbstractCache,N<:Number}
     if output.store_hdf
         # Create or open a h5group for the checkpoint
         checkpoint = create_or_open_group(output.simulation, "checkpoint")
         # Store checkpoint
-        store_checkpoint!(checkpoint, cache, step, t)
+        store_checkpoint!(checkpoint, cache, step, time)
     end
 end
 
@@ -829,8 +874,8 @@ end
   `AbstractTableau`. This overwrites the previously stored checkpoint.
 """ # Perhaps one could look into HDF5 compound types in the future
 function store_checkpoint!(checkpoint::G, cache::C, step::Integer,
-                           t::N) where {G<:HDF5.Group,
-                                        C<:AbstractCache,N<:Number}
+                           time::N) where {G<:HDF5.Group,
+                                           C<:AbstractCache,N<:Number}
 
     # Get all the attributes of cache
     keys = fieldnames(typeof(cache))
@@ -849,7 +894,7 @@ function store_checkpoint!(checkpoint::G, cache::C, step::Integer,
     end
 
     # Backup step and time
-    rewrite_dataset(checkpoint, "time", t)
+    rewrite_dataset(checkpoint, "time", time)
     rewrite_dataset(checkpoint, "step", step)
 end
 
@@ -910,13 +955,13 @@ end
 
   Checks if the first entry in `u` is `NaN`, if so a breakdown occured and an error is thrown.
 """
-assert_no_nan(u::AbstractArray, t) =
-    if isnan(u[1])
-        error("Breakdown occured at t=$t")
+assert_no_nan(state::AbstractArray, time) =
+    if isnan(state[1])
+        error("Breakdown occured at t=$time")
     end
 
-function assert_no_nan(u::AbstractGPUArray, t)
-    @allowscalar isnan(u[1]) ? error("Breakdown occured at t=$t") : nothing
+function assert_no_nan(state::AbstractGPUArray, time)
+    @allowscalar isnan(state[1]) ? error("Breakdown occured at t=$time") : nothing
 end
 
 """
@@ -952,7 +997,7 @@ end
 # ---------------------------------------- Helpers -----------------------------------------
 
 function Base.show(io::IO, m::MIME"text/plain", output::Output)
-    print(io, "Output (stride: ", output.stride, ", store_hdf=", output.store_hdf,
+    print(io, "Output (store_hdf=", output.store_hdf,
           ", store_locally=", output.store_locally, ")")
     output.store_hdf ?
     print(io, ", simulation: ", HDF5.name(output.simulation), " (file: ",
@@ -971,15 +1016,3 @@ end
 
 import Base.close
 close(output::Output) = close(output.simulation.file)
-
-# ------------------------------------------ Old -------------------------------------------
-
-# Gives a more managable array compared to output.u
-# function extract_output(output::Output)
-#     Array(reshape(reduce(hcat, output.u), size(output.u[1])..., length(output.u)))
-# end
-
-# function extract_diagnostic(data::Vector)
-#     Array(reshape(reduce(hcat, data), size(data[1])..., length(data)))
-# end
-# These are just stack() ^^
