@@ -102,6 +102,200 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},U<:AbstractArray,UB<:Abstr
     end
 end
 
+# ----------------------------- Prepare initial state --------------------------------------
+
+"""
+    prepare_initial_state(prob; physical_transform=identity)
+
+  Prepares the initial state by applying the user defined `physical_transform`, if any, to 
+  a copy of the initial condition stored in `prob`, returning it alongside the initial time. 
+"""
+function prepare_initial_state(prob; physical_transform=identity)
+    u0 = physical_transform(copy(prob.u0))
+    t0 = first(prob.tspan)
+    return u0, t0
+end
+
+# ----------------------------------- HDF5 setup -------------------------------------------
+
+"""
+    setup_hdf5_storage(filename, simulation_name, N_samples::Int, u0, prob, t0;
+    store_hdf=store_hdf, h5_kwargs=h5_kwargs)
+
+  Creates a *HDF5* file, if not existing, and writes a group with `simulation_name` to it, 
+  refered to as a `simulation` group. If the simulation group does not exists, the `h5_kwargs` 
+  are applied to the `"fields"` and `"t"` datasets. The opened `simulation` is returned.
+"""
+function setup_hdf5_storage(filename, simulation_name, N_samples::Int, u0, prob, t0;
+                            store_hdf=store_hdf, h5_kwargs=h5_kwargs)
+    if store_hdf
+        filename = add_h5_if_missing(filename)
+
+        # Create HDF5 file
+        file = h5open(filename, "cw")
+
+        # Create simulation name
+        simulation_name = handle_simulation_name(simulation_name, prob)
+
+        # TODO check if new dim of fields, in that case probably should re-create simulation group
+        # Checks how to handle simulation group
+        if !haskey(file, simulation_name)
+            simulation = setup_simulation_group(file, simulation_name, N_samples, u0, prob,
+                                                t0;
+                                                h5_kwargs)
+        else
+            simulation = reopen_simulation_group!(file, simulation_name, N_samples, u0)
+        end
+
+        return simulation
+    else
+        return nothing
+    end
+end
+
+"""
+    add_h5_if_missing(filename::AbstractString)
+
+  Makes sure the filename has an extension, if not the `.h5` extension is added. 
+"""
+function add_h5_if_missing(filename::AbstractString)
+    splitext(filename)[end] == "" ? splitext(filename)[1] * ".h5" : filename
+end
+
+"""
+    handle_simulation_name(simulation_name)
+
+  Creates a `simulation_name` string based on the users input. 
+  ### Supported symbols:
+  * `:timestamp` creates a timestamp string using `Dates.now()`.
+  * `:parameters` creates a string with the parameter names and values.
+"""
+function handle_simulation_name(simulation_name, prob)
+    # Handle simulation_name
+    if simulation_name == :timestamp
+        simulation_name = "$(now())"
+    elseif simulation_name == :parameters
+        simulation_name = parameter_string(prob.p)
+    elseif simulation_name isa String
+        nothing
+    else
+        error("$simulation_name is not a valid input")
+    end
+
+    return simulation_name
+end
+
+"""
+    setup_simulation_group(file, simulation_name, N_samples, u0, prob, t0; h5_kwargs)
+
+  Creates a *HDF5* group with `simulation_name` (a "simulation"), and allocates the correct 
+  sizes based on `N_samples` with the fields being chunked with additinal `h5_kwargs` applied.
+  In addition the inital condition is written along with the attributes of the `prob`.
+""" # TODO specialize arguments?
+function setup_simulation_group(file, simulation_name, N_samples, u0, prob, t0; h5_kwargs)
+
+    # Create simulation group
+    simulation = create_group(file, simulation_name)
+
+    # Create dataset for fields and time
+    dset = create_dataset(simulation, "fields", datatype(eltype(u0)),
+                          (size(u0)..., typemax(Int64)); chunk=(size(u0)..., 1),
+                          h5_kwargs...)
+    HDF5.set_extent_dims(dset, (size(u0)..., N_samples))
+    dset = create_dataset(simulation, "t", datatype(Float64), # TODO eltype(t0)) bug if tspan has Int type
+                          (typemax(Int64),); chunk=(1,), h5_kwargs...)
+    HDF5.set_extent_dims(dset, (N_samples,))
+
+    # Store the initial conditions
+    write_state(simulation, 1, u0, t0)
+
+    # Store attributes
+    write_attributes(simulation, prob)
+
+    return simulation
+end
+
+"""
+    write_state(simulation, idx::Int, u, t)
+
+  Writes the state `u` at time `t` to the simulation group `simulation` (HDF5).
+"""
+function write_state(simulation, idx::Int, u, t)
+    simulation["fields"][fill(:, ndims(u))..., idx] = u
+    simulation["t"][idx] = t
+end
+
+"""
+    write_attributes(simulation, prob::SpectralODEProblem)
+    write_attributes(simulation, domain::AbstractDomain)
+
+  Writes the esential attributes of the container to the simulation group `simulation`. The 
+  `SpectralODEProblem` also writes the `domain` properties.
+"""
+function write_attributes(simulation, prob::SpectralODEProblem)
+    write_attribute(simulation, "dt", prob.dt)
+    write_attributes(simulation, prob.domain)
+    # TODO add multiple dispatch to this
+    for (key, val) in pairs(prob.p)
+        write_attribute(simulation, string(key), val)
+    end
+end
+
+function write_attributes(simulation, domain::AbstractDomain)
+    # Construct list of attributes by removing derived attributes
+    attributes = setdiff(fieldnames(typeof(domain)),
+                         (:x, :y, :kx, :ky, :SC, :transforms, :precision))
+    for attribute in attributes
+        write_attribute(simulation, string(attribute), getproperty(domain, attribute))
+    end
+end
+
+"""
+    reopen_simulation_group!(file, simulation_name, N_samples::Int, u0)
+
+  Reopens an existing `simulation` group and extends its datasets if needed to accommodate 
+  a different `size(u0)` and/or `N_samples`.
+"""
+function reopen_simulation_group!(file, simulation_name, N_samples::Int, u0)
+    simulation = open_group(file, simulation_name)
+    # Expand length of fields and t
+    HDF5.set_extent_dims(simulation["fields"], (size(u0)..., N_samples))
+    HDF5.set_extent_dims(simulation["t"], (N_samples,))
+    return simulation
+end
+
+# ------------------------------ Setup local storage ---------------------------------------
+
+"""
+    setup_local_storage(u0, t0, N_samples; store_locally=store_locally)
+  
+  Allocates vectors in memory for storing the fields alongside the time if the user wants it,
+  otherwise empty vectors are returned.
+"""
+function setup_local_storage(N_samples, u0, t0; store_locally=store_locally)
+    if store_locally
+        # Allocate local memory for fields
+        u = [zero(u0) for _ in 1:N_samples]
+        u[1] .= u0
+        t = zeros(N_samples)
+        t[1] = t0
+    else
+        u, t = [], []
+    end
+
+    return u, t
+end
+
+"""
+    write_local_state(output, idx, u, t)
+
+  Writes the state `u` at time `t` to the local storage in the `Output` struct.
+"""
+function write_local_state(output::Output, idx, u, t)
+    output.u[idx] .= u
+    output.t[idx] = t
+end
+
 # --------------------------- Prepare sampling ---------------------------------------------
 
 """
@@ -340,220 +534,6 @@ function next_divisor(N::Int, target::Int)
     return recommended
 end
 
-# ----------------------------- Prepare initial state --------------------------------------
-
-"""
-    prepare_initial_state(prob; physical_transform=identity)
-
-  Prepares the initial state by applying the user defined `physical_transform`, if any, to 
-  a copy of the initial condition stored in `prob`, returning it alongside the initial time. 
-"""
-function prepare_initial_state(prob; physical_transform=identity)
-    u0 = physical_transform(copy(prob.u0))
-    t0 = first(prob.tspan)
-    return u0, t0
-end
-
-# ----------------------------------- HDF5 setup -------------------------------------------
-
-"""
-    setup_hdf5_storage(filename, simulation_name, N_samples::Int, u0, prob, t0;
-    store_hdf=store_hdf, h5_kwargs=h5_kwargs)
-
-  Creates a *HDF5* file, if not existing, and writes a group with `simulation_name` to it, 
-  refered to as a `simulation` group. If the simulation group does not exists, the `h5_kwargs` 
-  are applied to the `"fields"` and `"t"` datasets. The opened `simulation` is returned.
-"""
-function setup_hdf5_storage(filename, simulation_name, N_samples::Int, u0, prob, t0;
-                            store_hdf=store_hdf, h5_kwargs=h5_kwargs)
-    if store_hdf
-        filename = add_h5_if_missing(filename)
-
-        # Create HDF5 file
-        file = h5open(filename, "cw")
-
-        # Create simulation name
-        simulation_name = handle_simulation_name(simulation_name, prob)
-
-        # TODO check if new dim of fields, in that case probably should re-create simulation group
-        # Checks how to handle simulation group
-        if !haskey(file, simulation_name)
-            simulation = setup_simulation_group(file, simulation_name, N_samples, u0, prob,
-                                                t0;
-                                                h5_kwargs)
-        else
-            simulation = reopen_simulation_group!(file, simulation_name, N_samples, u0)
-        end
-
-        return simulation
-    else
-        return nothing
-    end
-end
-
-"""
-    add_h5_if_missing(filename::AbstractString)
-
-  Makes sure the filename has an extension, if not the `.h5` extension is added. 
-"""
-function add_h5_if_missing(filename::AbstractString)
-    splitext(filename)[end] == "" ? splitext(filename)[1] * ".h5" : filename
-end
-
-"""
-    handle_simulation_name(simulation_name)
-
-  Creates a `simulation_name` string based on the users input. 
-  ### Supported symbols:
-  * `:timestamp` creates a timestamp string using `Dates.now()`.
-  * `:parameters` creates a string with the parameter names and values.
-"""
-function handle_simulation_name(simulation_name, prob)
-    # Handle simulation_name
-    if simulation_name == :timestamp
-        simulation_name = "$(now())"
-    elseif simulation_name == :parameters
-        simulation_name = parameter_string(prob.p)
-    elseif simulation_name isa String
-        nothing
-    else
-        error("$simulation_name is not a valid input")
-    end
-
-    return simulation_name
-end
-
-"""
-    setup_simulation_group(file, simulation_name, N_samples, u0, prob, t0; h5_kwargs)
-
-  Creates a *HDF5* group with `simulation_name` (a "simulation"), and allocates the correct 
-  sizes based on `N_samples` with the fields being chunked with additinal `h5_kwargs` applied.
-  In addition the inital condition is written along with the attributes of the `prob`.
-""" # TODO specialize arguments?
-function setup_simulation_group(file, simulation_name, N_samples, u0, prob, t0; h5_kwargs)
-
-    # Create simulation group
-    simulation = create_group(file, simulation_name)
-
-    # Create dataset for fields and time
-    dset = create_dataset(simulation, "fields", datatype(eltype(u0)),
-                          (size(u0)..., typemax(Int64)); chunk=(size(u0)..., 1),
-                          h5_kwargs...)
-    HDF5.set_extent_dims(dset, (size(u0)..., N_samples))
-    dset = create_dataset(simulation, "t", datatype(Float64), # TODO eltype(t0)) bug if tspan has Int type
-                          (typemax(Int64),); chunk=(1,), h5_kwargs...)
-    HDF5.set_extent_dims(dset, (N_samples,))
-
-    # Store the initial conditions
-    write_state(simulation, 1, u0, t0)
-
-    # Store attributes
-    write_attributes(simulation, prob)
-
-    return simulation
-end
-
-"""
-    write_state(simulation, idx::Int, u, t)
-
-  Writes the state `u` at time `t` to the simulation group `simulation` (HDF5).
-"""
-function write_state(simulation, idx::Int, u, t)
-    simulation["fields"][fill(:, ndims(u))..., idx] = u
-    simulation["t"][idx] = t
-end
-
-"""
-    write_attributes(simulation, prob::SpectralODEProblem)
-    write_attributes(simulation, domain::AbstractDomain)
-
-  Writes the esential attributes of the container to the simulation group `simulation`. The 
-  `SpectralODEProblem` also writes the `domain` properties.
-"""
-function write_attributes(simulation, prob::SpectralODEProblem)
-    write_attribute(simulation, "dt", prob.dt)
-    write_attributes(simulation, prob.domain)
-    # TODO add multiple dispatch to this
-    for (key, val) in pairs(prob.p)
-        write_attribute(simulation, string(key), val)
-    end
-end
-
-function write_attributes(simulation, domain::AbstractDomain)
-    # Construct list of attributes by removing derived attributes
-    attributes = setdiff(fieldnames(typeof(domain)),
-                         (:x, :y, :kx, :ky, :SC, :transforms, :precision))
-    for attribute in attributes
-        write_attribute(simulation, string(attribute), getproperty(domain, attribute))
-    end
-end
-
-"""
-    reopen_simulation_group!(file, simulation_name, N_samples::Int, u0)
-
-  Reopens an existing `simulation` group and extends its datasets if needed to accommodate 
-  a different `size(u0)` and/or `N_samples`.
-"""
-function reopen_simulation_group!(file, simulation_name, N_samples::Int, u0)
-    simulation = open_group(file, simulation_name)
-    # Expand length of fields and t
-    HDF5.set_extent_dims(simulation["fields"], (size(u0)..., N_samples))
-    HDF5.set_extent_dims(simulation["t"], (N_samples,))
-    return simulation
-end
-
-# ------------------------------ Setup local storage ---------------------------------------
-
-"""
-    setup_local_storage(u0, t0, N_samples; store_locally=store_locally)
-  
-  Allocates vectors in memory for storing the fields alongside the time if the user wants it,
-  otherwise empty vectors are returned.
-"""
-function setup_local_storage(N_samples, u0, t0; store_locally=store_locally)
-    if store_locally
-        # Allocate local memory for fields
-        u = [zero(u0) for _ in 1:N_samples]
-        u[1] .= u0
-        t = zeros(N_samples)
-        t[1] = t0
-    else
-        u, t = [], []
-    end
-
-    return u, t
-end
-
-"""
-    write_local_state(output, idx, u, t)
-
-  Writes the state `u` at time `t` to the local storage in the `Output` struct.
-"""
-function write_local_state(output::Output, idx, u, t)
-    output.u[idx] .= u
-    output.t[idx] = t
-end
-
-# ---------------------------------- Helpers -----------------------------------------------
-
-function Base.show(io::IO, m::MIME"text/plain", output::Output)
-    print(io, "Output (stride: ", output.stride, ", store_hdf=", output.store_hdf,
-          ", store_locally=", output.store_locally, ")")
-    output.store_hdf ?
-    print(io, ", simulation: ", HDF5.name(output.simulation), " (file: ",
-          output.simulation.file.filename, "):") : print(":")
-
-    if output.physical_transform !== identity
-        print(io, "\nphysical_transform: ", nameof(output.physical_transform))
-    end
-
-    print(io, "\nDiagnostics:")
-    for diagnostic in output.diagnostics
-        print(io, "\n-")
-        show(io, m, diagnostic)
-    end
-end
-
 # ----------------------------- Handling of output -----------------------------------------
 
 """
@@ -748,10 +728,7 @@ function restore_checkpoint(simulation::HDF5.Group, prob::SOP,
 end
 
 # -------------------------------------- Utilities -----------------------------------------
-
-import Base.close
-close(output::Output) = close(output.simulation.file)
-
+# TODO detangle this mess
 """
     parameter_string(parameters::AbstractDict)
     parameter_string(parameters::AbstractDict)
@@ -813,14 +790,37 @@ function rewrite_dataset(parent::Union{HDF5.File,HDF5.Group}, name::AbstractStri
     write_dataset(parent, name, data; pv...)
 end
 
+# ---------------------------------- Helpers -----------------------------------------------
+
+function Base.show(io::IO, m::MIME"text/plain", output::Output)
+    print(io, "Output (stride: ", output.stride, ", store_hdf=", output.store_hdf,
+          ", store_locally=", output.store_locally, ")")
+    output.store_hdf ?
+    print(io, ", simulation: ", HDF5.name(output.simulation), " (file: ",
+          output.simulation.file.filename, "):") : print(":")
+
+    if output.physical_transform !== identity
+        print(io, "\nphysical_transform: ", nameof(output.physical_transform))
+    end
+
+    print(io, "\nDiagnostics:")
+    for diagnostic in output.diagnostics
+        print(io, "\n-")
+        show(io, m, diagnostic)
+    end
+end
+
+import Base.close
+close(output::Output) = close(output.simulation.file)
+
 # -------------------------------------- Old -----------------------------------------------
 
 # Gives a more managable array compared to output.u
-function extract_output(output::Output)
-    Array(reshape(reduce(hcat, output.u), size(output.u[1])..., length(output.u)))
-end
+# function extract_output(output::Output)
+#     Array(reshape(reduce(hcat, output.u), size(output.u[1])..., length(output.u)))
+# end
 
-function extract_diagnostic(data::Vector)
-    Array(reshape(reduce(hcat, data), size(data[1])..., length(data)))
-end
+# function extract_diagnostic(data::Vector)
+#     Array(reshape(reduce(hcat, data), size(data[1])..., length(data)))
+# end
 # These are just stack() ^^
