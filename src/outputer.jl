@@ -102,7 +102,7 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},U<:AbstractArray,UB<:Abstr
     end
 end
 
-# ----------------------------- Prepare initial state --------------------------------------
+# --------------------------------- Prepare Initial State ----------------------------------
 
 """
     prepare_initial_state(prob; physical_transform=identity)
@@ -116,7 +116,7 @@ function prepare_initial_state(prob; physical_transform=identity)
     return u0, t0
 end
 
-# ----------------------------------- HDF5 setup -------------------------------------------
+# -------------------------------------- HDF5 Setup ----------------------------------------
 
 """
     setup_hdf5_storage(filename, simulation_name, N_samples::Int, u0, prob, t0;
@@ -212,8 +212,9 @@ function write_attributes(simulation, domain::AbstractDomain)
     end
 end
 
-# ------------------------------ Setup local storage ---------------------------------------
+# ---------------------------------- Setup Local Storage -----------------------------------
 
+# TODO clean-up here later, make local storage a Dict
 """
     setup_local_storage(u0, t0, N_samples; store_locally=store_locally)
   
@@ -244,63 +245,7 @@ function write_local_state(output::Output, idx, u, t)
     output.t[idx] = t
 end
 
-# ------------------------------ DIAGNOSTIC BUILDING RELATED -------------------------------
-
-# TODO check if new dim of fields, in that case probably should re-create simulation group
-#simulation = setup_simulation_group(file, simulation_name, N_samples, u0, prob,
-#                                    t0; h5_kwargs)
-"""
-    setup_simulation_group(file, simulation_name, N_samples, u0, prob, t0; h5_kwargs)
-
-  Creates a *HDF5* group with `simulation_name` (a "simulation"), and allocates the correct 
-  sizes based on `N_samples` with the fields being chunked with additinal `h5_kwargs` applied.
-  In addition the inital condition is written along with the attributes of the `prob`.
-""" # TODO move logic elsewhere
-function setup_simulation_group(file, simulation_name, N_samples, u0, prob, t0; h5_kwargs)
-
-    # Create simulation group
-    simulation = create_group(file, simulation_name)
-
-    # Create dataset for fields and time
-    dset = create_dataset(simulation, "fields", datatype(eltype(u0)),
-                          (size(u0)..., typemax(Int64)); chunk=(size(u0)..., 1),
-                          h5_kwargs...)
-    HDF5.set_extent_dims(dset, (size(u0)..., N_samples))
-    dset = create_dataset(simulation, "t", datatype(Float64), # TODO eltype(t0)) bug if tspan has Int type
-                          (typemax(Int64),); chunk=(1,), h5_kwargs...)
-    HDF5.set_extent_dims(dset, (N_samples,))
-
-    # Store the initial conditions
-    write_state(simulation, 1, u0, t0)
-
-    return simulation
-end
-
-"""
-    write_state(simulation, idx::Int, u, t)
-
-  Writes the state `u` at time `t` to the simulation group `simulation` (HDF5).
-""" # TODO merge with writing of the data
-function write_state(simulation, idx::Int, u, t)
-    simulation["fields"][fill(:, ndims(u))..., idx] = u
-    simulation["t"][idx] = t
-end
-
-"""
-    reopen_simulation_group!(file, simulation_name, N_samples::Int, u0)
-
-  Reopens an existing `simulation` group and extends its datasets if needed to accommodate 
-  a different `size(u0)` and/or `N_samples`.
-""" # TODO remove this function and instead add functionality elsewhere
-function reopen_simulation_group!(file, simulation_name, N_samples::Int, u0)
-    simulation = open_group(file, simulation_name)
-    # Expand length of fields and t
-    HDF5.set_extent_dims(simulation["fields"], (size(u0)..., N_samples))
-    HDF5.set_extent_dims(simulation["t"], (N_samples,))
-    return simulation
-end
-
-# --------------------------- Prepare sampling ---------------------------------------------
+# ---------------------------- Stride And Storage Size Related -----------------------------
 
 """
     prepare_sampling(stride::Int, field_storage_limit, prob::SpectralODEProblem)
@@ -538,7 +483,214 @@ function next_divisor(N::Int, target::Int)
     return recommended
 end
 
-# ----------------------------- Handling of output -----------------------------------------
+# ------------------------------ DIAGNOSTIC BUILDING RELATED -------------------------------
+
+# TODO check if new dim of fields, in that case probably should re-create simulation group
+#simulation = setup_simulation_group(file, simulation_name, N_samples, u0, prob,
+#                                    t0; h5_kwargs)
+"""
+    setup_simulation_group(file, simulation_name, N_samples, u0, prob, t0; h5_kwargs)
+
+  Creates a *HDF5* group with `simulation_name` (a "simulation"), and allocates the correct 
+  sizes based on `N_samples` with the fields being chunked with additinal `h5_kwargs` applied.
+  In addition the inital condition is written along with the attributes of the `prob`.
+""" # TODO move logic elsewhere
+function setup_simulation_group(file, simulation_name, N_samples, u0, prob, t0; h5_kwargs)
+
+    # Create simulation group
+    simulation = create_group(file, simulation_name)
+
+    # Create dataset for fields and time
+    dset = create_dataset(simulation, "fields", datatype(eltype(u0)),
+                          (size(u0)..., typemax(Int64)); chunk=(size(u0)..., 1),
+                          h5_kwargs...)
+    HDF5.set_extent_dims(dset, (size(u0)..., N_samples))
+    dset = create_dataset(simulation, "t", datatype(Float64), # TODO eltype(t0)) bug if tspan has Int type
+                          (typemax(Int64),); chunk=(1,), h5_kwargs...)
+    HDF5.set_extent_dims(dset, (N_samples,))
+
+    # Store the initial conditions
+    write_state(simulation, 1, u0, t0)
+
+    return simulation
+end
+
+"""
+    write_state(simulation, idx::Int, u, t)
+
+  Writes the state `u` at time `t` to the simulation group `simulation` (HDF5).
+""" # TODO merge with writing of the data
+function write_state(simulation, idx::Int, u, t)
+    simulation["fields"][fill(:, ndims(u))..., idx] = u
+    simulation["t"][idx] = t
+end
+
+"""
+    reopen_simulation_group!(file, simulation_name, N_samples::Int, u0)
+
+  Reopens an existing `simulation` group and extends its datasets if needed to accommodate 
+  a different `size(u0)` and/or `N_samples`.
+""" # TODO remove this function and instead add functionality elsewhere
+function reopen_simulation_group!(file, simulation_name, N_samples::Int, u0)
+    simulation = open_group(file, simulation_name)
+    # Expand length of fields and t
+    HDF5.set_extent_dims(simulation["fields"], (size(u0)..., N_samples))
+    HDF5.set_extent_dims(simulation["t"], (N_samples,))
+    return simulation
+end
+
+# ---------------------------------- Main Builder Method -----------------------------------
+
+function build_diagnostics(prob, diagnostic, simulation, h5_kwargs, u0, prob, t0;
+                           store_hdf=store_hdf, store_locally=store_locally)
+    @unpack diagnostic_recipes, tspan, u0_hat = prob
+    # TODO make this into a method
+    prob_kwargs = (L=L, N=N, u0=u0, u0_hat=u0_hat, domain=domain, tspan=tspan, p=p,
+                   operators=operators, dt=dt, remove_modes=remove_modes, kwargs=kwargs)
+    t0 = first(tspan)
+
+    diagnostics = Dict{Symbol,Diagnostic}()
+    initial_samples = Dict{Symbol,AbstractArray}()
+    storage_requirements = Dict{Symbol,Int}()
+    # Cumulative counter
+    total_storage_requirement = 0
+
+    for recipe in diagnostic_recipes
+        name = recipe.name
+        # Build diagnostic
+        diagnostics[name] = build_diagnostic(Val(Symbol(recipe.method)); prob_kwargs...,
+                                             recipe.kwargs...)
+        # Sample once and store output
+        initial_samples[name] = diagnostics[name](state, prob, t0) # Here need to differentiate between physical and spectral
+
+        # Compute number of samples to be stored and stride distance
+        # Compute output size and predict storage need, compare against own storage limit
+        N_samples, stride = prepare_sampling(stride, storage_limit, prob)
+        storage_shape = (size(sample)..., N_samples)
+        storage_requirements[name] = 0 # TODO figure out what
+
+        # Add storage need to a cumulative sum
+        total_storage_requirement += storage_requirements[name]
+    end
+
+    # Compare cumulative storage need to Output storage need
+    output.storage_limit < total_storage_requirement ? error() : nothing
+
+    for i in something
+        # Then build diagnostic outputs
+        if stores_data
+            # Build h5group
+            if store_hdf
+                # Create Dict entry
+            elseif store_locally
+            end
+        end
+    end
+
+    diag = [HasegawaWakatani.build_diagnostic(Val(recipe.name); domain=domain, tspan=tspan,
+                                              dt=1e-3,
+                                              recipe.kwargs...) for recipe in diagnostics]
+end
+
+# function initialize_diagnostic!(diagnostic, simulation, h5_kwargs, u0, prob, t0, 
+#                                 store_hdf::Bool=true, store_locally::Bool=true)
+
+#     if diagnostic.stores_data
+#         # Calculate number of samples with rounded sampling rate
+#         N = floor(Int, N_steps / diagnostic.sample_step) + 1
+
+#         if N_steps % diagnostic.sample_step != 0
+#             @warn "($(diagnostic.name)) Note, there is a $(diagnostic.sample_step + N_steps%diagnostic.sample_step) sample step at the end"
+#         end
+#         if store_hdf
+#             if !haskey(simulation, diagnostic.name)
+#                 # Create group
+#                 diagnostic.h5group = create_group(simulation, diagnostic.name)
+
+#                 # Create dataset for fields and time
+#                 ## Datatype and shape is not so trivial here..., will have to think about it tomorrow
+#                 dset = create_dataset(simulation[diagnostic.name], "data",
+#                                       datatype(eltype(id)), (size(id)..., typemax(Int64));
+#                                       chunk=(size(id)..., 1), h5_kwargs...)
+#                 HDF5.set_extent_dims(dset, (size(id)..., N))
+#                 dset = create_dataset(simulation[diagnostic.name], "t",
+#                                       datatype(eltype(id)), (typemax(Int64),);
+#                                       chunk=(1,), h5_kwargs...)
+#                 HDF5.set_extent_dims(dset, (N,))
+
+#                 # Add labels
+#                 create_attribute(diagnostic.h5group, "labels", diagnostic.labels)
+
+#                 # Store initial diagnostic
+#                 diagnostic.h5group["data"][fill(:, ndims(id))..., 1] = id
+#                 diagnostic.h5group["t"][1] = first(prob.tspan)
+#             else
+#                 diagnostic.h5group = open_group(simulation, diagnostic.name)
+#                 # Extend size of arrays
+#                 # Open dataset
+#                 dset = open_dataset(diagnostic.h5group, "data")
+#                 HDF5.set_extent_dims(dset, (size(id)..., N))
+#                 dset = open_dataset(diagnostic.h5group, "t")
+#                 HDF5.set_extent_dims(dset, (N,))
+#             end
+#         end
+
+#         if store_locally
+#             # Allocate arrays
+#             diagnostic.data = [zero(id) for _ in 1:N] #Vector{typeof(id)}(undef, N)
+#             diagnostic.t = zeros(N)
+
+#             # Store intial diagnostic
+#             if isa(id, AbstractArray)
+#                 diagnostic.data[1] .= id
+#             else
+#                 diagnostic.data[1] = copy(id)
+#             end
+#             diagnostic.t[1] = first(prob.tspan)
+#         end
+#     end
+# end
+
+"""
+  # Initialization
+  prepare_initial_state
+  prepare_sampling
+
+  # Storage size magic 
+  compute_number_of_steps
+  recommend_stride
+  check_storage_size
+  compute_storage_need
+  validate_stride
+  parse_storage_limit
+  format_bytes
+  nearest_divisor
+  next_divisor
+    
+  # In memory storage
+  setup_local_storage
+
+  # HDF5
+  create_or_open_group 
+  reopen_simulation_group
+  rewrite_dataset
+  parameter_string
+  setup_simulation_group
+
+  # Sampling
+  handle_output!
+  maybe_store_state!
+  maybe_sample_diagnostics!
+  transform_state!
+
+  # Writing
+  store_state
+  write_state
+  write_attributes
+  write_local_state
+"""
+
+# ---------------------------------- Handling Of Output ------------------------------------
 
 """
     handle_output!(output::O, step::Integer, u::T, prob::SOP, t::N)
@@ -649,7 +801,8 @@ end
     #     output.store_locally ? write_local_state(output, idx, U, t) : nothing
     # end
 """
-# ---------------------------------- Checkpoint --------------------------------------------
+
+# -------------------------------------- Checkpoint ----------------------------------------
 
 """
     save_checkpoint!(output::O, cache::C, step::Integer, t::N) where {O<:Output,
@@ -731,7 +884,8 @@ function restore_checkpoint(simulation::HDF5.Group, prob::SOP,
     return cache
 end
 
-# -------------------------------------- Utilities -----------------------------------------
+# --------------------------------------- Utilities ----------------------------------------
+
 # TODO detangle this mess
 """
     parameter_string(parameters::AbstractDict)
@@ -795,7 +949,7 @@ function rewrite_dataset(parent::Union{HDF5.File,HDF5.Group}, name::AbstractStri
     write_dataset(parent, name, data; pv...)
 end
 
-# ---------------------------------- Helpers -----------------------------------------------
+# ---------------------------------------- Helpers -----------------------------------------
 
 function Base.show(io::IO, m::MIME"text/plain", output::Output)
     print(io, "Output (stride: ", output.stride, ", store_hdf=", output.store_hdf,
@@ -818,7 +972,7 @@ end
 import Base.close
 close(output::Output) = close(output.simulation.file)
 
-# -------------------------------------- Old -----------------------------------------------
+# ------------------------------------------ Old -------------------------------------------
 
 # Gives a more managable array compared to output.u
 # function extract_output(output::Output)
