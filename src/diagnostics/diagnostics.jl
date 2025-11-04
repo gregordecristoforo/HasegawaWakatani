@@ -262,3 +262,10 @@ include("spectral.jl")
 # ---------------------------------- Default Diagnostics -----------------------------------
 
 const DEFAULT_DIAGNOSTICS = @diagnostics [progress]
+
+requires_operator(::Val{method}; kwargs...) where {method} = OperatorRecipe[]
+
+function required_operators(diagnostic_recipes::Vector{<:DiagnosticRecipe})
+    vcat([requires_operator(Val(recipe.name); recipe.kwargs...)
+          for recipe in diagnostic_recipes]...)
+end
