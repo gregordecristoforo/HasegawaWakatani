@@ -591,6 +591,20 @@ function build_diagnostics(prob, diagnostic, simulation, h5_kwargs, u0, t0;
                                               recipe.kwargs...) for recipe in diagnostics]
 end
 
+function apply_diagnostic(diagnostic, state, prob, time)
+    # Take diagnostic of initial field (id = initial diagnostic)
+    #if diagnostic.assumes_spectral_state
+    #  id = diagnostic(prob.u0_hat, prob, first(prob.tspan))
+    #else
+    #  id = diagnostic(u0, prob, first(prob.tspan))
+    #end
+end
+
+#if diagnostic.assumes_spectral_state
+#    sample = apply_diagnostic!(diagnostic, step, output.U_buffer, state, prob, time)
+#sample = apply_diagnostic!(diagnostic, step, input, prob, time)
+#end
+
 # function initialize_diagnostic!(diagnostic, simulation, h5_kwargs, u0, prob, t0, 
 #                                 store_hdf::Bool=true, store_locally::Bool=true)
 
@@ -650,26 +664,6 @@ end
 #     end
 # end
 
-# function apply_diagnostic!(diagnostic::D, step::Integer, u::U, prob::SOP, t::N;
-#                              store_hdf::Bool=true,
-#                              store_locally::Bool=true) where {D<:Diagnostic,
-#                                                               U<:AbstractArray,
-#                                                               SOP<:SpectralODEProblem,
-#                                                               N<:Number}
-#     # u might be real or complex depending on previous handle_output and diagnostic.assumes_spectral_state
-
-#     data = diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
-
-#     if !isnothing(data)
-#         # Calculate index
-#         idx = step ÷ diagnostic.sample_step + 1
-
-#         store_hdf ? write_data(diagnostic, idx, data, t) : nothing
-
-#         store_locally ? write_local_data(diagnostic, idx, data, t) : nothing
-#     end
-# end
-
 # TODO REMOVE OR REWRITE THE THREE METHODS BELOW
 
 # TODO perhaps make more like write_state
@@ -687,15 +681,6 @@ function write_local_data(diagnostic::Diagnostic, idx, data, t)
         diagnostic.data[idx] = copy(data)
     end
     diagnostic.t[idx] = t
-end
-
-function apply_diagnostic(diagnostic, state, prob, time)
-    # Take diagnostic of initial field (id = initial diagnostic)
-    #if diagnostic.assumes_spectral_state
-    #  id = diagnostic(prob.u0_hat, prob, first(prob.tspan))
-    #else
-    #  id = diagnostic(u0, prob, first(prob.tspan))
-    #end
 end
 
 """
@@ -724,7 +709,6 @@ end
 
   # Sampling
   sample_diagnostic!
-  transform_state!
 
   # Writing
   write_state
@@ -781,25 +765,37 @@ end
    TODO write actuall string: The spectral state `u` is transformed to the real
   state `U`, with the user defined `physical_transform` applied, before being stored.
 """
-function sample_diagnostic!(output, diagnostic, step::Integer, u, prob, t)
+function sample_diagnostic!(output, diagnostic, step::Integer, state, prob, time)
     # Check if diagnostic assumes physical field and transform if not yet done
     if !diagnostic.assumes_spectral_state && !output.transformed
-        # Transform state
-        transform_state!(output, u, get_bwd(prob.domain))
+        # Transform state (updates U_buffer)
+        transform_state!(output, state, get_bwd(prob.domain))
     end
 
-    # Passes the logic onto perform_diagnostic! to do diagnostic and store data
-    if diagnostic.assumes_spectral_state
-        perform_diagnostic!(diagnostic, step, u, prob, t;
-                            store_hdf=output.store_hdf, store_locally=output.store_locally)
-    else
-        perform_diagnostic!(diagnostic, step, output.U_buffer, prob, t;
-                            store_hdf=output.store_hdf, store_locally=output.store_locally)
-    end
+    # Apply diagnostic to the correct input (either physical or spectral state)
+    input = diagnostic.assumes_spectral_state ? state : output.U_buffer
+    sample = diagnostic(input, prob, time)
 
-    # Store state
-    #store_state(output, step, output.U_buffer, t)
+    # Store sample
+    store_diagnostic!(output, step, sample, time)
 end
+
+"""
+    store_diagnostic!(output, step::Integer, sample, time)
+
+  Stores sample to *HDF5* file and memory, depending on the state of the `output.store_hdf` 
+  and `output.store_locally` respectively. The index is computed based on the step.
+"""
+# function store_diagnostic!(output, step::Integer, sample, time)
+#     if !isnothing(sample)
+#         # Calculate index
+#         idx = step ÷ diagnostic.stride + 1
+# TODO figure out what to call methods
+#         output.store_hdf ? write_data(diagnostic, idx, sample, time) : nothing
+
+#         output.store_locally ? write_local_data(diagnostic, idx, sample, time) : nothing
+#     end
+# end
 
 """
     transform_state!(output, u, p)
@@ -808,28 +804,10 @@ end
   to the `output.U_buffer` buffer. The user defined `physical_transform` is also applied to 
   the buffer, and the `output.transformed` flag is updated to not transform same field twice.
 """
-function transform_state!(output, u_hat, p)
-    spectral_transform!(output.U_buffer, p, u_hat)
+function transform_state!(output, state_hat, plan)
+    spectral_transform!(output.U_buffer, plan, state_hat)
     output.physical_transform(output.U_buffer)
     output.transformed = true
-end
-
-# TODO remove
-"""
-    store_state(output, step::Integer, U, t)
-
-  Stores state to *HDF5* file and memory, depending on the state of the `output.store_hdf` 
-  and `output.store_locally` respectively. The index is computed based on the step.
-"""
-function store_state(output, step::Integer, U, t)
-    # Calculate index
-    idx = step ÷ output.stride + 1
-
-    # Store in hdf if user wants
-    output.store_hdf ? write_state(output.simulation, idx, U, t) : nothing
-
-    # Store in memory if user wants
-    output.store_locally ? write_local_state(output, idx, U, t) : nothing
 end
 
 """
