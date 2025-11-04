@@ -723,8 +723,7 @@ end
   setup_simulation_group
 
   # Sampling
-  handle_output!
-  maybe_sample_diagnostics!
+  sample_diagnostic!
   transform_state!
 
   # Writing
@@ -773,7 +772,7 @@ function maybe_sample_diagnostics!(output, step::Integer, state, prob, time)
     # Handle diagnostics
     for diagnostic in output.diagnostics
         if step % diagnostic.stride == 0
-            sample_diagnostic!(output, diagnostic, step, u, prob, t)
+            sample_diagnostic!(output, diagnostic, step, state, prob, time)
         end
     end
 end
