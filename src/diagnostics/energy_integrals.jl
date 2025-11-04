@@ -44,9 +44,10 @@ function potential_energy_integral(state, prob, time; quadrature=nothing)
     parsevals_theorem(n, domain) / 2
 end
 
-function build_diagnostic(::Val{:potential_energy_integral}; kwargs...)
+function build_diagnostic(::Val{:potential_energy_integral}; stride::Int=-1, kwargs...)
     Diagnostic(; name="Potential energy integral",
                method=potential_energy_integral,
+               stride=stride,
                metadata="Potential energy density.",
                assumes_spectral_state=true)
 end
@@ -68,9 +69,10 @@ function requires_operator(::Val{:kinetic_energy_integral}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_x), OperatorRecipe(:diff_y)]
 end
 
-function build_diagnostic(::Val{:kinetic_energy_integral}; kwargs...)
+function build_diagnostic(::Val{:kinetic_energy_integral}; stride::Int=-1, kwargs...)
     Diagnostic(; name="Kinetic energy integral",
                method=kinetic_energy_integral,
+               stride=stride,
                metadata="Kinetic energy density.",
                assumes_spectral_state=true)
 end
@@ -83,9 +85,10 @@ function total_energy_integral(state, prob, time; quadrature=nothing)
     kinetic_energy_integral(state, prob, time; quadrature=quadrature)
 end
 
-function build_diagnostic(::Val{:total_energy_integral}, kwargs...)
+function build_diagnostic(::Val{:total_energy_integral}; stride::Int=-1, kwargs...)
     Diagnostic(; name="Total energy integral",
                method=total_energy_integral,
+               stride=stride,
                metadata="Total energy density.",
                assumes_spectral_state=true)
 end
@@ -99,9 +102,10 @@ function enstropy_energy_integral(state, prob, time; quadrature=nothing)
     parsevals_theorem(Ω, domain) / 2
 end
 
-function build_diagnostic(::Val{:enstropy_energy_integral}; kwargs...)
+function build_diagnostic(::Val{:enstropy_energy_integral}; stride::Int=-1, kwargs...)
     Diagnostic(; name="Enstropy energy integral",
                method=enstropy_energy_integral,
+               stride=stride,
                metadata="Enstropy energy density.",
                assumes_spectral_state=true)
 end
@@ -125,11 +129,12 @@ function requires_operator(::Val{:resistive_dissipation_integral}; kwargs...)
     [OperatorRecipe(:solve_phi)]
 end
 
-function build_diagnostic(::Val{:resistive_dissipation_integral}; adiabaticity_symbol=:C,
-                          kwargs...)
+function build_diagnostic(::Val{:resistive_dissipation_integral}; stride::Int=-1,
+                          adiabaticity_symbol=:C, kwargs...)
     diagnostic_kwargs = (; adiabaticity_symbol=adiabaticity_symbol)
     Diagnostic(; name="Resistive dissipation integral",
                method=resistive_dissipation_integral,
+               stride=stride,
                metadata="Resistive dissipation energy density.",
                assumes_spectral_state=true,
                kwargs=diagnostic_kwargs)
@@ -152,11 +157,12 @@ function requires_operator(::Val{:potential_dissipation_integral}; kwargs...)
      OperatorRecipe(:quadratic_term)]
 end
 
-function build_diagnostic(::Val{:potential_dissipation_integral}; diffusivity_symbol=:ν,
-                          kwargs...)
+function build_diagnostic(::Val{:potential_dissipation_integral}; stride::Int=-1,
+                          diffusivity_symbol=:ν, kwargs...)
     diagnostic_kwargs = (; diffusivity_symbol=diffusivity_symbol)
     Diagnostic(; name="Potential dissipation integral",
                method=potential_dissipation_integral,
+               stride=stride,
                metadata="Potential energy dissipation density.",
                assumes_spectral_state=true,
                kwargs=diagnostic_kwargs)
@@ -180,11 +186,12 @@ function requires_operator(::Val{:kinetic_dissipation_integral}; kwargs...)
      OperatorRecipe(:laplacian; order=3, alias=:hyper_laplacian)]
 end
 
-function build_diagnostic(::Val{:kinetic_dissipation_integral}; viscosity_symbol=:μ,
-                          kwargs...)
+function build_diagnostic(::Val{:kinetic_dissipation_integral}; stride::Int=-1,
+                          viscosity_symbol=:μ, kwargs...)
     diagnostic_kwargs = (; viscosity_symbol=viscosity_symbol)
     Diagnostic(; name="Kinetic dissipation integral",
                method=kinetic_dissipation_integral,
+               stride=stride,
                metadata="Kinetic energy dissipation density.",
                assumes_spectral_state=true,
                kwargs=diagnostic_kwargs)
@@ -206,12 +213,13 @@ function requires_operator(::Val{:viscous_dissipation_integral}; kwargs...)
          requires_operator(Val(:kinetic_dissipation_integral); kwargs...))
 end
 
-function build_diagnostic(::Val{:viscous_dissipation_integral}; diffusivity_symbol=:ν,
-                          viscosity_symbol=:μ, kwargs...)
+function build_diagnostic(::Val{:viscous_dissipation_integral}; stride::Int=-1,
+                          diffusivity_symbol=:ν, viscosity_symbol=:μ, kwargs...)
     diagnostic_kwargs = (; diffusivity_symbol=diffusivity_symbol,
                          viscosity_symbol=viscosity_symbol)
     Diagnostic(; name="Viscous dissipation integral",
                method=viscous_dissipation_integral,
+               stride=stride,
                metadata="Viscous energy dissipation density.",
                assumes_spectral_state=true,
                kwargs=diagnostic_kwargs)
@@ -237,12 +245,13 @@ function requires_operator(::Val{:enstropy_dissipation_integral}; kwargs...)
      OperatorRecipe(:quadratic_term)]
 end
 
-function build_diagnostic(::Val{:enstropy_dissipation_integral}; diffusivity_symbol=:ν,
-                          viscosity_symbol=:μ, kwargs...)
+function build_diagnostic(::Val{:enstropy_dissipation_integral}; stride::Int=-1,
+                          diffusivity_symbol=:ν, viscosity_symbol=:μ, kwargs...)
     diagnostic_kwargs = (; diffusivity_symbol=diffusivity_symbol,
                          viscosity_symbol=viscosity_symbol)
     Diagnostic(; name="Enstropy dissipation integral",
                method=enstropy_dissipation_integral,
+               stride=stride,
                metadata="Enstropy energy dissipation density.",
                assumes_spectral_state=true,
                kwargs=diagnostic_kwargs)
@@ -270,13 +279,15 @@ function requires_operator(::Val{:energy_evolution_integral}; kwargs...)
          requires_operator(Val(:viscous_dissipation_integral); kwargs...))
 end
 
-function build_diagnostic(::Val{:energy_evolution_integral}; adiabaticity_symbol=:C,
-                          diffusivity_symbol=:ν, viscosity_symbol=:μ, kwargs...)
+function build_diagnostic(::Val{:energy_evolution_integral}; stride::Int=-1,
+                          adiabaticity_symbol=:C, diffusivity_symbol=:ν,
+                          viscosity_symbol=:μ, kwargs...)
     diagnostic_kwargs = (; adiabaticity_symbol=adiabaticity_symbol,
                          diffusivity_symbol=diffusivity_symbol,
                          viscosity_symbol=viscosity_symbol)
     Diagnostic(; name="Energy evolution integral",
                method=energy_evolution_integral,
+               stride=stride,
                metadata="Energy density evolution.",
                assumes_spectral_state=true,
                kwargs=diagnostic_kwargs)
@@ -297,12 +308,13 @@ function requires_operator(::Val{:enstropy_evolution_integral}; kwargs...)
          requires_operator(Val(:enstropy_dissipation_integral); kwargs...))
 end
 
-function build_diagnostic(::Val{:enstropy_evolution_integral}; diffusivity_symbol=:ν,
-                          viscosity_symbol=:μ, kwargs...)
+function build_diagnostic(::Val{:enstropy_evolution_integral}; stride::Int=-1,
+                          diffusivity_symbol=:ν, viscosity_symbol=:μ, kwargs...)
     diagnostic_kwargs = (; diffusivity_symbol=diffusivity_symbol,
                          viscosity_symbol=viscosity_symbol)
     Diagnostic(; name="Enstropy evolution integral",
                method=enstropy_evolution_integral,
+               stride=stride,
                metadata="Enstropy density evolution.",
                assumes_spectral_state=true,
                kwargs=diagnostic_kwargs)

@@ -61,10 +61,11 @@ function radial_COM(state, prob, time, memory::Dict=Dict(); field_idx::Int=1)
     return [X_COM, V_COM]
 end
 
-function build_diagnostic(::Val{:radial_COM}; kwargs...)
+function build_diagnostic(::Val{:radial_COM}; stride::Int=-1, kwargs...)
     args = (Dict("previous_position" => 0.0, "previous_time" => 0.0),)
     Diagnostic(; name="Radial COM",
                method=radial_COM,
+               stride=stride,
                metadata="Radial Center-of-mass (COM) diagnostics, columns: X_COM, V_COM.",
                args=args)
 end

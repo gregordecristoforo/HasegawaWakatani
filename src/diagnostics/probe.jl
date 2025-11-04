@@ -182,7 +182,7 @@ end
   
   General build method for probe diagnostics which prepares the positions and metadata.
 """
-function build_probe_diagnostic(; name, method, positions, domain, quantities,
+function build_probe_diagnostic(; name, method, stride=-1, positions, domain, quantities,
                                 assumes_spectral_state=false, interpolation=nothing)
     # Bound and type checking
     positions = prepare_positions(positions, domain)
@@ -194,6 +194,7 @@ function build_probe_diagnostic(; name, method, positions, domain, quantities,
     end
     Diagnostic(; name=name,
                method=method,
+               stride=stride,
                metadata=prepare_metadata(positions, quantities),
                assumes_spectral_state=assumes_spectral_state,
                args=args,
@@ -216,10 +217,11 @@ function probe_density(state, prob, time, positions; interpolation=nothing)
     probe_field(n, prob.domain, positions, interpolation)
 end
 
-function build_diagnostic(::Val{:probe_density}; domain, positions,
+function build_diagnostic(::Val{:probe_density}; stride::Int=-1, domain, positions,
                           interpolation=nothing, kwargs...)
     build_probe_diagnostic(; name="Density probe",
                            method=probe_density,
+                           stride=stride,
                            positions=positions,
                            domain=domain,
                            quantities="density",
@@ -238,10 +240,11 @@ function probe_vorticity(state, prob, time, positions; interpolation=nothing)
     probe_field(Ω, prob.domain, positions, interpolation)
 end
 
-function build_diagnostic(::Val{:probe_vorticity}; domain, positions,
+function build_diagnostic(::Val{:probe_vorticity}; stride::Int=-1, domain, positions,
                           interpolation=nothing, kwargs...)
     build_probe_diagnostic(; name="Vorticity probe",
                            method=probe_vorticity,
+                           stride=stride,
                            positions=positions,
                            domain=domain,
                            quantities="vorticity",
@@ -264,10 +267,11 @@ end
 
 requires_operator(::Val{:probe_potential}; kwargs...) = [OperatorRecipe(:solve_phi)]
 
-function build_diagnostic(::Val{:probe_potential}; domain, positions,
+function build_diagnostic(::Val{:probe_potential}; stride::Int=-1, domain, positions,
                           interpolation=nothing, kwargs...)
     build_probe_diagnostic(; name="Phi probe",
                            method=probe_potential,
+                           stride=stride,
                            positions=positions,
                            domain=domain,
                            quantities="potential",
@@ -295,10 +299,11 @@ function requires_operator(::Val{:probe_radial_velocity}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_y)]
 end
 
-function build_diagnostic(::Val{:probe_radial_velocity}; domain, positions,
+function build_diagnostic(::Val{:probe_radial_velocity}; stride::Int=-1, domain, positions,
                           interpolation=nothing, kwargs...)
     build_probe_diagnostic(; name="Radial velocity probe",
                            method=probe_radial_velocity,
+                           stride=stride,
                            positions=positions,
                            domain=domain,
                            quantities="radial velocity",
@@ -346,10 +351,11 @@ function requires_operator(::Val{:probe_all}; kwargs...)
     [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_y)]
 end
 
-function build_diagnostic(::Val{:probe_all}; domain, positions,
+function build_diagnostic(::Val{:probe_all}; stride::Int=-1, domain, positions,
                           interpolation=nothing, kwargs...)
     build_probe_diagnostic(; name="All probe",
                            method=probe_all,
+                           stride=stride,
                            positions=positions,
                            domain=domain,
                            quantities=["density",
