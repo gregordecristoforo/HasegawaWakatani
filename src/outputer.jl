@@ -533,25 +533,6 @@ function format_bytes(nbytes::Integer)
 end
 
 """
-    nearest_divisor(N::Int, target::Int)
-  Finds the nearest divisor of `N` to the target. If `N` is prime `1` is returned.
-"""
-function nearest_divisor(N::Int, target::Int)
-    closest, smallest = 1, abs(target - 1)
-    for d in 1:floor(Int, sqrt(N))
-        if N % d == 0
-            for c in (d, N ÷ d)
-                dist = abs(c - target)
-                if dist < smallest || (dist == smallest && c < closest)
-                    closest, smallest = c, dist
-                end
-            end
-        end
-    end
-    return closest
-end
-
-"""
     next_divisor(N, target)
 
   Finds the smallest divisor of `N` that is ≥ `target`. If none exists (i.e. `target > N`), \
@@ -569,6 +550,25 @@ function next_divisor(N::Int, target::Int)
         end
     end
     return recommended
+end
+
+"""
+    nearest_divisor(N::Int, target::Int)
+  Finds the nearest divisor of `N` to the target. If `N` is prime `1` is returned.
+"""
+function nearest_divisor(N::Int, target::Int)
+    closest, smallest = 1, abs(target - 1)
+    for d in 1:floor(Int, sqrt(N))
+        if N % d == 0
+            for c in (d, N ÷ d)
+                dist = abs(c - target)
+                if dist < smallest || (dist == smallest && c < closest)
+                    closest, smallest = c, dist
+                end
+            end
+        end
+    end
+    return closest
 end
 
 # ------------------------------- Diagnostic Initialization --------------------------------
