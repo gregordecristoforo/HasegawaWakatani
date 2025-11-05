@@ -235,6 +235,15 @@ get_precision(prob::SpectralODEProblem) = prob.domain.precision
 get_fwd(prob::SpectralODEProblem) = get_fwd(prob.domain)
 get_bwd(prob::SpectralODEProblem) = get_bwd(prob.domain)
 
+function get_kwargs(prob::SpectralODEProblem)
+    (; [field => getfield(prob, field) for field in fieldnames(SpectralODEProblem)]...)
+end
+
+function build_diagnostic(method::Function, prob::SpectralODEProblem; kwargs...)
+    prob_kwargs = get_kwargs(prob)
+    build_diagnostic(Val(Symbol(method)); prob_kwargs..., kwargs...)
+end
+
 """
     isinplace(prob::AbstractODEProblem{iip}) where {iip}
     isinplace(f::Function)
