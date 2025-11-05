@@ -352,8 +352,8 @@ end
   - The function validates and adjusts `stride` to ensure it is within feasible bounds.
   - Issues a warning if the last step has a different stride than the rest.
 """
-function prepare_sampling(stride::Int, storage_limit, prob::SpectralODEProblem)
-
+function determine_sampling_strategy(sample, stride::Int, storage_limit,
+                                     prob::SpectralODEProblem; context="")
     # Compute total number of simulation steps
     N_steps = compute_number_of_steps(prob)
 
@@ -361,16 +361,16 @@ function prepare_sampling(stride::Int, storage_limit, prob::SpectralODEProblem)
     if !isempty(storage_limit)
         storage_bytes = parse_storage_limit(storage_limit)
         if stride == -1
-            stride = recommend_stride(storage_bytes, N_steps, prob)
+            stride = recommend_stride(storage_bytes, N_steps, sample; context=context)
         else
-            check_storage_size(storage_bytes, N_steps, stride, prob)
+            check_storage_size(storage_bytes, N_steps, stride, sample; context=context)
         end
     elseif stride == -1
         stride = 1
     end
 
     # Validate stride, might change stride if too large
-    stride = validate_stride(N_steps, stride)
+    stride = validate_stride(N_steps, stride; context=context)
 
     # Compute number of data points to record and warn if last step has differnt step size
     N_samples = cld(N_steps, stride) + 1
@@ -632,17 +632,7 @@ function determine_strides(diagnostic_recipes, initial_samples, prob)
     return strides
 end
 
-"""
-  # Initialization
-  prepare_sampling
-
-  # Storage size magic 
-  compute_number_of_steps
-  recommend_stride
-  check_storage_size
-  compute_storage_need
-  validate_stride
-    
+""" 
   # In memory storage
   setup_local_storage
 
