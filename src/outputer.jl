@@ -423,13 +423,12 @@ end
   thrown, which recommends the minimum divisor satisfying the storage limit. In addition the
    error checks of `recommend_stride` are performed, which may trigger before the storage check.
 """
-function check_storage_size(storage_limit::Int, N_steps::Int, stride::Int,
-                            prob::S) where {S<:SpectralODEProblem}
-    min_stride = recommend_stride(storage_limit, N_steps, prob)
+function check_storage_size(storage_limit::Int, N_steps::Int, stride::Int, sample, name)
+    min_stride = recommend_stride(storage_limit, N_steps, sample, name)
 
-    storage_need = compute_storage_need(N_steps, stride, prob)
+    storage_need = compute_storage_need(N_steps, stride, sample, name)
     if storage_need > storage_limit
-        throw(ArgumentError("The total output requires $(format_bytes(storage_need)), which exceeds the \
+        throw(ArgumentError("($name) The total output requires $(format_bytes(storage_need)), which exceeds the \
                             storage limit of $(format_bytes(storage_limit)). Consider increasing the \
                             `stride` (minimum recommended: $min_stride) or the `storage_limit`."))
     end
