@@ -395,15 +395,15 @@ end
   If the `storage_limit` is too strict an error is thrown, which informs the user of the 
   minimum limit.
 """
-function recommend_stride(storage_limit::Int, N_steps::Int, prob::SpectralODEProblem)
-    field_bytes = length(prob.u0) * sizeof(eltype(prob.u0))
+function recommend_stride(storage_limit::Int, N_steps::Int, sample::AbstractArray, name)
+    field_bytes = length(sample) * sizeof(eltype(sample))
     # Determine how many fields can be fully stored
     max_samples = storage_limit ÷ field_bytes
 
     # At least two should be stored, start and end
     if max_samples < 2
-        throw(ArgumentError("The storage limit ($(format_bytes(storage_limit))) is too small. \
-        The field(s) alone requires $(format_bytes(field_bytes)), however at least two samples \
+        throw(ArgumentError("($name) The storage limit ($(format_bytes(storage_limit))) is too small. \
+        The sample alone requires $(format_bytes(field_bytes)), however at least two samples \
         are required (minimum limit: $(format_bytes(2*field_bytes)))."))
     end
 
@@ -411,8 +411,9 @@ function recommend_stride(storage_limit::Int, N_steps::Int, prob::SpectralODEPro
     min_stride = ceil(Int, N_steps / (max_samples - 1))
 
     # Picks closest divisor that does not exceed storage limit, while N_steps ≥ min_stride
-    recommended = next_divisor(N_steps, min_stride)
-    return recommended
+    recommended_stride = next_divisor(N_steps, min_stride)
+
+    return recommended_stride
 end
 
 """
