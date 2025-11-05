@@ -445,7 +445,7 @@ function compute_storage_need(N_steps::Int, stride::Int, sample::AbstractArray, 
 end
 
 """
-    validate_stride(N_steps::Int, stride::Int)
+    validate_stride(N_steps::Int, stride::Int, name)
   
     Validates and adjusts the `stride`. If `stride`:
 
@@ -455,18 +455,18 @@ end
 
   Returns the validated (and possibly adjusted) `stride`.
 """
-function validate_stride(N_steps::Int, stride::Int)
+function validate_stride(N_steps::Int, stride::Int, name)
     if N_steps < stride
-        @warn "stride ($stride) exceeds total steps ($N_steps). \
+        @warn "($name) stride ($stride) exceeds total steps ($N_steps). \
                Adjusting to stride = N_steps ($N_steps)."
         stride = N_steps
     end
 
-    stride < 1 ? throw(ArgumentError("stride must be ≥ 1, got $stride")) : nothing
+    stride < 1 ? throw(ArgumentError("($name) stride must be ≥ 1, got $stride")) : nothing
 
     if N_steps % stride != 0
         suggestion = nearest_divisor(N_steps, stride)
-        @warn "stride ($stride) does not evenly divide N_steps ($N_steps). The \
+        @warn "($name) stride ($stride) does not evenly divide N_steps ($N_steps). The \
         final output interval will be shorter. Consider using stride = $suggestion instead."
     end
 
