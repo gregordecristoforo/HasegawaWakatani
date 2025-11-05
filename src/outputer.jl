@@ -590,8 +590,6 @@ function initialize_diagnostics(prob::SpectralODEProblem, state, state_hat, t0)
     diagnostics = Diagnostic[]
     initial_samples = []
 
-    println(size(prob.diagnostic_recipes))
-
     for recipe in prob.diagnostic_recipes
         # Build diagnostic
         diagnostic = build_diagnostic(recipe.method, prob; recipe.kwargs...)
@@ -611,32 +609,32 @@ end
 """
 function determine_strides(initial_samples, prob::SpectralODEProblem, total_storage_limit)
     strides = Int[]
-    #storage_requirements = Int[]
-    #total_storage_requirement = 0
+    storage_requirements = Int[]
+    total_storage_requirement = 0
 
-    for recipe in prob.diagnostic_recipes
-        # Compute output size and predict storage need, compare against own storage limit
-        # Compute number of samples to be stored and stride distance
-        context = "($name) "
+    for (recipe, sample) in zip(prob.diagnostic_recipes, initial_samples)
+        @unpack stride, storage_limit = recipe
+        context = "($(recipe.method)) "
+        # Determine the number of samples to be stored and the stride distance
         N_samples, stride = determine_sampling_strategy(sample, stride, storage_limit, prob;
                                                         context=context)
-
-        N_samples = cld(N_steps, stride) + 1
-        #storage_shape = (size(sample)..., N_samples)
+        # Determine the needed storage
         storage_requirement = compute_storage_need(N_samples, stride, sample; context)
-
-        # Add storage need to a cumulative sum
-        #total_storage_requirement += storage_requirements[name]
-        push!(strides, recipe.stride)
+        # Accumulate
+        total_storage_requirement += storage_requirement
+        push!(strides, stride)
+        push!(storage_requirements, storage_requirement)
     end
 
+    # Nice to have
+    println("Estimated filesize: ", format_bytes(total_storage_requirement))
+
     # Compare cumulative storage need to Output storage need
-    output.storage_limit < total_storage_requirement ? error() : nothing
-
-    # if N_steps % diagnostic.sample_step != 0
-    #   @warn "($(diagnostic.name)) Note, there is a $(diagnostic.sample_step + N_steps%diagnostic.sample_step) sample step at the end"
-    # end
-
+    if parse_storage_limit(total_storage_limit) < total_storage_requirement
+        # TODO add nice error message showing what each diagnostic requires, so the user can make up their mind
+        error("The Output requires $(format_bytes(total_storage_requirement)), which is \
+        more than the storage_limit: $total_storage_limit.")
+    end
     return strides
 end
 
