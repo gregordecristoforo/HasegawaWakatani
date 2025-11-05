@@ -436,13 +436,13 @@ function check_storage_size(storage_limit::Int, N_steps::Int, stride::Int,
 end
 
 """
-    compute_storage_need(N_steps::Int, stride::Int, prob::SpectralODEProblem)
+    compute_storage_need(N_steps::Int, stride::Int, sample::AbstractArray, name)
 
-  Computes the storage needed to store `N_steps÷stride`samples with `sizeof(prob.u0)`. 
+  Computes the storage needed to store `N_steps÷stride`samples with `sizeof(sample)`. 
 """
-function compute_storage_need(N_steps::Int, stride::Int, prob::SpectralODEProblem)
-    stride < 1 ? throw(ArgumentError("stride must be ≥ 1, got $stride")) : nothing
-    (cld(N_steps, stride) + 1) * length(prob.u0) * sizeof(eltype(prob.u0))
+function compute_storage_need(N_steps::Int, stride::Int, sample::AbstractArray, name)
+    stride < 1 ? throw(ArgumentError("($name) stride must be ≥ 1, got $stride")) : nothing
+    (cld(N_steps, stride) + 1) * length(sample) * sizeof(eltype(sample))
 end
 
 """
