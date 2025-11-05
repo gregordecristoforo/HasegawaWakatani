@@ -86,7 +86,7 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},UB<:AbstractArray,T<:Abstr
         diagnostics, initial_samples = initialize_diagnostics(prob, state, prob.u0_hat, t0)
 
         #built_diagnostics = Diagnostic[] # Currently disabled, todo re-enable
-        strides = determine_strides(diagnostics, initial_samples, prob)
+        strides = determine_strides(initial_samples, prob, storage_limit)
 
         #setup_diagnostic_group
         #setup_local_key
@@ -417,6 +417,9 @@ function recommend_stride(storage_limit::Int, N_steps::Int, sample::AbstractArra
     return recommended_stride
 end
 
+# Edge case
+recommend_stride(storage_limit, N_steps, sample::Nothing; context="") = 1
+
 """
     check_storage_size(storage_limit::Int, N_steps::Int, stride::Int, sample; context="")
   
@@ -446,6 +449,9 @@ function compute_storage_need(N_steps::Int, stride::Int, sample::AbstractArray; 
     stride < 1 ? throw(ArgumentError(context * "stride must be ≥ 1, got $stride")) : nothing
     (cld(N_steps, stride) + 1) * length(sample) * sizeof(eltype(sample))
 end
+
+# Edge case
+compute_storage_need(N_steps, stride, sample::Nothing; context="") = 0
 
 """
     validate_stride(N_steps::Int, stride::Int; context="")
@@ -580,7 +586,7 @@ end
 
   Build diagnostics from `prob.diagnostic_recipes` and sample.
 """
-function initialize_diagnostics(prob, state, state_hat, t0)
+function initialize_diagnostics(prob::SpectralODEProblem, state, state_hat, t0)
     diagnostics = Diagnostic[]
     initial_samples = []
 
@@ -601,7 +607,9 @@ function initialize_diagnostics(prob, state, state_hat, t0)
     return diagnostics, initial_samples
 end
 
-function determine_strides(diagnostic_recipes, initial_samples, prob)
+"""
+"""
+function determine_strides(initial_samples, prob::SpectralODEProblem, total_storage_limit)
     strides = Int[]
     #storage_requirements = Int[]
     #total_storage_requirement = 0
