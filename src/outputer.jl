@@ -389,22 +389,23 @@ function compute_number_of_steps(prob::SpectralODEProblem)
 end
 
 """
-    recommend_stride(storage_limit::Int, N_steps::Int, prob::SpectralODEProblem)
+    recommend_stride(storage_limit::Int, N_steps::Int, sample::AbstractArray; context="")
   
   Recommends the closest divisor to the minimum stride needed to fullfil the `storage_limit`.
   If the `storage_limit` is too strict an error is thrown, which informs the user of the 
   minimum limit.
 """
-function recommend_stride(storage_limit::Int, N_steps::Int, sample::AbstractArray, name)
+function recommend_stride(storage_limit::Int, N_steps::Int, sample::AbstractArray;
+                          context="")
     field_bytes = length(sample) * sizeof(eltype(sample))
     # Determine how many fields can be fully stored
     max_samples = storage_limit ÷ field_bytes
 
     # At least two should be stored, start and end
     if max_samples < 2
-        throw(ArgumentError("($name) The storage limit ($(format_bytes(storage_limit))) is too small. \
-        The sample alone requires $(format_bytes(field_bytes)), however at least two samples \
-        are required (minimum limit: $(format_bytes(2*field_bytes)))."))
+        throw(ArgumentError(context * "The storage limit ($(format_bytes(storage_limit))) \
+          is too small. The sample alone requires $(format_bytes(field_bytes)), however at \
+          least two samples are required (minimum limit: $(format_bytes(2*field_bytes)))."))
     end
 
     # Compute minimum stride to achieve the max number of samples
@@ -417,35 +418,37 @@ function recommend_stride(storage_limit::Int, N_steps::Int, sample::AbstractArra
 end
 
 """
-    check_storage_size(storage_limit::Int, N_steps::Int, stride::Int, prob::SpectralODEProblem)
+    check_storage_size(storage_limit::Int, N_steps::Int, stride::Int, sample; context="")
   
   Checks that the needed storage does not exceed the `storage_limit`, otherwise an error is 
   thrown, which recommends the minimum divisor satisfying the storage limit. In addition the
    error checks of `recommend_stride` are performed, which may trigger before the storage check.
 """
-function check_storage_size(storage_limit::Int, N_steps::Int, stride::Int, sample, name)
-    min_stride = recommend_stride(storage_limit, N_steps, sample, name)
+function check_storage_size(storage_limit::Int, N_steps::Int, stride::Int, sample;
+                            context="")
+    min_stride = recommend_stride(storage_limit, N_steps, sample; context=context)
 
-    storage_need = compute_storage_need(N_steps, stride, sample, name)
+    storage_need = compute_storage_need(N_steps, stride, sample; context=context)
     if storage_need > storage_limit
-        throw(ArgumentError("($name) The total output requires $(format_bytes(storage_need)), which exceeds the \
-                            storage limit of $(format_bytes(storage_limit)). Consider increasing the \
-                            `stride` (minimum recommended: $min_stride) or the `storage_limit`."))
+        throw(ArgumentError(context * "The total output requires \
+                              $(format_bytes(storage_need)), which exceeds the storage \
+                              limit of $(format_bytes(storage_limit)). Consider increasing \
+                              the `stride` (minimum recommended: $min_stride) or the `storage_limit`."))
     end
 end
 
 """
-    compute_storage_need(N_steps::Int, stride::Int, sample::AbstractArray, name)
+    compute_storage_need(N_steps::Int, stride::Int, sample::AbstractArray; context="")
 
   Computes the storage needed to store `N_steps÷stride`samples with `sizeof(sample)`. 
 """
-function compute_storage_need(N_steps::Int, stride::Int, sample::AbstractArray, name)
-    stride < 1 ? throw(ArgumentError("($name) stride must be ≥ 1, got $stride")) : nothing
+function compute_storage_need(N_steps::Int, stride::Int, sample::AbstractArray; context="")
+    stride < 1 ? throw(ArgumentError(context * "stride must be ≥ 1, got $stride")) : nothing
     (cld(N_steps, stride) + 1) * length(sample) * sizeof(eltype(sample))
 end
 
 """
-    validate_stride(N_steps::Int, stride::Int, name)
+    validate_stride(N_steps::Int, stride::Int; context="")
   
     Validates and adjusts the `stride`. If `stride`:
 
@@ -455,19 +458,19 @@ end
 
   Returns the validated (and possibly adjusted) `stride`.
 """
-function validate_stride(N_steps::Int, stride::Int, name)
+function validate_stride(N_steps::Int, stride::Int; context="")
     if N_steps < stride
-        @warn "($name) stride ($stride) exceeds total steps ($N_steps). \
-               Adjusting to stride = N_steps ($N_steps)."
+        @warn context * "stride ($stride) exceeds total steps ($N_steps). \
+                 Adjusting to stride = N_steps ($N_steps)."
         stride = N_steps
     end
 
-    stride < 1 ? throw(ArgumentError("($name) stride must be ≥ 1, got $stride")) : nothing
+    stride < 1 ? throw(ArgumentError(context * "stride must be ≥ 1, got $stride")) : nothing
 
     if N_steps % stride != 0
         suggestion = nearest_divisor(N_steps, stride)
-        @warn "($name) stride ($stride) does not evenly divide N_steps ($N_steps). The \
-        final output interval will be shorter. Consider using stride = $suggestion instead."
+        @warn context * "stride ($stride) does not evenly divide N_steps ($N_steps). The \
+          final output interval will be shorter. Consider using stride = $suggestion instead."
     end
 
     return stride
@@ -606,10 +609,13 @@ function determine_strides(diagnostic_recipes, initial_samples, prob)
     for recipe in prob.diagnostic_recipes
         # Compute output size and predict storage need, compare against own storage limit
         # Compute number of samples to be stored and stride distance
-        N_samples, stride = prepare_sampling(stride, field_storage_limit, prob)
+        context = "($name) "
+        N_samples, stride = determine_sampling_strategy(sample, stride, storage_limit, prob;
+                                                        context=context)
 
+        N_samples = cld(N_steps, stride) + 1
         #storage_shape = (size(sample)..., N_samples)
-        #storage_requirement = compute_storage_need(sample, stride)
+        storage_requirement = compute_storage_need(N_samples, stride, sample; context)
 
         # Add storage need to a cumulative sum
         #total_storage_requirement += storage_requirements[name]
