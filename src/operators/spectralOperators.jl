@@ -1,259 +1,164 @@
-module SpectralOperators
+# ------------------------------------------------------------------------------------------
+#                                    Spectral Operators                                     
+# ------------------------------------------------------------------------------------------
 
-using FFTW, CUDA, Base.Threads, LinearAlgebra, Adapt
+# ---------------------------------------- General -----------------------------------------
 
-include("fftutilities.jl")
-export AbstractTransformPlans, FFTPlans, rFFTPlans, spectral_transform, spectral_transform!
+# Abstract class that may inherit from a more abstract one
+abstract type SpectralOperator end
 
-struct SpectralOperatorCache{DX<:AbstractArray,DY<:AbstractArray,DXX<:AbstractArray,
-    DYY<:AbstractArray,L<:AbstractArray,SP<:AbstractArray,P<:AbstractArray,DU<:AbstractArray,
-    T<:AbstractFloat,TP<:AbstractTransformPlans,PHI<:AbstractArray}
+# TODO check if needed
+# For broadcasting the operators for composite operators
+Base.broadcastable(op::SpectralOperator) = Ref(op)
 
-    # Spectral coefficents
-    diff_x::DX
-    diff_y::DY
-    diff_xx::DXX
-    diff_yy::DYY
-    laplacian::L
-    laplacian_inv::L
-    hyper_laplacian::L
+# ----------------------------------- Linear Operators -------------------------------------
 
-    # Psudo spectral cache
-    padded::Bool
-    up::SP
-    vp::SP
-    U::P
-    V::P
-    qt_left::DU
-    qt_right::DU
-    dealiasing_coefficient::T
-    QTPlans::TP                                               # QT stands for quadratic terms
+# Abstract type that all Linear operators inherit from
+abstract type LinearOperator{T} <: SpectralOperator end
 
-    # Other cache
-    phi::PHI
+# TODO add Algebraic rules of Linear operators
+import Base: *, +, -, ^
+*(a::Number, op::LinearOperator) = typeof(op)(a .* op.coeffs)
 
-    # TODO make CuArray an argument
-    function SpectralOperatorCache(kx, ky, Nx, Ny; use_cuda=true, precision=Float64,
-        real_transform=true, dealiased=true)
+# Allows composite operators
+# TODO add some sort of promotion rules
++(a::LinearOperator, b::LinearOperator) = typeof(op)(a.coeffs .+ b.coeffs)
+-(a::LinearOperator, b::LinearOperator) = typeof(op)(a.coeffs .- b.coeffs)
+^(op::LinearOperator, power::Number) = typeof(op)(op.coeffs .^ power)
 
-        # Compute spectral coefficents
-        diff_x = transpose(im * kx)
-        diff_y = im * ky
-        diff_xx = -kx' .^ 2
-        diff_yy = -ky .^ 2
-        laplacian = -kx' .^ 2 .- ky .^ 2
-        laplacian_inv = laplacian .^ -1
-        hyper_laplacian = laplacian .^ 3
-        # Perhaps a better way exist
-        CUDA.@allowscalar laplacian_inv[1] = 0 # First entry will always be NaN or Inf
+# --------------------------------- Elementwise Operator -----------------------------------
 
-        # Allocate extra arrays for in-place operations
-        qt_left = zeros(complex(precision), length(ky), length(kx))
-        use_cuda ? qt_left = adapt(CuArray, qt_left) : nothing
-        qt_right = zero(qt_left)
-        phi = zero(qt_left)
+struct ElwiseOperator{T<:AbstractArray} <: LinearOperator{T}
+    coeffs::T
+    order::Number
 
-        # Compute padding length
-        if dealiased
-            N = Nx > 1 ? div(3 * Nx, 2, RoundUp) : 1
-            M = Ny > 1 ? div(3 * Ny, 2, RoundUp) : 1
-        else
-            N, M = Nx, Ny
-        end
+    ElwiseOperator(coeffs; order=1) = new{typeof(coeffs)}(coeffs .^ order, order)
+end
 
-        # Determine transform plans for pseudo spectral schemes
-        if real_transform
-            m = M % 2 == 0 ? M ÷ 2 + 1 : (M - 1) ÷ 2 + 1
-            spectral_pad = zeros(complex(precision), m, N)
-            use_cuda ? spectral_pad = adapt(CuArray, spectral_pad) : nothing
-            iFT = plan_irfft(im * spectral_pad, M)
-            FT = plan_rfft(iFT * spectral_pad)
-            QT_plans = rFFTPlans(FT, iFT)
-        else
-            spectral_pad = zeros(complex(precision), M, N)
-            use_cuda ? spectral_pad = adapt(CuArray, spectral_pad) : nothing
-            FT = plan_fft(spectral_pad)
-            iFT = plan_ifft(spectral_pad)
-            QT_plans = FFTPlans(FT, iFT)
-        end
+# Out-of-place operator
+@views @inline (op::ElwiseOperator)(u::AbstractArray) = op.coeffs .* u
 
-        # Allocate data for pseudo spectral schemes
-        up = zero(spectral_pad)
-        vp = zero(spectral_pad)
-        U = iFT * up
-        V = iFT * vp
+# To be able to use @. without applying LinearOperator to array element
+import Base.Broadcast: broadcasted
+broadcasted(op::ElwiseOperator, x) = broadcasted(*, op.coeffs, x)
 
-        # Calculate correct conversion coefficent
-        dealiasing_coefficient = precision(M * N / (Nx * Ny))
+# ------------------------------------ Matrix Operator -------------------------------------
 
-        new{typeof(diff_x),typeof(diff_y),typeof(diff_xx),typeof(diff_yy),typeof(laplacian),
-            typeof(up),typeof(U),typeof(qt_right),typeof(dealiasing_coefficient),
-            typeof(QT_plans),typeof(phi)}(diff_x, diff_y, diff_xx, diff_yy, laplacian,
-            laplacian_inv, hyper_laplacian, dealiased, up, vp, U, V, qt_left, qt_right,
-            dealiasing_coefficient, QT_plans, phi)
+struct MatrixOperator{T<:AbstractArray} <: LinearOperator{T}
+    coeffs::T
+    order::Number
+end
+
+# Out-of-place operator # TODO figure out what to do here
+@views @inline (op::MatrixOperator)(u::AbstractArray) = op.coeffs * u
+
+include("spatialDerivatives.jl")
+
+# --------------------------------- Non-Linear Operators -----------------------------------
+
+# Abstract type that all NonLinear operators inherit from
+abstract type NonLinearOperator <: SpectralOperator end
+
+include("quadraticTerm.jl")
+include("poissonBracket.jl")
+
+# ---------------------------------------- Others ------------------------------------------
+
+include("solvePhi.jl")
+include("spectralFunctions.jl")
+#include("sources.jl")
+
+# ------------------------------------ Operator Recipe -------------------------------------
+
+struct OperatorRecipe{KwargsType<:NamedTuple}
+    op::Symbol
+    alias::Symbol
+    kwargs::KwargsType
+
+    function OperatorRecipe(op; alias=op, kwargs...)
+        # TODO check that op is valid
+        nt = NamedTuple(kwargs)
+        new{typeof(nt)}(op, alias, nt)
     end
 end
 
-# TODO check if operators like laplacians and diff_xx and diff_yy should be Complex 
-
-#------------------------- Quadratic terms interface ---------------------------------------
-function quadratic_term(u::U, v::V, SC::SOC) where {U<:AbstractArray,V<:AbstractArray,
-    SOC<:SpectralOperatorCache}
-    spectral_conv!(SC.qt_left, u, v, SC)
+Base.hash(oprecipe::OperatorRecipe, h::UInt) = hash((oprecipe.op, oprecipe.kwargs), h)
+function Base.:(==)(or1::OperatorRecipe, or2::OperatorRecipe)
+    or1.op == or2.op && or1.kwargs == or2.kwargs
 end
 
-# TODO perhaps remove and make alias as it has the same parameters
-function quadratic_term!(out::DF, u::F, v::F, SC::SOC) where {DF<:AbstractArray,
-    F<:AbstractArray,SOC<:SpectralOperatorCache}
-    spectral_conv!(out, u, v, SC)
-end
-
-function spectral_conv!(out::DU, u::U, v::V, SC::SOC) where {DU<:AbstractArray,
-    U<:AbstractArray,V<:AbstractArray,SOC<:SpectralOperatorCache}
-    plans = SC.QTPlans
-    # Spawn threads to perform mul! in parallel
-    task_U = Threads.@spawn mul!(SC.U, plans.iFT, SC.padded ? pad!(SC.up, u, plans) : copy(u))
-    task_V = Threads.@spawn mul!(SC.V, plans.iFT, SC.padded ? pad!(SC.vp, v, plans) : copy(v))
-    # Wait for both tasks to finish
-    wait(task_V)
-    wait(task_U)
-
-    @threads for i in eachindex(SC.U)
-        SC.U[i] *= SC.V[i]
-    end
-    mul!(SC.padded ? SC.up : out, plans.FT, SC.U)
-    SC.padded ? SC.dealiasing_coefficient * unpad!(out, SC.up, plans) : out
-end
-
-function spectral_conv!(out::DU, u::U, v::V, SC::SOC) where {DU<:CuArray,U<:CuArray,
-    V<:CuArray,SOC<:SpectralOperatorCache}
-
-    plans = SC.QTPlans
-    mul!(SC.U, plans.iFT, SC.padded ? pad!(SC.up, u, plans) : u)
-    mul!(SC.V, plans.iFT, SC.padded ? pad!(SC.vp, v, plans) : v)
-    @. SC.U *= SC.V
-    mul!(SC.padded ? SC.up : out, plans.FT, SC.U)
-    #if padded unpad!(qt, up, plans) end
-    SC.padded ? SC.dealiasing_coefficient * unpad!(out, SC.up, plans) : out
-end
-
-# Specialized for 2D arrays
-# TODO optimize for GPU
-function pad!(up::DU, u::U, plan::FFTPlans) where {T,DU<:AbstractArray{T},U<:AbstractArray{T}}
-    up .= zero.(up)
-    Ny, Nx = size(u)
-
-    Nxl = div(Nx, 2, RoundUp)
-    Nxu = div(Nx, 2, RoundDown)
-    Nyl = div(Nx, 2, RoundUp)
-    Nyu = div(Nx, 2, RoundDown)
-
-    @views @inbounds up[1:Nyl, 1:Nxl] .= u[1:Nyl, 1:Nxl] # Lower left
-    @views @inbounds up[1:Nyl, end-Nxu+1:end] .= u[1:Nyl, end-Nxu+1:end] # Lower right
-    @views @inbounds up[end-Nyu+1:end, 1:Nxl] .= u[end-Nyu+1:end, 1:Nxl] # Upper left
-    @views @inbounds up[end-Nyu+1:end, end-Nxu+1:end] .= u[end-Nyu+1:end, end-Nxu+1:end] # Upper right
-    return up
-end
-
-# TODO optimize for GPU
-function pad!(up::DU, u::U, plan::rFFTPlans) where {T,DU<:AbstractArray{T},U<:AbstractArray{T}}
-    up .= zero.(up)
-    Ny, Nx = size(u)
-
-    Nxl = div(Nx, 2, RoundUp)
-    Nxu = div(Nx, 2, RoundDown)
-
-    @views @inbounds up[1:Ny, 1:Nxl] .= u[1:Ny, 1:Nxl] # Lower left
-    @views @inbounds up[1:Ny, end-Nxu+1:end] .= u[1:Ny, end-Nxu+1:end] # Lower right
-    return up
-end
-
-# TODO optimize for GPU
-function unpad!(u::DU, up::U, plan::FFTPlans) where {T,DU<:AbstractArray{T},U<:AbstractArray{T}}
-    Ny, Nx = size(u)
-
-    Nyl = div(Nx, 2, RoundUp)
-    Nyu = div(Nx, 2, RoundDown)
-    Nxl = div(Nx, 2, RoundUp)
-    Nxu = div(Nx, 2, RoundDown)
-
-    @views @inbounds u[1:Nyl, 1:Nxl] .= up[1:Nyl, 1:Nxl] # Lower left
-    @views @inbounds u[1:Nyl, end-Nxu+1:end] .= up[1:Nyl, end-Nxu+1:end] # Lower right
-    @views @inbounds u[end-Nyu+1:end, 1:Nxl] .= up[end-Nyu+1:end, 1:Nxl] # Upper left
-    @views @inbounds u[end-Nyu+1:end, end-Nxu+1:end] .= up[end-Nyu+1:end, end-Nxu+1:end] # Upper right
-    return u
-end
-
-# TODO optimize for GPU
-function unpad!(u::DU, up::U, plan::rFFTPlans) where {T,DU<:AbstractArray{T},U<:AbstractArray{T}}
-    Ny, Nx = size(u)
-
-    Nxl = div(Nx, 2, RoundUp)
-    Nxu = div(Nx, 2, RoundDown)
-
-    @views @inbounds u[1:Ny, 1:Nxl] .= up[1:Ny, 1:Nxl] # Lower left
-    @views @inbounds u[1:Ny, end-Nxu+1:end] .= up[1:Ny, end-Nxu+1:end] # Lower right
-    return u
-end
-
-#-------------------------------- Differentiation ------------------------------------------
-
-function diff_x(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
-    SC.diff_x .* field
-end
-
-function diff_y(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
-    SC.diff_y .* field
-end
-
-function diff_xx(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
-    SC.diff_xx .* field
-end
-
-function diff_yy(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
-    SC.diff_yy .* field
-end
-
-# TODO add diff_xn, diff_yn
-
-function laplacian(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
-    SC.laplacian .* field
-end
-
-function hyper_diffusion(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
-    SC.hyper_laplacian .* field
-end
-
-function solve_phi(field::F, SC::SOC) where {F<:AbstractArray,SOC<:SpectralOperatorCache}
-    SC.phi .= SC.laplacian_inv .* field
-end
-
-# function poisson_bracket(A::U, B::V, SC::SOC) where {U<:AbstractArray,SOC<:SpectralOperatorCache}
-#     quadratic_term(diff_x(A, SC), diff_y(B, SC), SC) - quadratic_term(diff_y(A, SC), diff_x(B, SC), SC)
+# function Base.get(oprecipe::OperatorRecipe, key, default)
+#     hasproperty(oprecipe, key) ? getproperty(oprecipe, key) : default
 # end
 
-# TODO make this more in-place
-function poisson_bracket(A::U, B::V, SC::SOC) where {U<:AbstractArray,V<:AbstractArray,
-    SOC<:SpectralOperatorCache}
-    spectral_conv!(SC.qt_left, diff_x(A, SC), diff_y(B, SC), SC) .-= spectral_conv!(SC.qt_right, diff_y(A, SC), diff_x(B, SC), SC) # TODO fix formatting
-    # left = diff_x(A, SC)
-    # right = diff_y(B, SC)
-    # spectral_conv!(SC.qt_left, left, right, SC)
-    # left .= diff_y(A, SC)
-    # right .= diff_x(B, SC)
-    # spectral_conv!(SC.qt_right, left, right, SC)
-    # #SC.qt_left .-= SC.qt_right
-    # @. SC.qt_left = SC.qt_left - SC.qt_right
+# ------------------------------------- Constructors ---------------------------------------
+
+# TODO add @op for each operator
+
+# Catch all method, can be overwritten with specilization
+operator_dependencies(::Val{_}, ::Type{__}) where {_,__} = ()
+
+function get_operator_recipes(operators::Symbol)
+    if operators == :default
+        return [OperatorRecipe(:diff_x; order=1),
+                OperatorRecipe(:diff_y; order=1),
+                OperatorRecipe(:laplacian; order=1),
+                OperatorRecipe(:solve_phi),
+                OperatorRecipe(:poisson_bracket)]
+    elseif operators == :SOL
+        return [OperatorRecipe(:diff_x),
+                OperatorRecipe(:diff_y),
+                OperatorRecipe(:laplacian),
+                OperatorRecipe(:solve_phi),
+                OperatorRecipe(:poisson_bracket),
+                OperatorRecipe(:quadratic_term)]
+    elseif operators == :all
+        return [OperatorRecipe(:diff_x; order=1),
+                OperatorRecipe(:diff_y; order=1),
+                OperatorRecipe(:laplacian; order=1),
+                OperatorRecipe(:solve_phi),
+                OperatorRecipe(:poisson_bracket),
+                OperatorRecipe(:quadratic_term),
+                OperatorRecipe(:spectral_log),
+                OperatorRecipe(:spectral_exp),
+                OperatorRecipe(:spectral_expm1),
+                OperatorRecipe(:reciprocal)]
+    elseif operators == :none
+        OperatorRecipe[]
+    else
+        error()
+    end
 end
 
-#---------------------------------- Other non-linearities ---------------------------------- 
-function spectral_function(f::F, u::U, SC::SOC) where {F<:Function,U<:AbstractArray,SOC<:SpectralOperatorCache}
-    plans = SC.QTPlans
-    mul!(SC.U, plans.iFT, SC.padded ? pad!(SC.up, u, plans) : u)
-    # Assumes function is broadcastable and only 1 argument TODO expand upon this
-    SC.V .= f.(SC.dealiasing_coefficient * SC.U)
-    mul!(SC.padded ? SC.up : SC.qt_left, plans.FT, SC.V)
-    SC.padded ? unpad!(SC.qt_left, SC.up, plans) / SC.dealiasing_coefficient : SC.qt_left
+# --------------------------------- OperatorRecipe Macro -----------------------------------
+
+# TODO implement
+macro op()
 end
 
-end
+## -------------------------------- TESTING BELOW ------------------------------------------
+
+# @op ∂xx = diff_x(order=2) => OperatorRecipe(:diff_x, order=2, alias=∂xx)
+
+# function prepare_operators(::Type{Domain}, operators, kx, ky, Nx, Ny; MemoryType=MemoryType,
+#     precision=precision, real_transform=real_transform, dealiased=dealiased)
+
+#     cache = Dict{Symbol,SpectralOperator}()
+
+#     # Figure out aliases
+#     #[:∂x, :∂y, :laplacian, :poisson_bracket] -> [:diff_x, :diff_y, :laplacian, :poisson_bracket]
+
+#     # Link operator to alias
+#     #[:∂x, :∂y, :laplacian, :poisson_bracket], [:diff_x, :diff_y, :laplacian, :poisson_bracket], [:diff_x, :diff_y, :laplacian, :quadratic_term, :poisson_bracket], [ElwiseOperator, ElwiseOperator, ElwiseOperator, QuadraticTerm, PoissonBracket]
+#     #-> spectral_operators = (:∂x=ElwiseOperator, :∂y=ElwiseOperator, :laplacian=ElwiseOperator, :poisson_bracket=PoissonBracket)
+
+# end
+
+# diff_x = ∂x = Dx
+# diff_y = ∂y  = Dy
+# diff_xx = ∂xx = Dxx = ∂x² = (∂x^2)
+# diff_yy = ∂yy = Dyy = ∂y² (∂y^2)
+# diff_xn = ∂xn = Dxn (∂x^n)
+# diff_yn = ∂yn = Dyn (∂y^n)
+# laplacian = diffusion = Δ
+# hyper_laplacian = hyper_diffusion (Δ^p)

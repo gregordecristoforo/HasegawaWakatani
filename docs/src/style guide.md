@@ -28,3 +28,18 @@ be in the order of speed-up to the code or (?). In the case of domain that amoun
 
 ### Order of other arguments
 Should follow order of struct construction and or order of struct fields.
+
+## Adding TODOs
+When wanting to add TODO comments, please also create a [GitHub Issue](https://github.com/JohannesMorkrid/HasegawaWakatani.jl/issues)
+ and add it to your TODO comment. Example
+
+```
+# TODO add suitable test [#4](https://github.com/JohannesMorkrid/HasegawaWakatani.jl/issues/4)
+function example(...) = ...
+```
+
+## DocStrings
+Mainly follow the 11 steps outlined in the [manual](https://docs.julialang.org/en/v1/manual/documentation/#Writing-Documentation). 
+However emphasis should be put on separiting `## Positional Arguments` and `## Keyword Arguments`
+as done by SciML ([example](https://github.com/SciML/NeuralPDE.jl/blob/master/src/ode_solve.jl)).
+Type should be included in the description instead of for the argument name.

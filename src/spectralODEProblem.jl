@@ -6,8 +6,6 @@
 """
 struct NullParameters end
 
-# TODO add get_velocity=vExB,
-
 abstract type AbstractODEProblem{isinplace} end
 
 """
@@ -24,10 +22,12 @@ abstract type AbstractODEProblem{isinplace} end
    option to add a method `remove_modes` to remove certain modes after each timestep. Other
    `kwargs` can be stored in the struct, however these are currently unused.
 """
-mutable struct SpectralODEProblem{LType<:Function,NType<:Function,u0Type<:AbstractArray,
-    u0_hatType<:AbstractArray,D<:AbstractDomain,tType,pType,N<:Number,
-    RMType<:Function,K,iip} <: AbstractODEProblem{iip}
-
+mutable struct SpectralODEProblem{LType<:Function,NType<:Function,
+                                  u0Type<:AbstractArray,u0_hatType<:AbstractArray,
+                                  D<:AbstractDomain,tType,pType,
+                                  operatorsType<:NamedTuple,
+                                  diagnosticRecipesType<:Vector,N<:Number,
+                                  RMType<:Function,K,iip} <: AbstractODEProblem{iip}
     L::LType
     N::NType
     u0::u0Type
@@ -36,21 +36,32 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,u0Type<:Abstra
     tspan::tType
     p::pType
 
-    dt::N # Passed onto something TODO find out what this something is
+    operators::operatorsType
+    diagnostic_recipes::diagnosticRecipesType
+    dt::N
     remove_modes::RMType
     kwargs::K
 
-    function SpectralODEProblem(N::Function, u0, domain::AbstractDomain, tspan;
-        p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing, kwargs...)
+    function SpectralODEProblem(NonLinear::Function, u0, domain::AbstractDomain, tspan;
+                                p=NullParameters(), dt=0.01,
+                                remove_modes::Function=remove_nothing, kwargs...)
 
         # If no linear operator given, assume there is non and match signature
-        isinplace(N) ? L(du, u, d, p, t) = (du .= zero(u)) : L(u, d, p, t) = zero(u)
+        isinplace(NonLinear) ? L(du, u, d, p, t) = (du .= zero(u)) : L(u, d, p, t) = zero(u)
 
-        SpectralODEProblem(L, N, u0, domain, tspan, p=p, dt=dt, remove_modes=remove_modes, kwargs...)
+        SpectralODEProblem(L, NonLinear, u0, domain, tspan; p=p, dt=dt,
+                           remove_modes=remove_modes, kwargs...)
     end
 
-    function SpectralODEProblem(L::Function, N::Function, u0, domain::AbstractDomain, tspan;
-        p=NullParameters(), dt=0.01, remove_modes::Function=remove_nothing, kwargs...)
+    function SpectralODEProblem(Linear::Function, NonLinear::Function, u0,
+                                domain::AbstractDomain, tspan;
+                                p=NullParameters(), dt::Number=0.01,
+                                operators::Symbol=:default,
+                                aliases::Vector{Pair{Symbol,Symbol}}=Pair{Symbol,Symbol}[],
+                                additional_operators::Vector{<:OperatorRecipe}=OperatorRecipe[],
+                                remove_modes::Function=remove_nothing,
+                                diagnostics::Vector{<:DiagnosticRecipe}=DiagnosticRecipe[],
+                                kwargs...)
 
         # Prepare data structures
         u0 = prepare_initial_condition(u0, domain)
@@ -59,38 +70,47 @@ mutable struct SpectralODEProblem{LType<:Function,NType<:Function,u0Type<:Abstra
         # Remove unwanted modes
         remove_modes(u0_hat, domain)
 
-        # Handle timespan
+        # Handle time related things
         length(tspan) != 2 ? throw("tspan should have exactly two elements") : nothing
-        tspan = promote(first(tspan), last(tspan)) #TODO warn if tspan and dt not compatible
+        tspan = convert.(domain.precision, promote(first(tspan), last(tspan)))
+        dt = convert(domain.precision, dt)
 
-        #dt = convert(precision, dt)
+        # Returns a NamedTuple with `SpectralOperator`s
+        ops = build_operators(domain; operators, aliases, additional_operators, diagnostics,
+                              kwargs...)
+
+        # Makes the rhs follow the signature used by SciML
+        L, N = prepare_functions(Linear, NonLinear, ops)
 
         new{typeof(L),typeof(N),typeof(u0),typeof(u0_hat),typeof(domain),typeof(tspan),
-            typeof(p),typeof(dt),typeof(remove_modes),typeof(kwargs),isinplace(L, N)}(L, N,
-            u0, u0_hat, domain, tspan, p, dt, remove_modes, kwargs)
+            typeof(p),typeof(ops),typeof(diagnostics),typeof(dt),typeof(remove_modes),
+            typeof(kwargs),isinplace(Linear, NonLinear)}(L, N, u0, u0_hat, domain, tspan, p,
+                                                         ops, diagnostics, dt, remove_modes,
+                                                         kwargs)
     end
 end
 
-#Need to handle kwargs like dt = 0.01, inverse_transformation::F=identity somewhere!
+# --------------------------------- Construction Related -----------------------------------
 
-function Base.show(io::IO, m::MIME"text/plain", prob::SpectralODEProblem)
-    print(io, nameof(typeof(prob)), "(", nameof(prob.L), ",", nameof(prob.N), ";dt=", prob.dt)
-    typeof(prob.p) == NullParameters ? nothing : print(io, ",p=", prob.p)
-    println(io, "):")
-    println(io, "in-place: ", isinplace(prob) isa Val{true})
-    println(io, "remove_modes: ", nameof(prob.remove_modes))
-    print(io, "domain: ")
-    show(io, m, prob.domain)
-    print(io, "\ntimespan: ")
-    show(io, prob.tspan)
-    print(io, "\nu0: ")
-    show(io, m, prob.u0)
+"""
+"""
+function prepare_functions(Linear::Function, NonLinear::Function, operators::NamedTuple)
+    if isinplace(Linear, NonLinear) isa Val{true}
+        L(du, u, p, t) = Linear(du, u, operators, p, t)
+        N(du, u, p, t) = NonLinear(du, u, operators, p, t)
+    else
+        L(u, p, t) = Linear(u, operators, p, t)
+        N(u, p, t) = NonLinear(u, operators, p, t)
+    end
+    return L, N
 end
 
 # TODO make it more generalized
+"""
+"""
 function prepare_initial_condition(u0, domain::Domain)
-    # Transform to CUDA if used
-    domain.use_cuda ? u0 = adapt(CuArray{domain.precision}, u0) : nothing
+    # Transform to MemoryType
+    u0 = u0 |> domain.MemoryType{domain.precision}
 
     # Used for normal Fourier transform
     eltype(fwd(domain)) <: Complex ? u0 = complex(u0) : nothing
@@ -98,6 +118,10 @@ function prepare_initial_condition(u0, domain::Domain)
     return u0
 end
 
+# -------------------------- Spectral Coefficent Initialization ----------------------------
+
+"""
+"""
 function prepare_spectral_coefficients(u0, domain::Domain)
     # Allocate data structure for spectral modes
     u0_hat = allocate_coefficients(u0, domain)
@@ -114,32 +138,111 @@ end
   Recursively iterates trough the initial condition data structure to try to get to the 
   lowest level Array and then allocates the needed shape after applying the fwd transform.
 """
-function allocate_coefficients(u0, domain::Domain)
-    _allocate_coefficients(u0, domain)
-end
+allocate_coefficients(u0, domain::Domain) = _allocate_coefficients(u0, domain)
 
 # TODO perhaps clean up this logic
 function _allocate_coefficients(u0::AbstractArray{<:Number}, domain::Domain)
     # Allocate array for spectral modes 
     sz = size(get_bwd(domain))
-    allocation_size = (sz..., size(u0)[length(sz)+1:end]...)
-    u0_hat = zeros(eltype(get_bwd(domain)), allocation_size)
-
-    # Transform to CUDA
-    domain.use_cuda ? adapt(CuArray, u0_hat) : u0_hat
+    allocation_size = (sz..., size(u0)[(length(sz)+1):end]...)
+    return zeros(eltype(get_bwd(domain)), allocation_size) |> domain.MemoryType
 end
 
 function _allocate_coefficients(u0::AbstractArray{<:AbstractArray}, domain::Domain)
     [_allocate_coefficients(u, domain) for u in u0]
 end
 
-# ---------------------------------- Helpers -----------------------------------------------
+# --------------------------------- Building Of Operators ----------------------------------
+
+"""
+    prepare_operator_recipes(operators::Symbol,
+                                  additional_operators::Vector{<:OperatorRecipe},
+                                  diagnostics::Vector{<:DiagnosticRecipe})
+
+  Use switches to get a list of `OperatorRecipe`s and append the `additional_operators` and
+  `required_operators` by the `diagnostics` to it.
+"""
+function prepare_operator_recipes(operators::Symbol,
+                                  additional_operators::Vector{<:OperatorRecipe},
+                                  diagnostics::Vector{<:DiagnosticRecipe})
+    # Determine operators trough switches
+    recipes = get_operator_recipes(operators)
+    # Determine which operators are required by the diagnostics
+    required = required_operators(diagnostics)
+    # Combine with additional_operators 
+    return vcat(recipes, additional_operators, required)
+end
+
+function ensure!(cache, recipe, domain, problem_kwargs)
+    # To not construct the same operator twice
+    if haskey(cache, recipe)
+        return cache[recipe]
+    end
+
+    # Makes the code more readable
+    operator = recipe.op
+
+    # Get dependencies and construct recursively
+    dependencies = [dependency.op => ensure!(cache, dependency, domain, problem_kwargs)
+                    for dependency in operator_dependencies(Val(operator), Domain)]
+
+    # Collect kwargs from recipe, problem and combine with dependency references
+    kwargs = (; recipe.kwargs..., problem_kwargs..., dependencies...)
+
+    # Build operator and add to cache
+    cache[recipe] = build_operator(Val(operator), domain; kwargs...)
+end
+
+# TODO fix aliases method issue [#27](https://github.com/JohannesMorkrid/HasegawaWakatani.jl/issues/27)
+function add_aliases!(operators, aliases, cache)
+    #for alias in aliases
+    #    # Get last, as thats whats being aliases
+    #    operator = last(alias)
+    #    cache[]
+    #end
+    #vcat()
+    #[first(alias) => cache[last(aliases)] for alias in aliases]
+    return operators
+end
+
+function build_operators(domain::AbstractDomain; operators::Symbol=:default,
+                         aliases::Vector{Pair{Symbol,Symbol}}=Pair{Symbol,Symbol}[],
+                         additional_operators::Vector{<:OperatorRecipe}=OperatorRecipe[],
+                         diagnostics::Vector{<:DiagnosticRecipe}=DiagnosticRecipe[],
+                         problem_kwargs...)
+    # Collects all recipes needed to be built
+    recipes = prepare_operator_recipes(operators, additional_operators, diagnostics)
+
+    # Used to only have to build each operator once
+    cache = Dict{OperatorRecipe,SpectralOperator}()
+
+    # Construct NamedTuple
+    spectral_operators = (;
+                          [recipe.alias => ensure!(cache, recipe, domain, problem_kwargs)
+                           for recipe in recipes]...)
+
+    # Sort out aliases
+    spectral_operators = add_aliases!(spectral_operators, aliases, cache)
+
+    return spectral_operators
+end
+
+# ---------------------------------------- Helpers -----------------------------------------
 
 spectral_size(prob::SpectralODEProblem) = size(prob.u0_hat)
 
 get_precision(prob::SpectralODEProblem) = prob.domain.precision
 get_fwd(prob::SpectralODEProblem) = get_fwd(prob.domain)
 get_bwd(prob::SpectralODEProblem) = get_bwd(prob.domain)
+
+function get_kwargs(prob::SpectralODEProblem)
+    (; [field => getfield(prob, field) for field in fieldnames(SpectralODEProblem)]...)
+end
+
+function build_diagnostic(method::Function, prob::SpectralODEProblem; kwargs...)
+    prob_kwargs = get_kwargs(prob)
+    build_diagnostic(Val(Symbol(method)); prob_kwargs..., kwargs...)
+end
 
 """
     isinplace(prob::AbstractODEProblem{iip}) where {iip}
@@ -175,4 +278,19 @@ function isinplace(f::Function)
         - In-place: `$f(du, u, d, p, t)` (5 arguments, modifies `du` in-place), or
         - Out-of-place: `$f(u, d, p, t)` (4 arguments, returns a new value).
     However, no methods of `$f` match these signatures.")
+end
+
+function Base.show(io::IO, m::MIME"text/plain", prob::SpectralODEProblem)
+    print(io, nameof(typeof(prob)), "(", nameof(prob.L), ",", nameof(prob.N), ";dt=",
+          prob.dt)
+    typeof(prob.p) == NullParameters ? nothing : print(io, ",p=", prob.p)
+    println(io, "):")
+    println(io, "in-place: ", isinplace(prob) isa Val{true})
+    println(io, "remove_modes: ", nameof(prob.remove_modes))
+    print(io, "domain: ")
+    show(io, m, prob.domain)
+    print(io, "\ntimespan: ")
+    show(io, prob.tspan)
+    print(io, "\nu0: ")
+    show(io, m, prob.u0)
 end
