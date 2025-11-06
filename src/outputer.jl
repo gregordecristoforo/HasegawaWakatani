@@ -806,7 +806,7 @@ function store_checkpoint!(checkpoint::G, cache::C, step::Integer,
 
     # Backup step and time
     rewrite_dataset(checkpoint, "time", time)
-    rewrite_dataset(checkpoint, "step", step)
+    rewrite_dataset(checkpoint, "step", step) # TODO step might collide with cache step
 end
 
 """
