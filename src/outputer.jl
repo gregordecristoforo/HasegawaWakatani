@@ -72,25 +72,28 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},UB<:AbstractArray,T<:Abstr
         # Prepare initial state
         state, t0 = prepare_initial_state(prob; physical_transform=physical_transform)
 
-        # Merge h5_kwargs with default kwargs
-        h5_kwargs = merge((blosc=3,), h5_kwargs)
-
-        # Setup HDF5 storage if wanted
-        simulation = setup_hdf5_storage(filename, simulation_name, state, prob, t0;
-                                        store_hdf=store_hdf, h5_kwargs=h5_kwargs)
-
-        # Setup local (in memory) storage if wanted
-        u, t = setup_local_storage(state, t0; store_locally=false) # Currently disabled TODO re-enable
-
-        # Build diagnostics and do initial sampling pass #TODO move up
+        # Build diagnostics and do initial sampling pass
         diagnostics, initial_samples = initialize_diagnostics(prob, state, prob.u0_hat, t0)
 
         #built_diagnostics = Diagnostic[] # Currently disabled, todo re-enable
         strides = determine_strides(initial_samples, prob, storage_limit)
 
-        #setup_diagnostic_group
-        #setup_local_key
-        # store_diagnostic!(output, diagnostic, step, sample, time)
+        # Merge h5_kwargs with default kwargs
+        h5_kwargs = merge((blosc=3,), h5_kwargs)
+
+        # Setup HDF5 storage if wanted
+        simulation = setup_hdf5_storage(prob, t0;
+                                        filename=filename,
+                                        simulation_name=simulation_name,
+                                        diagnostics=diagnostics,
+                                        initial_samples=initial_samples,
+                                        strides=strides,
+                                        store_hdf=store_hdf,
+                                        h5_kwargs=h5_kwargs)
+
+        # Setup local (in memory) storage if wanted
+        u, t = setup_local_storage(state, t0; store_locally=false) # Currently disabled TODO re-enable
+
         # Create output
         new{typeof(diagnostics),typeof(state),typeof(t),typeof(simulation),
             typeof(physical_transform),typeof(h5_kwargs)}(diagnostics, strides, state, t,
@@ -116,6 +119,30 @@ end
 
 # -------------------------------------- HDF5 Setup ----------------------------------------
 
+function setup_hdf5_storage(prob, t0;
+                            filename,
+                            simulation_name,
+                            diagnostics,
+                            initial_samples,
+                            strides,
+                            store_hdf=true,
+                            h5_kwargs=(blosc=3,))
+    simulation = setup_simulation_group(filename, simulation_name, prob;
+                                        store_hdf=store_hdf, h5_kwargs=h5_kwargs)
+    if isnothing(simulation)
+        return simulation
+    else
+        N_steps = compute_number_of_steps(prob)
+        for (diagnostic, sample, stride) in zip(diagnostics, initial_samples, strides)
+            if diagnostic.stores_data
+                N_samples = cld(N_steps, stride) + 1
+                setup_diagnostic_group(simulation, diagnostic, N_samples, sample, t0;
+                                       h5_kwargs)
+            end
+        end
+    end
+end
+
 """
     setup_hdf5_storage(filename, simulation_name, N_samples::Int, state, prob, t0;
     store_hdf=store_hdf, h5_kwargs=h5_kwargs)
@@ -124,8 +151,9 @@ end
   refered to as a `simulation` group. If the simulation group does not exists, the `h5_kwargs` 
   are applied to the `"fields"` and `"t"` datasets. The opened `simulation` is returned.
 """
-function setup_hdf5_storage(filename, simulation_name, state, prob, t0; store_hdf=store_hdf,
-                            h5_kwargs=h5_kwargs)
+function setup_simulation_group(filename, simulation_name, prob;
+                                store_hdf=true,
+                                h5_kwargs=(blosc=3,))
     if store_hdf
         filename = add_h5_if_missing(filename)
 
@@ -212,11 +240,6 @@ end
 
 # -------------------------------- HDF5 Diagnostic Storage ---------------------------------
 
-# TODO FIX THESE TWO METHODS
-
-# TODO check if new dim of fields, in that case probably should re-create simulation group
-#simulation = setup_simulation_group(file, simulation_name, N_samples, state, prob,
-#                                    t0; h5_kwargs)
 """
     setup_simulation_group(file, simulation_name, N_samples, state, prob, t0; h5_kwargs)
 
@@ -224,16 +247,14 @@ end
   sizes based on `N_samples` with the fields being chunked with additinal `h5_kwargs` applied.
   In addition the inital condition is written along with the attributes of the `prob`.
 """
-function setup_diagnostic_group(file, simulation_name, N_samples, state, prob, t0;
-                                h5_kwargs)
+function setup_diagnostic_group(simulation, diagnostic, N_samples, sample, t0; h5_kwargs)
     if !haskey(simulation, diagnostic.name)
         # Create diagnostic group
         h5group = create_group(simulation, diagnostic.name)
 
         # Create dataset to store samples and associated time
-        ## Datatype and shape is not so trivial here..., will have to think about it tomorrow
-        dset = create_dataset(h5group, "data", datatype(eltype(id)),
-                              (size(id)..., typemax(Int64)); chunk=(size(id)..., 1),
+        dset = create_dataset(h5group, "data", datatype(eltype(sample)),
+                              (size(sample)..., typemax(Int64)); chunk=(size(sample)..., 1),
                               h5_kwargs...)
         HDF5.set_extent_dims(dset, (size(id)..., N))
         dset = create_dataset(h5group, "t", datatype(eltype(id)), (typemax(Int64),);
@@ -243,25 +264,22 @@ function setup_diagnostic_group(file, simulation_name, N_samples, state, prob, t
         # Add metadata
         create_attribute(h5group, "metadata", diagnostic.metadata)
 
-        # Store initial diagnostic
-        diagnostic.h5group["data"][fill(:, ndims(id))..., 1] = id
-        diagnostic.h5group["t"][1] = first(prob.tspan)
+        # TODO where should this logic be?
+        # Store initial sample
+        h5group["data"][fill(:, ndims(sample))..., 1] = sample
+        h5group["t"][1] = t0
 
         # Store the initial conditions
-        write_state(simulation, 1, state, t0)
+        #write_state(simulation, 1, state, t0)
     else
-        # TODO determine id and N
-
         h5group = open_group(simulation, diagnostic.name)
         # Extend size of arrays
         # Open dataset
         dset = open_dataset(h5group, "data")
-        HDF5.set_extent_dims(dset, (size(id)..., N))
+        HDF5.set_extent_dims(dset, (size(sample)..., N_samples))
         dset = open_dataset(h5group, "t")
-        HDF5.set_extent_dims(dset, (N,))
+        HDF5.set_extent_dims(dset, (N_samples,))
     end
-
-    # TODO determine what to return
 end
 
 """
