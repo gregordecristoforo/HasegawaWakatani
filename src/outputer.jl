@@ -11,7 +11,7 @@
   - `stride::Int`: Number of steps between stored samples.
   - `diagnostics::DV`: Array of `Diagnostic`s.
   - `u::U`: Array for storing simulation states in memory.
-  - `U_buffer::UB`: Buffer for storing physical space state.
+  - `state_buffer::UB`: Buffer for storing physical space state.
   - `t::T`: Array for storing time points.
   - `simulation::S`: HDF5 group or `Nothing`, representing the simulation storage.
   - `physical_transform::PT`: Function to transform the state in physical space.
@@ -50,7 +50,7 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},UB<:AbstractArray,T<:Abstr
                       K<:NamedTuple}
     diagnostics::DV
     strides::Vector{Int}
-    U_buffer::UB
+    state_buffer::UB
     t::T # TODO replace with simulationDict?
     simulation::S
     physical_transform::PT
@@ -332,7 +332,7 @@ function setup_local_key()
     end
     diagnostic.t[1] = first(prob.tspan)
 end
-step
+
 """
     write_local_state(output, idx, u, t)
 
@@ -659,12 +659,6 @@ end
 """ 
   # In memory storage
   setup_local_storage
-
-  # HDF5
-  create_or_open_group 
-  reopen_simulation_group
-  rewrite_dataset
-  setup_simulation_group
 """
 
 # ---------------------------------- Handling Of Output ------------------------------------
@@ -722,12 +716,12 @@ end
 function sample_diagnostic!(output, diagnostic, idx::Integer, state, prob, time)
     # Check if diagnostic assumes physical field and transform if not yet done
     if !diagnostic.assumes_spectral_state && !output.transformed
-        # Transform state (updates U_buffer)
+        # Transform state (updates state_buffer)
         transform_state!(output, state, get_bwd(prob.domain))
     end
 
     # Apply diagnostic to the correct input (either physical or spectral state)
-    input = diagnostic.assumes_spectral_state ? state : output.U_buffer
+    input = diagnostic.assumes_spectral_state ? state : output.state_buffer
     sample = diagnostic(input, prob, time)
 
     # Store sample
@@ -753,12 +747,12 @@ end
     transform_state!(output, u, p)
 
   Transforms spectral coefficients `u_hat` into real fields by applying `spectral_transform!` 
-  to the `output.U_buffer` buffer. The user defined `physical_transform` is also applied to 
+  to the `output.state_buffer` buffer. The user defined `physical_transform` is also applied to 
   the buffer, and the `output.transformed` flag is updated to not transform same field twice.
 """
 function transform_state!(output, state_hat, plan)
-    spectral_transform!(output.U_buffer, plan, state_hat)
-    output.physical_transform(output.U_buffer)
+    spectral_transform!(output.state_buffer, plan, state_hat)
+    output.physical_transform(output.state_buffer)
     output.transformed = true
 end
 
