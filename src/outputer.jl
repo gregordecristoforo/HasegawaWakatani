@@ -886,9 +886,9 @@ end
 function create_or_open_group(parent::Union{HDF5.File,HDF5.Group}, path::AbstractString;
                               properties...)
     if haskey(parent, path)
-        return open_group(parent, "checkpoint", properties...)
+        return open_group(parent, path, properties...)
     else
-        return create_group(parent, "checkpoint", properties...)
+        return create_group(parent, path, properties...)
     end
 end
 
