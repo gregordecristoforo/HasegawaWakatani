@@ -37,22 +37,22 @@ tspan = [0.0, 20.0]
 diagnostics = @diagnostics [
     probe_density(; positions=[(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], stride=10),
     radial_COM(; stride=1),
-    progress(; stride=100),
-    cfl(; stride=1),
-    plot_density(; stride=1000),
+    progress(; stride=-1),
+    cfl(; stride=250, silent=true, storage_limit="2KB"),
     plot_vorticity(; stride=1000),
-    plot_potential(; stride=1000)
+    plot_potential(; stride=1000),
+    plot_density(; stride=1000)
 ]
 
 # Collection of specifications defining the problem to be solved
-prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt=1e-3,
+prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt=2.5e-3,
                           boussinesq=true, aliases=[:∂x => :diff_x],
                           diagnostics=diagnostics)
 
 # The output
 output_file_name = joinpath(@__DIR__, "output", "Garcia 2005 PoP.h5")
 output = Output(prob; filename=output_file_name, simulation_name=:parameters,
-                storage_limit="0.5 GB", store_locally=true)
+                storage_limit="0.5 GB", store_locally=false)
 
 # Solve and plot
 sol = spectral_solve(prob, MSS3(), output; resume=false)
