@@ -143,6 +143,7 @@ function setup_hdf5_storage(prob, t0;
     return simulation
 end
 
+# TODO check if new dim of fields, in that case probably should re-create simulation group
 """
     setup_hdf5_storage(filename, simulation_name, N_samples::Int, state, prob, t0;
     store_hdf=store_hdf, h5_kwargs=h5_kwargs)
@@ -283,17 +284,14 @@ function setup_diagnostic_group(simulation, diagnostic, N_samples, sample, t0; h
 end
 
 """
-    write_state(simulation, idx::Int, u, t)
+    write_to(h5group::HDF5.Group, idx, data, time)
 
-  Writes the state `u` at time `t` to the simulation group `simulation` (HDF5).
+  Writes the `data` at time `time` to the  `h5group` (HDF5).
 """
-function write_data(diagnostic, idx, data, t)# (simulation, idx::Int, u, t)
+function write_to(h5group::HDF5.Group, idx, data, time)
     # TODO better check on ndims
-    simulation[diagnostic.name]["data"][fill(:, ndims(data))..., idx] = data
-    simulation[diagnostic.name]["t"][idx] = t
-
-    simulation["fields"][fill(:, ndims(u))..., idx] = u
-    simulation["t"][idx] = t
+    h5group["data"][fill(:, ndims(data))..., idx] = data
+    h5group["t"][idx] = time
 end
 
 # ---------------------------------- Setup Local Storage -----------------------------------
@@ -736,10 +734,12 @@ end
 """
 function store_diagnostic!(output, diagnostic, idx::Integer, sample, time)
     if !isnothing(sample)
-        # TODO figure out what to call methods and re-implement
-        #output.store_hdf ? write_data(diagnostic, idx, sample, time) : nothing
-
-        #output.store_locally ? write_local_data(diagnostic, idx, sample, time) : nothing
+        if output.store_hdf
+            write_to(output.simulation[diagnostic.name], idx, sample, time)
+        end
+        if output.store_locally
+            #output.store_locally ? write_local_data(diagnostic, idx, sample, time) : nothing
+        end
     end
 end
 
