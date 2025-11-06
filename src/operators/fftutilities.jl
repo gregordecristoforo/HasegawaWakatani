@@ -1,3 +1,9 @@
+# ------------------------------------------------------------------------------------------
+#                                       FFT Utilities                                       
+# ------------------------------------------------------------------------------------------
+
+# ---------------------------------- FFT Transform Plans -----------------------------------
+
 abstract type AbstractTransformPlans end
 
 abstract type FourierTransformPlans <: AbstractTransformPlans end
@@ -20,14 +26,14 @@ struct rFFTPlans{FWD<:FFTW.Plan,BWD<:FFTW.Plan} <: FourierTransformPlans
     iFT::BWD
 end
 
+# ------------------------------ Spectral Transform Methods --------------------------------
+
 """
     spectral_transform!(U<:AbstractArray, transformplan<:FFTW.Plan)
     spectral_transform!(U<:Union{Tuple,Vector}, transformplan<:FFTW.Plan)
   Spectral transform, applies transform plan p to u in-place returning du.
 """
-function spectral_transform!(du, p::P, u) where {P<:FFTW.Plan}
-    _spectral_transform!(du, p, u)
-end
+spectral_transform!(du, p::P, u) where {P<:FFTW.Plan} = _spectral_transform!(du, p, u)
 
 function _spectral_transform!(du, p::P, u::AbstractArray{<:Number}) where {P<:FFTW.Plan}
     idx = ntuple(_ -> :, ndims(p))
@@ -36,7 +42,8 @@ function _spectral_transform!(du, p::P, u::AbstractArray{<:Number}) where {P<:FF
     end
 end
 
-function _spectral_transform!(du, p::P, u::AbstractArray{<:AbstractArray}) where {P<:FFTW.Plan}
+function _spectral_transform!(du, p::P,
+                              u::AbstractArray{<:AbstractArray}) where {P<:FFTW.Plan}
     for i in eachindex(u)
         _spectral_transform!(du[i], p, u[i])
     end
@@ -49,7 +56,7 @@ end
   Spectral transform out-of-place, applies transform plan p to U. 
 """
 function spectral_transform(U::T, p::P) where {T<:AbstractArray,P<:FFTW.Plan}
-    mapslices(u -> p * u, U, dims=(1, 2))
+    mapslices(u -> p * u, U; dims=(1, 2))
 end
 
 function spectral_transform(U::T, p::P) where {T<:Union{Tuple,Vector},P<:FFTW.Plan}
@@ -61,7 +68,7 @@ end
 #     spectral_transform!
 # end
 
-# ------------------------------ Helpers ---------------------------------------------------
+# ---------------------------------------- Helpers -----------------------------------------
 
 get_fwd(transformplans::FourierTransformPlans) = transformplans.FT
 const fwd = get_fwd

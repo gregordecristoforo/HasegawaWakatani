@@ -1,144 +1,310 @@
-# --------------------------------- Energy integrals ---------------------------------------
+# ------------------------------------------------------------------------------------------
+#                                Energy Integral Diagnostics                                
+# ------------------------------------------------------------------------------------------
+
+# ----------------------------------- Parsevals Theorem ------------------------------------
+
 # For the most part uses Parsevals theorem, these does not correct for aliasing
+function parsevals_theorem(coeffs::AbstractArray, domain::Domain; compute_density=true)
+    _parsevals_theorem(coeffs, domain, Val(domain.real_transform); compute_density)
+end
 
-# Energy integrals 
+function _parsevals_theorem(coeffs::AbstractArray, domain::Domain,
+                            real_transform::Val{true}; compute_density=true)
+    integral = @views (2 * sum(abs2.(coeffs)) .- sum(abs2.(coeffs))) *
+                      (length(domain) * differential_area(domain)) /
+                      (spectral_length(domain))
+    return compute_density ? integral / area(domain) : integral
+end
+
+function _parsevals_theorem(coeffs::AbstractArray, domain::Domain,
+                            real_transform::Val{false}; compute_density=true)
+    integral = @views (sum(abs2.(coeffs))) * differential_area(domain)
+    return compute_density ? integral / area(domain) : integral
+end
+
+# ------------------------------ Integral Of Quadratic Term --------------------------------
+
+function integral_of_quadratic_term(u, v, domain, quadratic_term; compute_density=true)
+    @unpack transforms, U, V, up, vp, padded, dealiasing_coefficient = quadratic_term
+    mul!(U, bwd(transforms), padded ? pad!(up, u, typeof(transforms)) : u)
+    mul!(V, bwd(transforms), padded ? pad!(vp, v, typeof(transforms)) : v)
+    @. U *= V
+    # ∫∫Udxdy ≈ ∑Udxdy
+    integral = dealiasing_coefficient * sum(U) * differential_area(domain)
+    return compute_density ? integral / area(domain) : integral
+end
+
+# ------------------------------- Potential Energy Integral --------------------------------
+
 # P(t) = ∫dx 1/2n^2
-function potential_energy_integral(u::U, prob::P, t::T; quadrature=nothing) where
-{U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    domain = prob.domain
-    if domain.real_transform
-        @views (sum(abs.(u[1:end, :, 1]) .^ 2) .- 0.5 * sum(abs.(u[1, :, 1]) .^ 2)) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
-    else
-        @views (sum(abs.(u[:, :, 1]) .^ 2)) / (2.0 * domain.Nx * domain.Ny * domain.Lx * domain.Ly)
-    end
+function potential_energy_integral(state, prob, time; quadrature=nothing)
+    @unpack domain = prob
+    n = selectdim(state, ndims(domain) + 1, 1)
+    parsevals_theorem(n, domain) / 2
 end
 
-function PotentialEnergyDiagnostic(N::Int=10)
-    Diagnostic("Potential energy integral", potential_energy_integral, N, "potential energy",
-        assumes_spectral_field=true)
+function build_diagnostic(::Val{:potential_energy_integral}; kwargs...)
+    Diagnostic(; name="Potential energy integral",
+               method=potential_energy_integral,
+               metadata="Potential energy density.",
+               assumes_spectral_state=true)
 end
+
+# ----------------------------------- Energy Integrals -------------------------------------
+
+# -------------------------------- Kinetic Energy Integral ---------------------------------
 
 # K(t) = ∫1/2(∇_⟂Φ)^2 = ∫dx1/2 U_E^2
-function kinetic_energy_integral(u::U, prob::P, t::T; quadrature=nothing) where
-{U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    domain = prob.domain
-    ϕ = @views solve_phi(u[:, :, 2], domain)
-    E_kin = -laplacian(abs.(ϕ) .^ 2, domain)
-
-    if domain.real_transform
-        @views (sum(E_kin[1:end, :]) .- 0.5 * sum(E_kin[1, :])) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
-    else
-        sum(E_kin) / (2.0 * domain.Nx * domain.Ny * domain.Lx * domain.Ly)
-    end
+function kinetic_energy_integral(state, prob, time; quadrature=nothing)
+    @unpack domain, operators = prob
+    @unpack solve_phi, diff_x, diff_y = operators
+    Ω = selectdim(state, ndims(domain) + 1, 1)
+    ϕ = solve_phi(Ω)
+    parsevals_theorem(diff_x(ϕ), domain) / 2 + parsevals_theorem(diff_y(ϕ), domain) / 2
 end
 
-function KineticEnergyDiagnostic(N::Int=10)
-    Diagnostic("Kinetic energy integral", kinetic_energy_integral, N, "kinetic energy",
-        assumes_spectral_field=true)
+function requires_operator(::Val{:kinetic_energy_integral}; kwargs...)
+    [OperatorRecipe(:solve_phi), OperatorRecipe(:diff_x), OperatorRecipe(:diff_y)]
 end
+
+function build_diagnostic(::Val{:kinetic_energy_integral}; kwargs...)
+    Diagnostic(; name="Kinetic energy integral",
+               method=kinetic_energy_integral,
+               metadata="Kinetic energy density.",
+               assumes_spectral_state=true)
+end
+
+# --------------------------------- Total Enegy Integral -----------------------------------
 
 # E(t) = P(T) + K(T)
-function total_energy_integral(u::U, prob::P, t::T; quadrature=nothing) where
-{U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    potential_energy_integral(u, prob, t) .+ kinetic_energy_integral(u, prob, t)
+function total_energy_integral(state, prob, time; quadrature=nothing)
+    potential_energy_integral(state, prob, time; quadrature=quadrature) .+
+    kinetic_energy_integral(state, prob, time; quadrature=quadrature)
 end
 
-function TotalEnergyDiagnostic(N::Int=10)
-    Diagnostic("Total energy integral", total_energy_integral, N, "total energy",
-        assumes_spectral_field=true)
+function build_diagnostic(::Val{:total_energy_integral}; kwargs...)
+    Diagnostic(; name="Total energy integral",
+               method=total_energy_integral,
+               metadata="Total energy density.",
+               assumes_spectral_state=true)
 end
 
-# U(t) = ∫1/2(∇_⟂^2Φ)^2 = ∫dx1/2 U_E^2
-function enstropy_energy_integral(u::U, prob::P, t::T; quadrature=nothing) where
-{U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    domain = prob.domain
-    if domain.real_transform
-        @views (sum(abs.(u[1:end, :, 2]) .^ 2) .- 0.5 * sum(abs.(u[1, :, 2]) .^ 2)) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
-    else
-        @views (sum(abs.(u[:, :, 2]) .^ 2)) / (2.0 * domain.Nx * domain.Ny * domain.Lx * domain.Ly)
-    end
+# ------------------------------- Enstropy Energy Integral ---------------------------------
+
+# U(t) = ∫1/2(∇_⟂^2Φ)^2 = ∫dx1/2 Ω^2
+function enstropy_energy_integral(state, prob, time; quadrature=nothing)
+    @unpack domain = prob
+    Ω = selectdim(state, ndims(domain) + 1, 2)
+    parsevals_theorem(Ω, domain) / 2
 end
 
-function EnstropyEnergyDiagnostic(N::Int=10)
-    Diagnostic("Enstropy energy integral", enstropy_energy_integral, N, "enstropy energy",
-        assumes_spectral_field=true)
+function build_diagnostic(::Val{:enstropy_energy_integral}; kwargs...)
+    Diagnostic(; name="Enstropy energy integral",
+               method=enstropy_energy_integral,
+               metadata="Enstropy energy density.",
+               assumes_spectral_state=true)
 end
+
+# ----------------------------- Dissipative Energy Integrals -------------------------------
+
+# ---------------------------- Resistive Dissipation Integral ------------------------------
 
 # Γ_c(t) = C∫(n-ϕ)^2
-function resistive_dissipation_integral(u::U, prob::P, t::T; quadrature=nothing) where
-{U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    domain = prob.domain
-    h = @views u[:, :, 1] .- solve_phi(u[:, :, 2], domain)
-    if domain.real_transform
-        @views prob.p["C"] * (2 * sum(abs.(h[1:end, :]) .^ 2) .- sum(abs.(h[1, :]) .^ 2)) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
-    else
-        prob.p["C"] * (sum(abs.(h) .^ 2)) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
-    end
+function resistive_dissipation_integral(state, prob, time; adiabaticity_symbol=:C,
+                                        quadrature=nothing)
+    @unpack domain, operators, p = prob
+    @unpack solve_phi, quadratic_term = operators
+    C = getfield(p, adiabaticity_symbol)
+    n, Ω = eachslice(state; dims=ndims(state))
+    h = n .- solve_phi(Ω)
+    return C * parsevals_theorem(h, domain)
 end
 
-function ResistiveDissipationDiagnostic(N::Int=10)
-    Diagnostic("Resistive dissipation integral", resistive_dissipation_integral, N,
-        "resistive dissipation energy", assumes_spectral_field=true)
+function requires_operator(::Val{:resistive_dissipation_integral}; kwargs...)
+    [OperatorRecipe(:solve_phi)]
 end
+
+function build_diagnostic(::Val{:resistive_dissipation_integral}; adiabaticity_symbol=:C,
+                          kwargs...)
+    diagnostic_kwargs = (; adiabaticity_symbol=adiabaticity_symbol)
+    Diagnostic(; name="Resistive dissipation integral",
+               method=resistive_dissipation_integral,
+               metadata="Resistive dissipation energy density.",
+               assumes_spectral_state=true,
+               kwargs=diagnostic_kwargs)
+end
+
+# ---------------------------- Potential Dissipation Integral ------------------------------
 
 # D^E_N(t) = ν∫n∇⁶_⟂n
-function potential_dissipation_integral(u::U, prob::P, t::T; quadrature=nothing) where
-{U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    domain = prob.domain
-    D_n_hat = @views -prob.p["D_n"] * hyper_diffusion(abs.(u[:, :, 1]) .^ 2, domain)
-
-    if domain.real_transform
-        @views (2 * sum(D_n_hat[1:end, :]) .- sum(D_n_hat[1, :])) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
-    else
-        sum(D_n_hat) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
-    end
+function potential_dissipation_integral(state, prob, time; diffusivity_symbol=:ν,
+                                        quadrature=nothing)
+    @unpack domain, p, operators = prob
+    @unpack hyper_laplacian, quadratic_term = operators
+    ν = getfield(p, diffusivity_symbol)
+    n = selectdim(state, ndims(domain) + 1, 1)
+    ν * integral_of_quadratic_term(n, hyper_laplacian(n), domain, quadratic_term)
 end
 
-function PotentialDissipationDiagnostic(N::Int=10)
-    Diagnostic("Potential dissipation integral", potential_dissipation_integral, N,
-        "potential dissipation energy", assumes_spectral_field=true)
+function requires_operator(::Val{:potential_dissipation_integral}; kwargs...)
+    [OperatorRecipe(:laplacian; order=3, alias=:hyper_laplacian),
+     OperatorRecipe(:quadratic_term)]
 end
 
-# D^E_V(t) = ν∫ϕ∇⁶_⟂Ω = ν∫Ω∇⁴_⟂Ω 
-function kinetic_dissipation_integral(u::U, prob::P, t::T; quadrature=nothing) where
-{U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    domain = prob.domain
-    D_Ω_hat = @views prob.p["D_Ω"] * abs.(laplacian(u[:, :, 2], domain)) .^ 2
-
-    if domain.real_transform
-        @views (2 * sum(D_Ω_hat[1:end, :]) .- sum(D_Ω_hat[1, :])) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
-    else
-        sum(D_Ω_hat) / (domain.Nx * domain.Ny * domain.Lx * domain.Ly)
-    end
+function build_diagnostic(::Val{:potential_dissipation_integral}; diffusivity_symbol=:ν,
+                          kwargs...)
+    diagnostic_kwargs = (; diffusivity_symbol=diffusivity_symbol)
+    Diagnostic(; name="Potential dissipation integral",
+               method=potential_dissipation_integral,
+               metadata="Potential energy dissipation density.",
+               assumes_spectral_state=true,
+               kwargs=diagnostic_kwargs)
 end
 
-function KineticDissipationDiagnostic(N::Int=10)
-    Diagnostic("Kinetic dissipation integral", kinetic_dissipation_integral, N,
-        "kinetic dissipation energy", assumes_spectral_field=true)
+# ----------------------------- Kinetic Dissipation Integral -------------------------------
+
+# D^E_V(t) = μ∫ϕ∇⁶_⟂Ω = μ∫Ω∇⁴_⟂Ω 
+function kinetic_dissipation_integral(state, prob, time; viscosity_symbol=:μ,
+                                      quadrature=nothing)
+    @unpack domain, p, operators = prob
+    @unpack solve_phi, hyper_laplacian, quadratic_term = operators
+    μ = getfield(p, viscosity_symbol)
+    Ω = selectdim(state, ndims(domain) + 1, 2)
+    ϕ = solve_phi(Ω)
+    μ * integral_of_quadratic_term(ϕ, hyper_laplacian(Ω), domain, quadratic_term)
 end
+
+function requires_operator(::Val{:kinetic_dissipation_integral}; kwargs...)
+    [OperatorRecipe(:solve_phi), OperatorRecipe(:quadratic_term),
+     OperatorRecipe(:laplacian; order=3, alias=:hyper_laplacian)]
+end
+
+function build_diagnostic(::Val{:kinetic_dissipation_integral}; viscosity_symbol=:μ,
+                          kwargs...)
+    diagnostic_kwargs = (; viscosity_symbol=viscosity_symbol)
+    Diagnostic(; name="Kinetic dissipation integral",
+               method=kinetic_dissipation_integral,
+               metadata="Kinetic energy dissipation density.",
+               assumes_spectral_state=true,
+               kwargs=diagnostic_kwargs)
+end
+
+# ----------------------------- Viscous Dissipation Integral -------------------------------
 
 # D^E(t) = D^E_N(t) + D^E_V(t) 
-function viscous_dissipation_integral(u::U, prob::P, t::T; quadrature=nothing) where
-{U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    potential_dissipation_integral(u, prob, t) .+ kinetic_dissipation_integral(u, prob, t)
+function viscous_dissipation_integral(state, prob, time; diffusivity_symbol=:ν,
+                                      viscosity_symbol=:μ, quadrature=nothing)
+    potential_dissipation_integral(state, prob, time; diffusivity_symbol=diffusivity_symbol,
+                                   quadrature=quadrature) .+
+    kinetic_dissipation_integral(state, prob, time; viscosity_symbol=viscosity_symbol,
+                                 quadrature=quadrature)
 end
 
-function ViscousDissipationDiagnostic(N::Int=10)
-    Diagnostic("Viscous dissipation integral", viscous_dissipation_integral, N,
-        "viscous dissipation energy", assumes_spectral_field=true)
+function requires_operator(::Val{:viscous_dissipation_integral}; kwargs...)
+    vcat(requires_operator(Val(:potential_dissipation_integral); kwargs...),
+         requires_operator(Val(:kinetic_dissipation_integral); kwargs...))
 end
 
-# dE/dt(t) = - Γ_c - D^E 
-function energy_evolution_integral(u::U, prob::P, t::T; quadrature=nothing) where
-{U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    radial_flux(u, prob, t) - resistive_dissipation_integral(u, prob, t) .- viscous_dissipation_integral(u, prob, t)
+function build_diagnostic(::Val{:viscous_dissipation_integral}; diffusivity_symbol=:ν,
+                          viscosity_symbol=:μ, kwargs...)
+    diagnostic_kwargs = (; diffusivity_symbol=diffusivity_symbol,
+                         viscosity_symbol=viscosity_symbol)
+    Diagnostic(; name="Viscous dissipation integral",
+               method=viscous_dissipation_integral,
+               metadata="Viscous energy dissipation density.",
+               assumes_spectral_state=true,
+               kwargs=diagnostic_kwargs)
 end
 
-function EnergyEvolutionDiagnostic(N::Int=10)
-    Diagnostic("Energy evolution integral", energy_evolution_integral, N,
-        "energy evolution", assumes_spectral_field=true)
+# ----------------------------- Enstropy Dissipation Integral ------------------------------
+
+# D^U(t) = ∫(n-Ω)(ν∇⁶_⟂n - μ∇⁶_⟂Ω)
+function enstropy_dissipation_integral(state, prob, time; diffusivity_symbol=:ν,
+                                       viscosity_symbol=:μ, kwargs...)
+    @unpack domain, p, operators = prob
+    @unpack hyper_laplacian, quadratic_term = operators
+    ν = getfield(p, diffusivity_symbol)
+    μ = getfield(p, viscosity_symbol)
+    n, Ω = eachslice(state; dims=ndims(state))
+    h = n - Ω
+    diffusive_terms = ν * hyper_laplacian(n) - μ * hyper_laplacian(Ω)
+    integral_of_quadratic_term(h, diffusive_terms, domain, quadratic_term)
 end
 
-# TODO add enstropy dissipation and evolution, more tricky probably
+function requires_operator(::Val{:enstropy_dissipation_integral}; kwargs...)
+    [OperatorRecipe(:laplacian; order=3, alias=:hyper_laplacian),
+     OperatorRecipe(:quadratic_term)]
+end
 
-# TODO implement Parseval method to generalize all energy integrals
+function build_diagnostic(::Val{:enstropy_dissipation_integral}; diffusivity_symbol=:ν,
+                          viscosity_symbol=:μ, kwargs...)
+    diagnostic_kwargs = (; diffusivity_symbol=diffusivity_symbol,
+                         viscosity_symbol=viscosity_symbol)
+    Diagnostic(; name="Enstropy dissipation integral",
+               method=enstropy_dissipation_integral,
+               metadata="Enstropy energy dissipation density.",
+               assumes_spectral_state=true,
+               kwargs=diagnostic_kwargs)
+end
+
+# ---------------------------------- Evolution Integrals -----------------------------------
+
+# ------------------------------- Energy Evolution Integral --------------------------------
+
+# dE/dt(t) = Γ_n - Γ_c - D^E 
+function energy_evolution_integral(state, prob, time; adiabaticity_symbol=:C,
+                                   diffusivity_symbol=:ν, viscosity_symbol=:μ,
+                                   quadrature=nothing)
+    radial_flux(state, prob, time; quadrature=quadrature) .-
+    resistive_dissipation_integral(state, prob, time;
+                                   adiabaticity_symbol=adiabaticity_symbol,
+                                   quadrature=quadrature) .-
+    viscous_dissipation_integral(state, prob, time; diffusivity_symbol=diffusivity_symbol,
+                                 viscosity_symbol=viscosity_symbol, quadrature=quadrature)
+end
+
+function requires_operator(::Val{:energy_evolution_integral}; kwargs...)
+    vcat(requires_operator(Val(:radial_flux); kwargs...),
+         requires_operator(Val(:resistive_dissipation_integral); kwargs...),
+         requires_operator(Val(:viscous_dissipation_integral); kwargs...))
+end
+
+function build_diagnostic(::Val{:energy_evolution_integral}; adiabaticity_symbol=:C,
+                          diffusivity_symbol=:ν,
+                          viscosity_symbol=:μ, kwargs...)
+    diagnostic_kwargs = (; adiabaticity_symbol=adiabaticity_symbol,
+                         diffusivity_symbol=diffusivity_symbol,
+                         viscosity_symbol=viscosity_symbol)
+    Diagnostic(; name="Energy evolution integral",
+               method=energy_evolution_integral,
+               metadata="Energy density evolution.",
+               assumes_spectral_state=true,
+               kwargs=diagnostic_kwargs)
+end
+
+# ------------------------------- Enstropy Energy Integral ---------------------------------
+
+#dU / dt(t) = Γ_n - D^U
+function enstropy_evolution_integral(state, prob, time; diffusivity_symbol=:ν,
+                                     viscosity_symbol=:μ, quadrature=nothing)
+    radial_flux(state, prob, time; quadrature=quadrature) .-
+    enstropy_dissipation_integral(state, prob, time; diffusivity_symbol=diffusivity_symbol,
+                                  viscosity_symbol=viscosity_symbol, quadrature=quadrature)
+end
+
+function requires_operator(::Val{:enstropy_evolution_integral}; kwargs...)
+    vcat(requires_operator(Val(:radial_flux); kwargs...),
+         requires_operator(Val(:enstropy_dissipation_integral); kwargs...))
+end
+
+function build_diagnostic(::Val{:enstropy_evolution_integral}; diffusivity_symbol=:ν,
+                          viscosity_symbol=:μ, kwargs...)
+    diagnostic_kwargs = (; diffusivity_symbol=diffusivity_symbol,
+                         viscosity_symbol=viscosity_symbol)
+    Diagnostic(; name="Enstropy evolution integral",
+               method=enstropy_evolution_integral,
+               metadata="Enstropy density evolution.",
+               assumes_spectral_state=true,
+               kwargs=diagnostic_kwargs)
+end

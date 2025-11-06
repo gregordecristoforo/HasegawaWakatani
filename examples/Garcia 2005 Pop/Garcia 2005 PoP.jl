@@ -2,7 +2,7 @@
 using HasegawaWakatani
 using CUDA
 
-domain = Domain(1024, 1024; Lx=50, Ly=50, MemoryType=CuArray, precision=Float32)
+domain = Domain(256, 256; Lx=50, Ly=50, MemoryType=CuArray, precision=Float32)
 
 # Check documentation to see other initial conditions
 ic = initial_condition(isolated_blob, domain)
@@ -33,31 +33,26 @@ parameters = (ν=1e-2, κ=1e-2)
 # Time interval
 tspan = [0.0, 20.0]
 
-# The problem
-prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt=1e-3,
-                          boussinesq=true, operators=:default,
-                          aliases=[:∂x => :diff_x],
-                          additional_operators=[OperatorRecipe(:diff_y),
-                              OperatorRecipe(:laplacian),
-                              OperatorRecipe(:poisson_bracket),
-                              OperatorRecipe(:solve_phi)])
-
 # Array of diagnostics want
-diagnostics = [
-    #ProbeDensityDiagnostic([(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], N=10),
-    #RadialCOMDiagnostic(1),
-    #ProgressDiagnostic(100),
-    #CFLDiagnostic(1),
-    PlotDensityDiagnostic(1000),
-    PlotVorticityDiagnostic(1000)
-    #PlotPotentialDiagnostic(1000),
+diagnostics = @diagnostics [
+    probe_density(; positions=[(5, 0), (8.5, 0), (11.25, 0), (14.375, 0)], stride=10),
+    radial_COM(; stride=1),
+    progress(; stride=-1),
+    cfl(; stride=250, silent=true, storage_limit="2KB"),
+    plot_vorticity(; stride=1000),
+    plot_potential(; stride=1000),
+    plot_density(; stride=1000)
 ]
+
+# Collection of specifications defining the problem to be solved
+prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt=2.5e-3,
+                          boussinesq=true, aliases=[:∂x => :diff_x],
+                          diagnostics=diagnostics)
 
 # The output
 output_file_name = joinpath(@__DIR__, "output", "Garcia 2005 PoP.h5")
-output = Output(prob; filename=output_file_name, diagnostics=diagnostics,
-                stride=-1, simulation_name=:parameters, field_storage_limit="0.5 GB",
-                store_locally=true)
+output = Output(prob; filename=output_file_name, simulation_name=:parameters,
+                storage_limit="0.5 GB", store_locally=false)
 
 # Solve and plot
 sol = spectral_solve(prob, MSS3(), output; resume=false)

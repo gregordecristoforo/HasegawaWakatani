@@ -1,6 +1,8 @@
-# --------------------------------- Poisson bracket ----------------------------------------
+# ------------------------------------------------------------------------------------------
+#                                      Poisson Bracket                                      
+# ------------------------------------------------------------------------------------------
 
-# ----------------------------------- Construction -----------------------------------------
+# ------------------------------------- Construction ---------------------------------------
 
 struct PoissonBracket <: NonLinearOperator
     diff_x::LinearOperator
@@ -32,6 +34,8 @@ function build_operator(::Val{:poisson_bracket}, domain::Domain; diff_x, diff_y,
                         quadratic_term, kwargs...)
     PoissonBracket(domain, diff_x, diff_y, quadratic_term)
 end
+
+# -------------------------------------- Main Method ---------------------------------------
 
 @inline function (op::PoissonBracket)(u_hat::AbstractArray, v_hat::AbstractArray)
     @unpack tmp1, tmp2, qt_left, qt_right, diff_x, diff_y, quadratic_term = op

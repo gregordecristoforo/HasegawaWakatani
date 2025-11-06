@@ -1,4 +1,6 @@
-# ------------------------------------ QuadraticTerm ---------------------------------------
+# ------------------------------------------------------------------------------------------
+#                                       QuadraticTerm                                       
+# ------------------------------------------------------------------------------------------
 
 """
 """
@@ -158,3 +160,5 @@ end
 end
 
 # TODO size(u) != size(v) ? error("u and v must have the same size") : nothing
+
+# TODO add option to compute quadratic_term from spectral to physical

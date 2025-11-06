@@ -78,9 +78,9 @@ Domain(Nx:128, Ny:256, Lx:1.0, Ly:2.0, real_transform:true, dealiased:true, Memo
 !!! warning
     Restricted to 2D for the time being.
 """
-struct Domain{X <: AbstractArray, Y <: AbstractArray, KX <: AbstractArray,
-              KY <: AbstractArray, TP <: AbstractTransformPlans,
-              T <: AbstractFloat} <: AbstractDomain
+struct Domain{X<:AbstractArray,Y<:AbstractArray,KX<:AbstractArray,
+              KY<:AbstractArray,TP<:AbstractTransformPlans,
+              T<:AbstractFloat} <: AbstractDomain
     Nx::Int
     Ny::Int
     Lx::T
@@ -97,16 +97,16 @@ struct Domain{X <: AbstractArray, Y <: AbstractArray, KX <: AbstractArray,
     MemoryType::Type
     precision::DataType
 
-    Domain(N::Integer; L::Number = 1, kwargs...) = Domain(N, N; Lx = L, Ly = L, kwargs...)
+    Domain(N::Integer; L::Number=1, kwargs...) = Domain(N, N; Lx=L, Ly=L, kwargs...)
     function Domain(Nx::Integer, Ny::Integer;
-                    Lx::Number = 1,
-                    Ly::Number = 1,
-                    MemoryType::Type{<:AbstractArray} = Array,
-                    precision::DataType = Float64,
-                    real_transform::Bool = true,
-                    dealiased::Bool = true,
-                    x0::Number = -Lx / 2,
-                    y0::Number = -Ly / 2)
+                    Lx::Number=1,
+                    Ly::Number=1,
+                    MemoryType::Type{<:AbstractArray}=Array,
+                    precision::DataType=Float64,
+                    real_transform::Bool=true,
+                    dealiased::Bool=true,
+                    x0::Number=-Lx / 2,
+                    y0::Number=-Ly / 2)
 
         # Ensure MemoryType is not parameterized
         if MemoryType.var.name != :T
@@ -134,7 +134,7 @@ struct Domain{X <: AbstractArray, Y <: AbstractArray, KX <: AbstractArray,
         transform_plans = prepare_transform_plans(Nx, Ny, MemoryType, precision,
                                                   real_transform)
 
-        new{typeof(x), typeof(y), typeof(kx), typeof(ky), typeof(transform_plans),
+        new{typeof(x),typeof(y),typeof(kx),typeof(ky),typeof(transform_plans),
             precision}(Nx, Ny, Lx, Ly, dx, dy, x, y, kx, ky, real_transform, dealiased,
                        transform_plans, MemoryType, precision)
     end
@@ -213,11 +213,11 @@ Return a tuple of differential elements, the grid spacing along each axis, defau
 differential_elements(domain::Domain) = (domain.dy, domain.dx)
 
 """
-    points(domain::Domain)
+    get_points(domain::Domain)
 
 Return a tuple of points along each axis, default (y, x).
 """
-points(domain::Domain) = (domain.y, domain.x)
+get_points(domain::Domain) = (domain.y, domain.x)
 
 """
     wave_vectors(domain::Domain)
@@ -231,8 +231,8 @@ wave_vectors(domain::Domain) = (domain.ky, domain.kx)
 
 Return the domain specific keyword arguments, depending on the type of AbstractDomain.
 """
-domain_kwargs(domain::Domain) = (real_transform = domain.real_transform,
-                                 dealiased = dealiased)
+domain_kwargs(domain::Domain) = (real_transform=domain.real_transform,
+                                 dealiased=dealiased)
 
 """
     spectral_size(domain::AbstractDomain)
@@ -242,11 +242,25 @@ Return a tuple containing the size of the spectral coefficient Array (size in sp
 spectral_size(domain::AbstractDomain) = size(get_bwd(domain))
 
 """
+    spectral_length(domain::AbstractDomain)
+
+Return the number of spectral coefficients. (length in spectral space).
+"""
+spectral_length(domain::AbstractDomain) = prod(spectral_size(domain))
+
+"""
     area(domain::AbstractDomain)
 
 Compute the area of the domain. By default use prod(lengths(domain)).
 """
 area(domain::AbstractDomain) = prod(lengths(domain))
+
+"""
+    differential_area(domain::AbstractDomain)
+
+Compute the differential area of the domain. By default use prod(differential_area(domain)).
+"""
+differential_area(domain::AbstractDomain) = prod(differential_elements(domain))
 
 # Getters
 get_transform_plans(domain::AbstractDomain) = domain.transforms
@@ -258,3 +272,4 @@ memory_type(domain::AbstractDomain) = domain.MemoryType{domain.precision}
 # Overloading
 Base.size(domain::AbstractDomain) = (domain.Ny, domain.Nx)
 Base.length(domain::AbstractDomain) = prod(size(domain))
+Base.ndims(domain) = length(size(domain))
