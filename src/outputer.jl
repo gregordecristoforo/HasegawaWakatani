@@ -204,7 +204,7 @@ end
 function write_attributes(simulation, domain::AbstractDomain)
     # Construct list of attributes by removing derived attributes
     attributes = setdiff(fieldnames(typeof(domain)),
-                         (:x, :y, :kx, :ky, :SC, :transforms, :precision))
+                         (:x, :y, :kx, :ky, :SC, :transforms, :precision, :MemoryType))
     for attribute in attributes
         write_attribute(simulation, string(attribute), getproperty(domain, attribute))
     end
