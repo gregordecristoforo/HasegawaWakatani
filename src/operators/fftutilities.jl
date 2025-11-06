@@ -1,58 +1,113 @@
-abstract type TransformPlans end
+# ------------------------------------------------------------------------------------------
+#                                       FFT Utilities                                       
+# ------------------------------------------------------------------------------------------
 
-struct FFTPlans{F,B} <: TransformPlans where {F<:FFTW.Plan,B<:FFTW.Plan}
-    FT::F
-    iFT::B
+# ---------------------------------- FFT Transform Plans -----------------------------------
+
+abstract type AbstractTransformPlans end
+
+abstract type FourierTransformPlans <: AbstractTransformPlans end
+
+"""
+    FFTPlans{FT<:FFTW.Plan, iFT<:FFTW.Plan} 
+  Collection of transform plans using standard FFT.
+"""
+struct FFTPlans{FWD<:FFTW.Plan,BWD<:FFTW.Plan} <: FourierTransformPlans
+    FT::FWD
+    iFT::BWD
 end
 
-struct rFFTPlans{F,B} <: TransformPlans where {F<:FFTW.Plan,B<:FFTW.Plan}
-    FT::F
-    iFT::B
+"""
+    rFFTPlans{FT<:FFTW.Plan, iFT<:FFTW.Plan}
+  Collection of transform plans using real FFT (rFFT), utilizing hermitian symmetry.
+"""
+struct rFFTPlans{FWD<:FFTW.Plan,BWD<:FFTW.Plan} <: FourierTransformPlans
+    FT::FWD
+    iFT::BWD
 end
 
-# General transform plans
-function spectral_transform(U::T, p::P) where {T<:AbstractArray,P<:FFTW.Plan}
-    mapslices(u -> p * u, U, dims=(1, 2))
-end
+# ------------------------------ Spectral Transform Methods --------------------------------
 
-function spectral_transform(U::T, p::P) where {T<:Union{Tuple,Vector},P<:FFTW.Plan}
-    map(u -> p * u, U)
-end
+"""
+    spectral_transform!(U<:AbstractArray, transformplan<:FFTW.Plan)
+    spectral_transform!(U<:Union{Tuple,Vector}, transformplan<:FFTW.Plan)
+  Spectral transform, applies transform plan p to u in-place returning du.
+"""
+spectral_transform!(du, p::P, u) where {P<:FFTW.Plan} = _spectral_transform!(du, p, u)
 
-function spectral_transform!(du::DU, u::U, p::P) where {DU<:AbstractArray,U<:AbstractArray,P<:FFTW.Plan}
-    @assert ndims(du) == ndims(u)
+function _spectral_transform!(du, p::P, u::AbstractArray{<:Number}) where {P<:FFTW.Plan}
     idx = ntuple(_ -> :, ndims(p))
     for i in axes(u, ndims(p) + 1)
         mul!(view(du, idx..., i), p, u[idx..., i])
     end
 end
 
-function spectral_transform!(du::DU, u::U, p::P) where {DU<:Union{Tuple,Vector},
-    U<:Union{Tuple,Vector},P<:FFTW.Plan}
+function _spectral_transform!(du, p::P,
+                              u::AbstractArray{<:AbstractArray}) where {P<:FFTW.Plan}
     for i in eachindex(u)
-        mul!(du[i], p, u[i])
+        _spectral_transform!(du[i], p, u[i])
     end
 end
 
-# ------------------------------------- Old ------------------------------------------------
-# TODO make these typed or remove
-# Collection of plans for a transform and its inverse
-
-# Fourier transform applied to "stacked" fields
-function multi_fft(U::AbstractArray, plans::TransformPlans)
-    mapslices(u -> plans.FT * u, U, dims=(1, 2))
+# TODO optimize spectral_transform methods, maybe use spectral_transform! TODO or remove
+"""
+    spectral_transform(U<:AbstractArray, transformplan<:FFTW.Plan)
+    spectral_transform(U<:Union{Tuple,Vector}, transformplan<:FFTW.Plan)
+  Spectral transform out-of-place, applies transform plan p to U. 
+"""
+function spectral_transform(U::T, p::P) where {T<:AbstractArray,P<:FFTW.Plan}
+    mapslices(u -> p * u, U; dims=(1, 2))
 end
 
-function multi_fft(U::Union{Tuple,Vector}, plans::TransformPlans)
-    map(u -> plans.FT * u, U)
+function spectral_transform(U::T, p::P) where {T<:Union{Tuple,Vector},P<:FFTW.Plan}
+    map(u -> p * u, U)
 end
 
-# TODO understand why plans::TransformPlans does not work
-# Inverse Fourier transform
-function multi_ifft(U::AbstractArray, plans)
-    mapslices(u -> plans.iFT * u, U, dims=(1, 2))
+# function spectral_transform(U, p::P) where {P<:FFTW.Plan}
+#     allocate_coefficients()
+#     spectral_transform!
+# end
+
+# ---------------------------------------- Helpers -----------------------------------------
+
+get_fwd(transformplans::FourierTransformPlans) = transformplans.FT
+const fwd = get_fwd
+
+get_bwd(transformplans::FourierTransformPlans) = transformplans.iFT
+const bwd = get_bwd
+
+"""
+    Base.show(io::IO, transformplans::AbstractTransformPlans)
+
+  Pretty-print `AbstractTransformPlans`.
+"""
+function Base.show(io::IO, transformplans::AbstractTransformPlans)
+    typename = nameof(typeof(transformplans))
+
+    fwd = get_fwd(transformplans)
+    bwd = get_bwd(transformplans)
+
+    # TODO perhaps do a better check if the plan is real
+    if transformplans isa rFFTPlans
+        println(io, typename)
+        println(io, "  forward (real→complex): ", fwd)
+        println(io, "  backward (complex→real): ", bwd)
+    else
+        println(io, typename)
+        println(io, "  forward: ", fwd)
+        println(io, "  backward :", bwd)
+    end
 end
 
-function multi_ifft(U::Union{Tuple,Vector}, plans::TransformPlans)
-    map(u -> plans.iFT * u, U)
+"""
+    Base.show(io::IO, ::MIME"text/plain", transformplans::AbstractTransformPlans)
+
+  Compact one-line show of AbstractTransformPlans for use in arrays and etc.
+"""
+function Base.show(io::IO, ::MIME"text/plain", transformplans::AbstractTransformPlans)
+    typename = nameof(typeof(transformplans))
+    fwd = get_fwd(transformplans)
+    bwd = get_bwd(transformplans)
+
+    print(io, typename, "(fwd: ", fwd, ", bwd: ", bwd, ")")
 end

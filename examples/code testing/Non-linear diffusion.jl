@@ -2,12 +2,12 @@
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run scheme test
-domain = Domain(256, 256, 50, 50, anti_aliased=true)
+domain = Domain(256, 256, 50, 50, dealiased=true)
 u0 = initial_condition(log_gaussian, domain)
 
 # Diffusion 
 function L(u, d, p, t)
-    p["nu"] * diffusion(u, d)
+    p["nu"] * laplacian(u, d)
 end
 
 function N(u, d, p, t)
@@ -21,7 +21,7 @@ parameters = Dict(
 
 t_span = [0, 2]
 
-prob = SpectralODEProblem(L, N, domain, u0, t_span, p=parameters, dt=0.001)
+prob = SpectralODEProblem(L, N, u0, domain, t_span, p=parameters, dt=0.001)
 
 function inverse_transform!(U::V) where {V<:AbstractArray}
     @views U[:, :, 1] .= exp.(U[:, :, 1]) .- 1

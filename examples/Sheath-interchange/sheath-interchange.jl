@@ -2,15 +2,15 @@
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run scheme test for Burgers equation
-domain = Domain(128, 128, 100, 100, anti_aliased=true)
+domain = Domain(128, 128, 100, 100, dealiased=true)
 ic = initial_condition_linear_stability(domain, 1e-3)
 
 plot(ic[:, :, 1])
 
 # Linear operator
 function L(u, d, p, t)
-    D_n = p["D_n"] .* diffusion(u, d)
-    D_Ω = p["D_Ω"] .* diffusion(u, d)
+    D_n = p["D_n"] .* laplacian(u, d)
+    D_Ω = p["D_Ω"] .* laplacian(u, d)
     [D_n;;; D_Ω]
 end
 
@@ -60,7 +60,7 @@ parameters = Dict(
 
 t_span = [0, 5000000]
 
-prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-1)
+prob = SpectralODEProblem(L, N, ic, domain, t_span, p=parameters, dt=1e-1)
 
 # Diagnostics
 diagnostics = [
@@ -98,4 +98,4 @@ end
 gif(anim, "long timeseries.gif", fps=20)
 
 send_mail("Long time series simulation finnished!", attachment="benkadda.gif")
-close(output.file)
+close(output)

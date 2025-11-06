@@ -2,15 +2,15 @@
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run "Gyro-Bohm model"
-#domain = Domain(128, 128, 32, 32, anti_aliased=true)
-domain = Domain(256, 256, 48, 48, anti_aliased=true)
+#domain = Domain(128, 128, 32, 32, dealiased=true)
+domain = Domain(256, 256, 48, 48, dealiased=true)#, use_cuda=false)
 ic = initial_condition_linear_stability(domain, 1e-3)
 
 # Linear operator
 function L(u, d, p, t)
-    D_n = p["D"] .* diffusion(u, d)
-    D_Ω = p["D"] .* diffusion(u, d)
-    [D_n;;; D_Ω]
+    D_n = p["D"] .* laplacian(u, d)
+    D_Ω = p["D"] .* laplacian(u, d)
+    cat(D_n, D_Ω, dims=3)
 end
 
 # Non-linear operator, linearized
@@ -27,7 +27,7 @@ function N(u, d, p, t)
     dΩ = -poisson_bracket(ϕ, Ω, d)
     dΩ .-= p["g"] * diff_y(n, d)
     dΩ .+= p["sigma"] * ϕ
-    return [dn;;; dΩ]
+    return cat(dn, dΩ, dims=3)
 end
 
 # Parameters
@@ -39,28 +39,28 @@ parameters = Dict(
 
 t_span = [0, 500_000]
 
-prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=2e-3)
+prob = SpectralODEProblem(L, N, ic, domain, t_span, p=parameters, dt=2e-3)
 
 # Diagnostics
 diagnostics = [
     ProgressDiagnostic(10000),
-    ProbeAllDiagnostic([(x, 0) for x in LinRange(-40, 50, 10)], N=10),
+    ProbeAllDiagnostic([(x, 0) for x in range(-24, 19.6, 10)], N=10),
     #PlotDensityDiagnostic(500),
-    RadialFluxDiagnostic(100),
-    KineticEnergyDiagnostic(100),
-    PotentialEnergyDiagnostic(100),
-    EnstropyEnergyDiagnostic(100),
-    GetLogModeDiagnostic(500, :ky),
-    CFLDiagnostic(500),
-    RadialPotentialEnergySpectraDiagnostic(500),
-    PoloidalPotentialEnergySpectraDiagnostic(500),
-    RadialKineticEnergySpectraDiagnostic(500),
-    PoloidalKineticEnergySpectraDiagnostic(500),
+    # RadialFluxDiagnostic(100),
+    # KineticEnergyDiagnostic(100),
+    # PotentialEnergyDiagnostic(100),
+    # EnstropyEnergyDiagnostic(100),
+    # GetLogModeDiagnostic(500, :ky),
+    # CFLDiagnostic(500),
+    # RadialPotentialEnergySpectraDiagnostic(500),
+    # PoloidalPotentialEnergySpectraDiagnostic(500),
+    # RadialKineticEnergySpectraDiagnostic(500),
+    # PoloidalKineticEnergySpectraDiagnostic(500),
 ]
 
 # Output
 cd(relpath(@__DIR__, pwd()))
-output = Output(prob, 1001, diagnostics, "../output/gyro-bohm=1e-1.h5",
+output = Output(prob, 1001, diagnostics, "../output/gyro-bohm=1e-1 CUDA.h5",
     simulation_name=:parameters, store_locally=false)
 
 FFTW.set_num_threads(16)
@@ -69,4 +69,4 @@ FFTW.set_num_threads(16)
 sol = spectral_solve(prob, MSS3(), output, resume=true)
 
 send_mail("sigma=1e-1 finnished, go analyse the data!")
-close(output.file)
+close(output)

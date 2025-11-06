@@ -2,13 +2,13 @@
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run linear stability test
-domain = Domain(256, 256, 100, 100, anti_aliased=true)
+domain = Domain(256, 256, 100, 100, dealiased=true)
 ic = initial_condition_linear_stability(domain, 1e-6)
 
 # Linear operator (May not be static actually)
 function L(u, d, p, t)
-    D_η = p["D_n"] * diffusion(u, d) #.- p["g"]*diff_y(u,d) .- p["sigma_n"]
-    D_Ω = p["D_Omega"] * diffusion(u, d) #.+ p["sigma_Omega"]*solve_phi(u,d)
+    D_η = p["D_n"] * laplacian(u, d) #.- p["g"]*diff_y(u,d) .- p["sigma_n"]
+    D_Ω = p["D_Omega"] * laplacian(u, d) #.+ p["sigma_Omega"]*solve_phi(u,d)
     [D_η;;; D_Ω]
 end
 
@@ -40,7 +40,7 @@ parameters = Dict(
 t_span = [0, 3600]
 
 # The problem
-prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-2)
+prob = SpectralODEProblem(L, N, ic, domain, t_span, p=parameters, dt=1e-2)
 
 # Array of diagnostics want
 diagnostics = [

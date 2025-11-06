@@ -2,13 +2,13 @@
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run scheme test for Burgers equation
-domain = Domain(128, 128, 100, 100, anti_aliased=true)
+domain = Domain(128, 128, 100, 100, dealiased=true)
 ic = initial_condition_linear_stability(domain, 1e-3)
 
 # Linear operator
 function L(u, d, p, t)
-    D_n = p["D_n"] .* diffusion(u, d)
-    D_Ω = p["D_Ω"] .* diffusion(u, d)
+    D_n = p["D_n"] .* laplacian(u, d)
+    D_Ω = p["D_Ω"] .* laplacian(u, d)
     [D_n;;; D_Ω]
 end
 
@@ -41,7 +41,7 @@ parameters = Dict(
 
 t_span = [0, 5_000_000]
 
-prob = SpectralODEProblem(L, N, domain, ic, t_span, p=parameters, dt=1e-1)
+prob = SpectralODEProblem(L, N, ic, domain, t_span, p=parameters, dt=1e-1)
 
 # Diagnostics
 diagnostics = [
@@ -71,4 +71,4 @@ FFTW.set_num_threads(16)
 sol = spectral_solve(prob, MSS3(), output)
 
 send_mail("g=1e-3 finnished, go analyse the data and see if it has different PDF!")
-close(output.file)
+close(output)

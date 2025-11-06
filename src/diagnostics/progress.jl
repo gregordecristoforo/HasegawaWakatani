@@ -1,12 +1,28 @@
-# --------------------------- Progress diagnostic ------------------------------------------
+# ------------------------------------------------------------------------------------------
+#                                    Progress Diagnostic                                    
+# ------------------------------------------------------------------------------------------
 
-function progress(u::U, prob::P, t::T) where {U<:AbstractArray,P<:SpectralODEProblem,T<:Number}
-    procentage = (t - first(prob.tspan)) / (last(prob.tspan) - first(prob.tspan)) * 100
-    # Determine smallest "digits" to display unique procentage each time
-    digits = ceil(Int, -log10(prob.dt / (last(prob.tspan) - first(prob.tspan)))) - 2
-    println("$(round(procentage, digits=digits))% done")
+"""
+    progress_bar(state, prob, time, progress; t0, dt)
+
+    Update `progress_bar` (`Progress` type from `ProgressMeter`.jl) based on evolution `time`.
+
+    ### Keyword arguments:
+    - `t0`: start time (Number)
+    - `dt`: timestep (Number)
+"""
+function progress(state, prob, time, progress_bar; t0, dt)
+    update!(progress_bar, round(Int, (time - t0) / dt))
 end
 
-function ProgressDiagnostic(N::Int=100)
-    Diagnostic("Progress", progress, N, "progress", assumesSpectralField=true, storesData=false)
+function build_diagnostic(::Val{:progress}; tspan, dt, kwargs...)
+    args = (Progress(floor(Int, (last(tspan) - first(tspan)) / dt); showspeed=true),)
+    kwargs = (; t0=first(tspan), dt=dt)
+    Diagnostic(; name="Progress",
+               method=progress,
+               metadata="Progressbar.",
+               assumes_spectral_state=true,
+               stores_data=false,
+               args=args,
+               kwargs=kwargs)
 end

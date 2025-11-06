@@ -1,4 +1,4 @@
-﻿# HasegawaWakatani
+﻿# HasegawaWakatani (name to be changed)
 
 [![Build Status](https://github.com/JohannesMorkrid/HasegawaWakatani/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JohannesMorkrid/HasegawaWakatani/actions/workflows/CI.yml?query=branch%3Amain)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://JohannesMorkrid.github.io/HasegawaWakatani.jl/dev)
@@ -23,16 +23,16 @@ with $\Omega = \nabla^2\phi$. The code features:
 * HDF data output for binary format storage with blosc compression
 * 2/3 Antialiasing on quadratic terms and non-linear functions
 * Diagnostic modules
+* CUDA support
 
-![Alt Text](assets/vorticity.gif)
+![Alt Text](assets/blob.gif)
 
 The code atempts to be modular and generalizable to be able to solve other spectral problems. 
+Plasma Biperiodic Ode-solver for Long-time Turbulence (PlasmaBOLT)
 
 Things want to add in future versions:
 * Operators, remediscent of SciMLOperators
-* Consistent parameterization
 * In-place all the way
 * Rosenbrock-Euler method for first step
-* CUDA support
 
 

@@ -2,12 +2,12 @@
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run test for Burgers equation
-domain = Domain(1, 1024, 1, 20, anti_aliased=true)
+domain = Domain(1, 1024, 1, 20, dealiased=true)
 u0 = initial_condition(gaussianWallY, domain)
 
 # Diffusion 
 function L(u, d, p, t)
-    p["nu"] * diffusion(u, d)
+    p["nu"] * laplacian(u, d)
 end
 
 # Burgers equation 
@@ -21,14 +21,14 @@ parameters = Dict(
 )
 
 # Break down time 
-dudy = diff_y(domain.transform.FT * u0, domain)
-t_b = -1 / (minimum(real(domain.transform.iFT * dudy)))
+dudy = diff_y(domain.transforms.FT * u0, domain)
+t_b = -1 / (minimum(real(domain.transforms.iFT * dudy)))
 
 # Time span
 t_span = [0, 0.8 * t_b]
 
 # Initialize problem
-prob = SpectralODEProblem(L, N, domain, u0, t_span, p=parameters, dt=0.0001)
+prob = SpectralODEProblem(L, N, u0, domain, t_span, p=parameters, dt=0.0001)
 
 # Initialize output
 cd(relpath(@__DIR__, pwd()))

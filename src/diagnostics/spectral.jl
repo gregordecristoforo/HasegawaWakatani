@@ -1,117 +1,191 @@
-#-------------------------------------- Spectral -------------------------------------------
+# ------------------------------------------------------------------------------------------
+#                                   Spectral Diagnostics                                    
+# ------------------------------------------------------------------------------------------
 
-function get_modes(u::U, prob::P, t::N) where {U<:AbstractArray,P<:SpectralODEProblem,N<:Number}
-    return u
+# ----------------------------------- Raw Spectral Data ------------------------------------
+
+"""
+    get_modes(state_hat, prob, time; axis::Symbol=:both)
+
+  Return `state_hat`, along an `axis`.
+  
+  ### `axis` options (`Symbol`):
+  - `kx`: gets modes along the `kx` axis in spectral space.
+  - `ky`: gets modes along the `ky` axis in spectral space.
+  - `both`: gets all the modes in spectral space.
+  - `kx`: gets modes along the `kx=ky` line in spectral space. 
+"""
+
+# Interface
+function get_modes(state_hat::AbstractArray, prob, time; axis::Symbol=:both)
+    get_modes(state_hat, prob, time, Val(axis))
 end
 
-function GetModeDiagnostic(N::Int=100)
-    Diagnostic("Mode diagnostic", get_modes, N, "Modes (Complex)", assumesSpectralField=true)
+# Catch-all (invalid axis)
+function get_modes(state_hat::AbstractArray, prob, time, axis::Val{T}) where {T}
+    throw(ArgumentError("axis has to be either :kx, :ky, :both or :diag, instead :$axis was given."))
 end
 
-function get_log_modes(u::U, prob::P, t::N; kx::K=:ky) where {U<:AbstractArray,
-    P<:SpectralODEProblem,N<:Number,K<:Union{Int,Symbol}}
-    if kx == :ky
-        if length(size(u)) >= 3
-            data = zeros(prob.domain.Nx ÷ 2, last(size(u)))
-        else
-            data = zeros(prob.domain.Nx ÷ 2)
-        end
+# Specializations
+get_modes(state_hat::AbstractArray, prob, time, ::Val{:kx}) = selectdim(state_hat, 1, 1)
+get_modes(state_hat::AbstractArray, prob, time, ::Val{:ky}) = selectdim(state_hat, 2, 1)
+get_modes(state_hat::AbstractArray, prob, time, ::Val{:both}) = @views state_hat
 
-        for i in 1:prob.domain.Nx÷2
-            data[i, :] = log.(abs.(u[i, i, :]))
-        end
-        return data
+function get_modes(state_hat::AbstractArray, prob, time, ::Val{:diag})
+    if ndims(state_hat) > 2
+        return diag.(eachslice(state_hat; dims=ndims(prob.domain) + 1))
+    elseif ndims(state_hat) == 2
+        return diag(state_hat)
     else
-        return log.(abs.(u[:, kx, :]))
+        error("axis=:diag is not supported for $(ndims(state_hat))D-Arrays.")
     end
 end
 
-function GetLogModeDiagnostic(N::Int=100, kx::K=:ky) where {K<:Union{Int,Symbol}}
-    Diagnostic("Log mode diagnostic", get_log_modes, N, "log(|u_k|)", assumesSpectralField=true, (), (kx=kx,))
+function build_diagnostic(::Val{:get_modes}; axis=:both, kwargs...)
+    Diagnostic(; name="Modes",
+               method=get_modes,
+               metadata="Modes (Complex) along $axis axis",
+               assumes_spectral_state=true,
+               args=(Val(axis),))
 end
 
-function plot_frequencies(u::U) where {U<:AbstractArray}
-    heatmap(log10.(norm.(u)), title="Frequencies")
+"""
+    get_log_modes(state_hat, prob, time; axis::Symbol=:diag)
+  
+  Return log(|`state_hat`|) along an `axis`. See [`get_modes`](@ref) for the `axis` options.
+"""
+function get_log_modes(state_hat, prob, time; axis::Symbol=:diag)
+    get_log_modes(state_hat, prob, time, Val(axis))
 end
 
-#--------------------------------- Energy spectra ------------------------------------------
-
-function radial_potential_energy_spectra(u::U, prob::P, t::T) where {U<:AbstractArray,
-    P<:SpectralODEProblem,T<:Number}
-    sum(abs.(u[:, :, 1]) .^ 2, dims=1)' / (prob.domain.Ny)
+function get_log_modes(state_hat, prob, time, axis::Val{T}) where {T}
+    modes = get_modes(state_hat, prob, time, axis)
+    log.(abs.(modes))
 end
 
-function RadialPotentialEnergySpectraDiagnostic(N::Int=100)
-    Diagnostic("Radial potential energy spectra", radial_potential_energy_spectra, N,
-        "radial potential energy spectra", assumesSpectralField=true)
+function build_diagnostic(::Val{:get_log_modes}; axis=:diag, kwargs...)
+    Diagnostic(; name="Log modes",
+               method=get_log_modes,
+               metadata="log(|modes|) along $axis axis",
+               assumes_spectral_state=true,
+               args=(Val(axis),))
 end
 
-function poloidal_potential_energy_spectra(u::U, prob::P, t::T) where {U<:AbstractArray,
-    P<:SpectralODEProblem,T<:Number}
-    sum(abs.(u[:, :, 1]) .^ 2, dims=2) / (prob.domain.Nx)
+# ------------------------------------ Energy Spectra --------------------------------------
+
+"""
+    energy_spectrum(power_spectrum::AbstractArray, prob, time, ::Val{spectrum})
+
+  Computes the energy spectrum `E(k)`, based on the `spectrum` argument.
+
+  ### `spectrum` options:
+  - `:radial`: radial (kx) spectrum, averaged over the poloidal direction.
+  - `:poloidal`: poloidal (ky) spectrum, averaged over the radial direction. 
+  - `:wavenumber`: wavenumber (k) spectrum, averaged over wavenumber magnitude |k|.
+
+  ## Returns:
+    (wavenumbers, E) where E = E(k) (`Tuple`).
+"""
+function energy_spectrum(power_spectrum::AbstractArray, prob, time, ::Val{:radial})
+    return prob.domain.kx, vec(sum(power_spectrum; dims=1)) * (2 * pi / prob.domain.Ly)
 end
 
-function PoloidalPotentialEnergySpectraDiagnostic(N::Int=100)
-    Diagnostic("Poloidal potential energy spectra", poloidal_potential_energy_spectra, N,
-        "poloidal potential energy spectra", assumesSpectralField=true)
+function energy_spectrum(power_spectrum::AbstractArray, prob, time, ::Val{:poloidal})
+    return prob.domain.ky, vec(sum(power_spectrum; dims=2)) * (2 * pi / prob.domain.Lx)
 end
 
-function radial_kinetic_energy_spectra(u::U, prob::P, t::T) where {U<:AbstractArray,
-    P<:SpectralODEProblem,T<:Number}
-    sum(abs.(u[:, :, 2]) .^ 2, dims=1)' / (prob.domain.Ny)
+# TODO add windowed option?
+function energy_spectrum(power_spectrum::AbstractArray{<:Number,2},
+                         prob, time, ::Val{:wavenumber})
+    @unpack domain = prob
+
+    # Determine dk for binning [k-dk, k+dk] inspired by Camargo
+    dk = 0.5 * min(2 * pi / domain.Lx, 2 * pi / domain.Ly)
+    # Compute magnitudes
+    k_magnitude = hypot.(domain.kx', domain.ky)
+    # Determine bins
+    nbins = ceil(Int, maximum(k_magnitude) / dk) # Or = max(size(domain)...)
+    k_values = (0:nbins) .* dk
+    # Compute energy spectrum (S(k) = 2π*(∫S(k, θ)dθ, θ∈[0, 2π])/2π)
+    E = 2pi .* [mean(power_spectrum[k-dk.<=k_magnitude.<k+dk]) for k in k_values]
+    # Return spectrum alongside wavenumbers
+    return k_values, E
 end
 
-function RadialKineticEnergySpectraDiagnostic(N::Int=100)
-    Diagnostic("Radial kinetic energy spectra", radial_kinetic_energy_spectra, N,
-        "radial kinetic energy spectra", assumesSpectralField=true)
+"""
+    wavenumber_metadata(::Val{spectrum}) where spectrum<:Symbol
+
+  Return human readable metadata about which wavenumber is stored.
+"""
+wavenumber_metadata(::Val{:radial}) = "Radial wavenumber (kx);"
+wavenumber_metadata(::Val{:poloidal}) = "Poloidal wavenumber (ky);"
+wavenumber_metadata(::Val{:wavenumber}) = "Wavenumbers (k);"
+
+# Catch-all
+function wavenumber_metadata(::Val{spectrum}) where {spectrum}
+    throw(ArgumentError("spectrum has to be either :radial, :poloidal or :wavenumber, :" *
+                        string(spectrum) * " was given."))
 end
 
-function poloidal_kinetic_energy_spectra(u::U, prob::P, t::T) where {U<:AbstractArray,
-    P<:SpectralODEProblem,T<:Number}
-    sum(abs.(u[:, :, 2]) .^ 2, dims=2) / (prob.domain.Nx)
+# --------------------------------------- Potential ----------------------------------------
+
+"""
+    potential_energy_spectrum(state_hat, prob, time, spectrum=Val(:radial))
+  
+  Computes energy spectrum of the potential power spectrum |̂n(k)|², based on `spectrum` type.
+  
+  See [`energy_spectrum`](@ref) for `spectrum` type options.
+"""
+function potential_energy_spectrum(state_hat, prob, time, spectrum=Val(:radial))
+    @unpack domain = prob
+    n_hat = selectdim(state_hat, ndims(state_hat), 1)
+    energy_spectrum(abs2.(n_hat), prob, time, spectrum)
 end
 
-function PoloidalKineticEnergySpectraDiagnostic(N::Int=100)
-    Diagnostic("Poloidal kinetic energy spectra", poloidal_kinetic_energy_spectra, N,
-        "poloidal kinetic energy spectra", assumesSpectralField=true)
+function potential_energy_spectrum(state_hat::AbstractArray, prob, time;
+                                   spectrum::Symbol=:radial)
+    potential_energy_spectrum(state_hat::AbstractArray, prob, time, Val(spectrum))
 end
 
+function build_diagnostic(::Val{:potential_energy_spectrum}; spectrum::Symbol=:wavenumber,
+                          kwargs...)
+    start = spectrum == :wavenumber ? "Potential" :
+            titlecase(string(spectrum)) * " potential"
+    metadata = wavenumber_metadata(Val(spectrum)) * " Potential energy spectrum ($spectrum)"
+    Diagnostic(; name=start * " energy spectrum",
+               method=potential_energy_spectrum,
+               metadata=metadata,
+               assumes_spectral_state=true,
+               args=(Val(spectrum),))
+end
 
+# ---------------------------------------- Kinetic -----------------------------------------
 
+"""
+    kinetic_energy_spectrum(state_hat, prob, time, spectrum=Val(:radial))
+  
+  Computes energy spectrum of the kinetic power spectrum |̂Ω(k)|², based on `spectrum` type.
+  
+  See [`energy_spectrum`](@ref) for `spectrum` type options.
+"""
+function kinetic_energy_spectrum(state_hat::AbstractArray, prob, time,
+                                 spectrum=Val{:radial})
+    @unpack domain = prob
+    Ω_hat = selectdim(state_hat, ndims(state_hat), 1)
+    energy_spectrum(abs2.(Ω_hat), prob, time, spectrum)
+end
 
+function kinetic_energy_spectrum(state_hat, prob, time; spectrum=:radial)
+    kinetic_energy_spectrum(state_hat, prob, time, Val(spectrum))
+end
 
-
-
-# radii = -domain.SC.Laplacian
-# dk = 0.5*0.15
-
-# radii.÷dk
-
-# radiidx = round.(Int, radii/dk) .+ 1
-
-# bins = zeros(maximum(radiidx))
-
-# for i in eachindex(n_hat)
-#     bins[radiidx[i]] += abs(n_hat[i]).^2
-# end
-
-# plot(bins .+ 1e-50, xaxis=:log, yaxis=:log)
-
-# bins = 0:dk:maximum(radii)+dk
-# energy = zeros(length(bins))
-
-# heatmap((bins[1] .<= radii .<= bins[2]))
-# heatmap((bins[2] .<= radii .<= bins[3]))
-# heatmap((bins[3] .<= radii .<= bins[4]))
-# heatmap((bins[4] .<= radii .<= bins[5]))
-# heatmap((bins[5] .<= radii .<= bins[6]))
-# heatmap((bins[6] .<= radii .<= bins[7]))
-# heatmap((bins[7] .<= radii .<= bins[8]))
-# heatmap((bins[8] .<= radii .<= bins[9]))
-# heatmap((bins[end-10] .<= radii .<= bins[end]))
-# bins[end-3]
-# radii[65, 65]
-# maximum(radii)
-
-# maximum(sqrt(radii))
-# maximum(domain.kx).^2
+function build_diagnostic(::Val{:kinetic_energy_spectrum}; spectrum::Symbol=:wavenumber,
+                          kwargs...)
+    start = spectrum == :wavenumber ? "Kinetic" : titlecase(string(spectrum)) * " kinetic"
+    metadata = wavenumber_metadata(Val(spectrum)) * " Kinetic energy spectrum ($spectrum)"
+    Diagnostic(; name=start * " energy spectrum",
+               method=kinetic_energy_spectrum,
+               metadata=metadata,
+               assumes_spectral_state=true,
+               args=(Val(spectrum),))
+end

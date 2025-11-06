@@ -2,12 +2,12 @@
 include(relpath(pwd(), @__DIR__) * "/src/HasegawaWakatini.jl")
 
 ## Run scheme test
-domain = Domain(256, 256, 50, 50, anti_aliased=false)
+domain = Domain(256, 256, 50, 50, dealiased=false)
 u0 = initial_condition(gaussian, domain)
 
 # Diffusion 
 function L(u, d, p, t)
-    p["nu"] * diffusion(u, d)
+    p["nu"] * laplacian(u, d)
 end
 
 function N(u, d, p, t)
@@ -21,7 +21,7 @@ parameters = Dict(
 
 t_span = [0, 2]
 
-prob = SpectralODEProblem(L, N, domain, u0, t_span, p=parameters, dt=1e-3)
+prob = SpectralODEProblem(L, N, u0, domain, t_span, p=parameters, dt=1e-3)
 
 cd(relpath(@__DIR__, pwd()))
 output = Output(prob, 21, [ProgressDiagnostic(10)], "output/linear diffusion.h5")#, simulation_name=":parameters")

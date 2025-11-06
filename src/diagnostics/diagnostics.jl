@@ -1,165 +1,142 @@
-# ----------------------------------- Diagnostics ------------------------------------------
+# ------------------------------------------------------------------------------------------
+#                                        Diagnostics                                        
+# ------------------------------------------------------------------------------------------
 
-mutable struct Diagnostic{N<:AbstractString,M<:Function,D<:AbstractArray,T<:AbstractArray,
-    HG<:Union{Nothing,HDF5.Group},L<:Any,A<:Tuple,K<:NamedTuple}
+# ---------------------------------- Main Functionality ------------------------------------
 
+struct Diagnostic{N<:AbstractString,M<:Function,L<:AbstractString,A<:Tuple,
+                  K<:NamedTuple}
     name::N
     method::M
-    data::D
-    t::T
-    sampleStep::Int
-    h5group::HG
-    label::L
-    assumesSpectralField::Bool
-    storesData::Bool
+    metadata::L
+    assumes_spectral_state::Bool
+    stores_data::Bool
     args::A
     kwargs::K
 
-    function Diagnostic(name::N, method::M, sampleStep::Int=-1, label::L="", args::A=(),
-        kwargs::K=NamedTuple(); assumesSpectralField::Bool=false, storesData::Bool=true) where {
-        N<:AbstractString,M<:Function,L<:Any,A<:Tuple,K<:NamedTuple}
-        new{typeof(name),typeof(method),Vector,Vector,Union{Nothing,HDF5.Group},typeof(label),
-            typeof(args),typeof(kwargs)}(name, method, Vector[], Vector[], sampleStep, nothing,
-            label, assumesSpectralField, storesData, args, kwargs)
+    function Diagnostic(; name::AbstractString,
+                        method::Function,
+                        metadata::String="",
+                        assumes_spectral_state::Bool=false,
+                        stores_data::Bool=true,
+                        args::Tuple=(),
+                        kwargs=NamedTuple())
+        new{typeof(name),typeof(method),typeof(metadata),typeof(args),
+            typeof(kwargs)}(name, method, metadata, assumes_spectral_state, stores_data,
+                            args, kwargs)
     end
 end
 
-function initialize_diagnostic!(diagnostic::D, U::T, prob::SOP, simulation::S, h5_kwargs::K;
-    store_hdf::Bool=true, store_locally::Bool=true) where {D<:Diagnostic,T<:AbstractArray,
-    SOP<:SpectralODEProblem,S<:Union{HDF5.Group,Nothing},K<:Any}
+"""
+    (diagnostic::Diagnostic)(state, prob, time)
 
-    # Calculate total number of steps
-    N_steps = floor(Int, (last(prob.tspan) - first(prob.tspan)) / prob.dt)
+  Apply diagnostic `method` with the right `args` and `kwargs` stored in the `Diagnostic`.
+"""
+@inline function (diagnostic::Diagnostic)(state, prob, time)
+    diagnostic.method(state, prob, time, diagnostic.args...; diagnostic.kwargs...)
+end
 
-    # If user did not specify 
-    if diagnostic.sampleStep == -1
-        #TODO implement some logic here later
-        diagnostic.sampleStep = 1
-        # N_data = floor(Int, 0.1 * N_steps)
+function Base.show(io::IO, m::MIME"text/plain", diagnostic::Diagnostic)
+    print(io, diagnostic.name, ": (spectral=", diagnostic.assumes_spectral_state,
+          ", stores_data=", diagnostic.stores_data, ")")
+    length(diagnostic.args) != 0 ? print(io, ", args=", diagnostic.args) : nothing
+    length(diagnostic.kwargs) != 0 ? print(io, ", kwargs=", diagnostic.kwargs) : nothing
+end
 
-        # if N_data > N_steps
-        #     N_data = N_steps + 1
-        #     @warn "N_data and stepsize was not compatible, N_data is instead set to N_data = " * "$N_data"
-        # end
+# -------------------------------- Building Of Diagnostics ---------------------------------
 
-        # # Calculate number of evolution steps between samples
-        # fieldStep = floor(Int, N_steps / (N_data - 1))
+function build_diagnostic(method::Function; kwargs...)
+    build_diagnostic(Val(Symbol(method)); kwargs...)
+end
+
+# ---------------------------------- Diagnostics Recipe ------------------------------------
+
+struct DiagnosticRecipe
+    method::Function
+    stride::Int
+    storage_limit::String
+    kwargs::NamedTuple
+
+    function DiagnosticRecipe(method::Function; stride::Int=-1, storage_limit="", kwargs...)
+        new(method, stride, storage_limit, NamedTuple(kwargs))
+    end
+end
+
+macro diagnostics(expr)
+    if expr.head == :vect  # Vector literal
+        return :([$(map(parse_diagnostic_expr, expr.args)...)])
+    elseif expr.head != :block
+        return :([$(parse_diagnostic_expr(expr))])
     end
 
-    if diagnostic.sampleStep > N_steps
-        diagnostic.sampleStep = N_steps
-        @warn "The sample step was larger than the number of steps and has been set to sampleStep = $N_steps"
+    # Multiple expressions in a block
+    recipes = Expr[]
+    for line in expr.args
+        line isa LineNumberNode && continue
+        isnothing(line) && continue
+
+        # Handle tuple expressions (when commas are used)
+        if line isa Expr && line.head == :tuple
+            for item in line.args
+                push!(recipes, parse_diagnostic_expr(item))
+            end
+        else
+            push!(recipes, parse_diagnostic_expr(line))
+        end
     end
 
-    # Take diagnostic of initial field (id = initial diagnostic)
-    if diagnostic.assumesSpectralField
-        id = diagnostic.method(prob.u0_hat, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
+    # Return a vector expression directly
+    return Expr(:vect, recipes...)
+end
+
+"""
+
+  Allows for single method()
+"""
+function parse_diagnostic_expr(expr)
+    if expr isa Symbol
+        return :(DiagnosticRecipe($expr))
+    elseif expr isa Expr && expr.head == :call
+        method = expr.args[1]
+
+        kwargs = []
+        for arg in expr.args[2:end]
+            if arg isa Expr && arg.head == :parameters
+                # Unwrap the parameters block (from semicolon syntax)
+                append!(kwargs, arg.args)
+            else
+                # Regular keyword argument
+                push!(kwargs, arg)
+            end
+        end
+
+        return :(DiagnosticRecipe($method; $(kwargs...)))
+    elseif expr.head == :(=)
+        error("Aliases, alias = method(kwargs...), is not supported for diagnostics.")
     else
-        id = diagnostic.method(U, prob, first(prob.tspan), diagnostic.args...; diagnostic.kwargs...)
-    end
-
-    if diagnostic.storesData
-        # Calculate number of samples with rounded sampling rate
-        N = floor(Int, N_steps / diagnostic.sampleStep) + 1
-
-        if N_steps % diagnostic.sampleStep != 0
-            @warn "($(diagnostic.name)) Note, there is a $(diagnostic.sampleStep + N_steps%diagnostic.sampleStep) sample step at the end"
-        end
-        if store_hdf
-            if !haskey(simulation, diagnostic.name)
-                # Create group
-                diagnostic.h5group = create_group(simulation, diagnostic.name)
-
-                # Create dataset for fields and time
-                ## Datatype and shape is not so trivial here..., will have to think about it tomorrow
-                dset = create_dataset(simulation[diagnostic.name], "data", datatype(eltype(id)), (size(id)..., typemax(Int64)),
-                    chunk=(size(id)..., 1); h5_kwargs...)
-                HDF5.set_extent_dims(dset, (size(id)..., N))
-                dset = create_dataset(simulation[diagnostic.name], "t", datatype(eltype(id)), (typemax(Int64),),
-                    chunk=(1,); h5_kwargs...)
-                HDF5.set_extent_dims(dset, (N,))
-
-                # Add label
-                create_attribute(diagnostic.h5group, "label", diagnostic.label)
-
-                # Store initial diagnostic
-                diagnostic.h5group["data"][fill(:, ndims(id))..., 1] = id
-                diagnostic.h5group["t"][1] = first(prob.tspan)
-            else
-                diagnostic.h5group = open_group(simulation, diagnostic.name)
-                # TODO extend size of array
-                # Open dataset
-                # HDF5.set_extent_dims(dset, (size(id)..., N))
-            end
-        end
-
-        if store_locally
-            # Allocate arrays
-            diagnostic.data = [zero(id) for _ in 1:N] #Vector{typeof(id)}(undef, N)
-            diagnostic.t = zeros(N)
-
-            # Store intial diagnostic
-            if isa(id, AbstractArray)
-                diagnostic.data[1] .= id
-            else
-                diagnostic.data[1] = copy(id)
-            end
-            diagnostic.t[1] = first(prob.tspan)
-        end
+        error("Invalid diagnostic syntax: $expr")
     end
 end
 
-function perform_diagnostic!(diagnostic::D, step::Integer, u::U, prob::SOP, t::N;
-    store_hdf::Bool=true, store_locally::Bool=true) where {D<:Diagnostic,U<:AbstractArray,
-    SOP<:SpectralODEProblem,N<:Number}
-    # u might be real or complex depending on previous handle_output and diagnostic.assumesSpectralField
+# ---------------------------- Include Implemented Diagnostics -----------------------------
 
-    if diagnostic.storesData
-        # Calculate index
-        idx = step ÷ diagnostic.sampleStep + 1
-
-        # Perform diagnostic
-        data = diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
-
-        if store_hdf
-            # TODO better check on ndims
-            diagnostic.h5group["data"][fill(:, ndims(data))..., idx] = data
-            diagnostic.h5group["t"][idx] = t
-        end
-
-        if store_locally
-            if isa(data, AbstractArray)
-                diagnostic.data[idx] .= data
-            else
-                diagnostic.data[idx] = copy(data)
-            end
-            diagnostic.t[idx] = t
-        end
-    else
-        # Apply diagnostic
-        diagnostic.method(u, prob, t, diagnostic.args...; diagnostic.kwargs...)
-    end
-end
-
-#-------------------------------------- Include --------------------------------------------
-
-include("probe.jl")
-include("COM.jl")
 include("CFL.jl")
+include("COM.jl")
 include("display.jl")
-include("spectral.jl")
-include("boundary.jl")
-include("projection.jl")
-include("parameter_study.jl")
-include("progress.jl")
-include("profiles.jl")
 include("energy_integrals.jl")
 include("fluxes.jl")
+include("probe.jl")
+include("profiles.jl")
+include("progress.jl")
+include("spectral.jl")
 
-# Default diagnostic
-#cflDiagnostic = Diagnostic(CFLExB, 100, "cfl")
-const DEFAULT_DIAGNOSTICS = [ProgressDiagnostic()]
+# ---------------------------------- Default Diagnostics -----------------------------------
 
-# ---------------------------------- Other -------------------------------------------------
+const DEFAULT_DIAGNOSTICS = @diagnostics [progress]
 
-# Enstrophy dissipation
+requires_operator(::Val{method}; kwargs...) where {method} = OperatorRecipe[]
+
+function required_operators(diagnostic_recipes::Vector{<:DiagnosticRecipe})
+    vcat([requires_operator(Val(Symbol(recipe.method)); recipe.kwargs...)
+          for recipe in diagnostic_recipes]...)
+end
