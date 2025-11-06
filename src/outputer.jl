@@ -688,10 +688,10 @@ end
 """
 function maybe_sample_diagnostics!(output, step::Integer, state, prob, time)
     # Handle diagnostics
-    for (i, diagnostic) in enumerate(output.diagnostics)
-        if step % output.strides[i] == 0
+    for (diagnostic, stride) in zip(output.diagnostics, output.strides)
+        if step % stride == 0
             # Calculate index
-            idx = step ÷ output.strides[i] + 1
+            idx = step ÷ stride + 1
             sample_diagnostic!(output, diagnostic, idx, state, prob, time)
         end
     end
