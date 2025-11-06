@@ -56,3 +56,9 @@ output = Output(prob; filename=output_file_name, simulation_name=:parameters,
 
 # Solve and plot
 sol = spectral_solve(prob, MSS3(), output; resume=false)
+
+using Plots
+using LaTeXStrings
+plot(sol.simulation["Density probe/t"][:], sol.simulation["Density probe/data"][:, :]';
+     xlabel=L"$t$",
+     ylabel=L"$\theta$", label=["(5.0, 0.0)" "(8.5, 0.0)" "(11.25, 0.0)" "(14.375, 0.0)"])
