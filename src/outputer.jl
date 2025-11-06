@@ -129,9 +129,7 @@ function setup_hdf5_storage(prob, t0;
                             h5_kwargs=(blosc=3,))
     simulation = setup_simulation_group(filename, simulation_name, prob;
                                         store_hdf=store_hdf, h5_kwargs=h5_kwargs)
-    if isnothing(simulation)
-        return simulation
-    else
+    if !isnothing(simulation)
         N_steps = compute_number_of_steps(prob)
         for (diagnostic, sample, stride) in zip(diagnostics, initial_samples, strides)
             if diagnostic.stores_data
@@ -141,6 +139,8 @@ function setup_hdf5_storage(prob, t0;
             end
         end
     end
+
+    return simulation
 end
 
 """
@@ -256,10 +256,10 @@ function setup_diagnostic_group(simulation, diagnostic, N_samples, sample, t0; h
         dset = create_dataset(h5group, "data", datatype(eltype(sample)),
                               (size(sample)..., typemax(Int64)); chunk=(size(sample)..., 1),
                               h5_kwargs...)
-        HDF5.set_extent_dims(dset, (size(id)..., N))
-        dset = create_dataset(h5group, "t", datatype(eltype(id)), (typemax(Int64),);
-                              chunk=(1,), h5_kwargs...) # TODO eltype(t0)) bug if tspan has Int type
-        HDF5.set_extent_dims(dset, (N,))
+        HDF5.set_extent_dims(dset, (size(sample)..., N_samples))
+        dset = create_dataset(h5group, "t", datatype(eltype(t0)), (typemax(Int64),);
+                              chunk=(1,), h5_kwargs...)
+        HDF5.set_extent_dims(dset, (N_samples,))
 
         # Add metadata
         create_attribute(h5group, "metadata", diagnostic.metadata)
