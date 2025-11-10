@@ -467,6 +467,11 @@ function compute_storage_need(N_steps::Int, stride::Int, sample::AbstractArray; 
     (cld(N_steps, stride) + 1) * length(sample) * sizeof(eltype(sample))
 end
 
+function compute_storage_need(N_steps, stride, sample::Number; context="")
+    stride < 1 ? throw(ArgumentError(context * "stride must be ≥ 1, got $stride")) : nothing
+    (cld(N_steps, stride) + 1) * sizeof(eltype(sample))
+end
+
 # Edge case
 compute_storage_need(N_steps, stride, sample::Nothing; context="") = 0
 
