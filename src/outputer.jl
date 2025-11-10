@@ -112,7 +112,8 @@ end
   a copy of the initial condition stored in `prob`, returning it alongside the initial time. 
 """
 function prepare_initial_state(prob; physical_transform=identity)
-    state = physical_transform(copy(prob.u0))
+    state = copy(prob.u0)
+    physical_transform(state)
     t0 = first(prob.tspan)
     return state, t0
 end
