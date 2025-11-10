@@ -652,7 +652,8 @@ function determine_strides(initial_samples, prob::SpectralODEProblem, total_stor
     println("Estimated filesize: ", format_bytes(total_storage_requirement))
 
     # Compare cumulative storage need to Output storage need
-    if parse_storage_limit(total_storage_limit) < total_storage_requirement
+    if !isempty(total_storage_limit) &&
+       parse_storage_limit(total_storage_limit) < total_storage_requirement
         # TODO add nice error message showing what each diagnostic requires, so the user can make up their mind
         error("The Output requires $(format_bytes(total_storage_requirement)), which is \
         more than the storage_limit: $total_storage_limit.")
