@@ -11,3 +11,4 @@
 *.gif
 /Manifest*.toml
 Manifest.toml
+.vscode
