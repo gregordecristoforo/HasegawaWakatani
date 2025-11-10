@@ -51,10 +51,6 @@ prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt
 # Inverse transform
 inverse_transformation!(u) = @. u[:, :, 1] = exp(u[:, :, 1]) - 1
 
-ic
-inverse_transformation!(ic)
-ic
-
 # The output
 output_file_name = joinpath(@__DIR__, "output", "Kube 2011 PoP.h5")
 output = Output(prob; filename=output_file_name, simulation_name=:parameters,
