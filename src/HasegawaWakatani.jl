@@ -40,6 +40,6 @@ include("utilities.jl")
 export initial_condition, gaussian, log_gaussian, sinusoidal, sinusoidalX, sinusoidalY,
        gaussianWallX, gaussianWallY, quadratic_function, exponential_background, randomIC,
        random_phase, random_crossphased, isolated_blob, frequencies, remove_zonal_modes,
-       remove_streamer_modes, remove_asymmetric_modes!, remove_nothing, send_mail
+       remove_streamer_modes, remove_asymmetric_modes!, remove_nothing, send_mail, logspace
 
 end
