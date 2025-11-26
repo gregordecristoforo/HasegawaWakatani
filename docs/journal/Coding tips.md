@@ -34,3 +34,6 @@ to reconnect to the session and continue where left off. Usefull for overnight s
 
 # Github tips
 * To track a file ignored by .gitignore do git add -f \<file>
+
+# Juliaup
+* If you are struggling with a folder having a constant julia version check 'juliaup override status'
