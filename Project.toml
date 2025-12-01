@@ -4,7 +4,6 @@ version = "0.12.0-DEV"
 authors = ["JohannesMorkrid <johannes.e.morkrid@uit.no>"]
 
 [deps]
-AMDGPU = "21141c5a-9bdb-4563-92ae-f87d6854732e"
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
