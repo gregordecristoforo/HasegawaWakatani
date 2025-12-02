@@ -5,7 +5,7 @@
 function plot_field(domain, field, time=-1; field_name="", digits=2, kwargs...)
     ending = (time == -1 ? ")" : ", t = $(round(time, digits=digits)))")
     title = field_name * "(x, y" * ending
-    display(heatmap(domain, field; aspect_ratio=:equal, xlabel="x", ylabel="y",
+    display(heatmap(domain, real(field); aspect_ratio=:equal, xlabel="x", ylabel="y",
                     title=title, kwargs...))
 end
 
