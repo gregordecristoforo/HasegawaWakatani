@@ -41,7 +41,7 @@ diagnostics = @diagnostics [
     cfl(; stride=250, silent=true, storage_limit="2KB"),
     plot_vorticity(; stride=1000),
     plot_potential(; stride=1000),
-    plot_density(; stride=1000)
+    plot_density(; stride=1000),
 ]
 
 # Collection of specifications defining the problem to be solved
@@ -51,11 +51,12 @@ prob = SpectralODEProblem(Linear, NonLinear, ic, domain, tspan; p=parameters, dt
 
 # The output
 output_file_name = joinpath(@__DIR__, "output", "Garcia 2005 PoP.h5")
+
 output = Output(prob; filename=output_file_name, simulation_name=:parameters,
-                storage_limit="0.5 GB", store_locally=false)
+                storage_limit="0.5 GB", store_locally=false, resume=true)
 
 # Solve and plot
-sol = spectral_solve(prob, MSS3(), output; resume=false)
+sol = spectral_solve(prob, MSS3(), output;)
 
 using Plots
 using LaTeXStrings
