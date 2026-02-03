@@ -19,6 +19,7 @@
   - `store_locally::Bool`: Whether to store output in memory.
   - `transformed::Bool`: Indicates if the state has been transformed to physical space.
   - `h5_kwargs::K`: Named tuple of keyword arguments for HDF5 storage.
+  - `resume::Bool`: Whether to resume from an existing output file.
   
   # Constructor
   
@@ -39,6 +40,7 @@
   - `store_locally`: Store output in memory (default: `true`).
   - `storage_limit`: Limit for field storage (default: empty string).
   - `h5_kwargs...`: Additional keyword arguments for HDF5 storage (merged with defaults).
+  - `resume`: Resume from existing output file (default: `false`).
 
   # Usage
 
@@ -58,13 +60,18 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},UB<:AbstractArray,T<:Abstr
     store_locally::Bool
     transformed::Bool
     h5_kwargs::K #Possibly also called a filter
+    flush_interval::Int
+    last_flush_time::DateTime
+    resume::Bool
 
     function Output(prob::SOP; filename::FN=basename(tempname()) * ".h5",
                     physical_transform::PT=identity,
-                    simulation_name::SN=:timestamp,
+                    simulation_name::SN=:filename,
                     store_hdf::Bool=true,
                     store_locally::Bool=true,
                     storage_limit::AbstractString="",
+                    flush_interval::Int=10,
+                    resume::Bool=false,
                     h5_kwargs...) where {SOP<:SpectralODEProblem,
                                          FN<:AbstractString,PT<:Function,
                                          SN<:Union{AbstractString,Symbol}}
@@ -89,7 +96,8 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},UB<:AbstractArray,T<:Abstr
                                         initial_samples=initial_samples,
                                         strides=strides,
                                         store_hdf=store_hdf,
-                                        h5_kwargs=h5_kwargs)
+                                        h5_kwargs=h5_kwargs,
+                                        resume=resume)
 
         # Setup local (in memory) storage if wanted
         u, t = setup_local_storage(state, t0; store_locally=false) # Currently disabled TODO re-enable
@@ -99,7 +107,8 @@ mutable struct Output{DV<:AbstractArray{<:Diagnostic},UB<:AbstractArray,T<:Abstr
             typeof(physical_transform),typeof(h5_kwargs)}(diagnostics, strides, state, t,
                                                           simulation, physical_transform,
                                                           store_hdf, store_locally, true,
-                                                          h5_kwargs)
+                                                          h5_kwargs, flush_interval, now(),
+                                                          resume)
     end
 end
 
@@ -120,6 +129,27 @@ end
 
 # -------------------------------------- HDF5 Setup ----------------------------------------
 
+"""
+    check_if_output_file_exists(simulation::HDF5.Group, resume::Bool)
+
+  Checks if the output file already exists when not resuming a previous simulation. If it 
+  exists, the user is prompted to confirm overwriting the file.
+"""
+function check_if_output_file_exists_and_resume_is_false(simulation::HDF5.Group,
+                                                         resume::Bool)
+    if !resume && isfile(simulation.file.filename)
+        println("The output file already exists, and this run is not resuming a previous simulation. Do you want to overwrite it? (y/n)")
+        answer = readline()
+
+        if answer == "y"
+            return true
+        else
+            error("Aborting simulation to prevent overwriting existing file.")
+        end
+    end
+    return false
+end
+
 function setup_hdf5_storage(prob, t0;
                             filename,
                             simulation_name,
@@ -127,9 +157,19 @@ function setup_hdf5_storage(prob, t0;
                             initial_samples,
                             strides,
                             store_hdf=true,
-                            h5_kwargs=(blosc=3,))
+                            h5_kwargs=(blosc=3,),
+                            resume)
     simulation = setup_simulation_group(filename, simulation_name, prob;
                                         store_hdf=store_hdf, h5_kwargs=h5_kwargs)
+
+    if check_if_output_file_exists_and_resume_is_false(simulation, resume)
+
+        # if file already exists it will be deleted and must be created again
+        rm(simulation.file.filename)
+        simulation = setup_simulation_group(filename, simulation_name, prob;
+                                            store_hdf=store_hdf, h5_kwargs=h5_kwargs)
+    end
+
     if !isnothing(simulation)
         N_steps = compute_number_of_steps(prob)
         for (diagnostic, sample, stride) in zip(diagnostics, initial_samples, strides)
@@ -159,20 +199,25 @@ function setup_simulation_group(filename, simulation_name, prob;
     if store_hdf
         filename = add_h5_if_missing(filename)
 
+        filepath = determine_filepath(filename)
+
+        # Create path if not created
+        mkpath(dirname(filepath))
+
         # Create HDF5 file
-        file = h5open(filename, "cw")
+        file = h5open(filepath, "cw")
 
         # Create simulation name
-        simulation_name = handle_simulation_name(simulation_name, prob)
+        group_name = handle_simulation_name(simulation_name, prob, filename)
 
         # Checks how to handle simulation group
-        if !haskey(file, simulation_name)
+        if !haskey(file, group_name)
             # Create simulation group
-            simulation = create_group(file, simulation_name)
+            simulation = create_group(file, group_name)
             # Store attributes
             write_attributes(simulation, prob)
         else
-            simulation = open_group(file, simulation_name)
+            simulation = open_group(file, group_name)
         end
 
         return simulation
@@ -181,6 +226,17 @@ function setup_simulation_group(filename, simulation_name, prob;
     end
 end
 
+function determine_filepath(filename)
+    if !isempty(dirname(filename))
+        return filename
+    end
+
+    if isinteractive()
+        return joinpath(Base.source_dir(), "output", filename)
+    else
+        joinpath(pwd(), "output", filename)
+    end
+end
 # ------------------------------------- HDF5 Helpers ---------------------------------------
 
 """
@@ -197,22 +253,24 @@ end
 
   Creates a `simulation_name` string based on the users input. 
   ### Supported symbols:
+  * `:filename` creates a string with the basename of the file without the extension.
   * `:timestamp` creates a timestamp string using `Dates.now()`.
   * `:parameters` creates a string with the parameter names and values.
 """
-function handle_simulation_name(simulation_name, prob)
+function handle_simulation_name(simulation_name, prob, filename)
     # Handle simulation_name
-    if simulation_name == :timestamp
-        simulation_name = "$(now())"
+
+    if simulation_name == :filename
+        return first(splitext(basename(filename)))
+    elseif simulation_name == :timestamp
+        return "$(now())"
     elseif simulation_name == :parameters
-        simulation_name = parameter_string(prob.p)
+        return parameter_string(prob.p)
     elseif simulation_name isa String
-        nothing
+        return nothing
     else
         error("$simulation_name is not a valid input")
     end
-
-    return simulation_name
 end
 
 """
@@ -225,9 +283,14 @@ end
 function write_attributes(simulation, prob::SpectralODEProblem)
     write_attribute(simulation, "dt", prob.dt)
     write_attributes(simulation, prob.domain)
-    # TODO add multiple dispatch to this
     for (key, val) in pairs(prob.p)
         write_attribute(simulation, string(key), val)
+    end
+
+    # Store the config file used to create the Output struct
+    configfile = Base.source_path()
+    !isempty(configfile) && open(configfile, "r") do file
+        write_attribute(simulation, "config-file", read(file, String))
     end
 end
 
@@ -264,7 +327,7 @@ function setup_diagnostic_group(simulation, diagnostic, N_samples, sample, t0; h
         HDF5.set_extent_dims(dset, (N_samples,))
 
         # Add metadata
-        create_attribute(h5group, "metadata", diagnostic.metadata)
+        write_attribute(h5group, "metadata", diagnostic.metadata)
 
         # TODO where should this logic be?
         # Store initial sample
@@ -638,8 +701,9 @@ function determine_strides(initial_samples, prob::SpectralODEProblem, total_stor
         @unpack stride, storage_limit = recipe
         context = "($(recipe.method)) "
         # Determine the number of samples to be stored and the stride distance
-        N_samples, stride = determine_sampling_strategy(sample, stride, storage_limit, prob;
-                                                        context=context)
+        N_samples,
+        stride = determine_sampling_strategy(sample, stride, storage_limit, prob;
+                                             context=context)
         # Determine the needed storage
         storage_requirement = compute_storage_need(N_samples, stride, sample; context)
         # Accumulate
@@ -688,10 +752,8 @@ function handle_output!(output::O, step::Integer, state::T, prob::SOP,
     # Handle diagnostics
     maybe_sample_diagnostics!(output, step, state, prob, time)
 
-    # TODO make it time based
-    if step % 1000 == 0
-        output.store_hdf ? flush(output.simulation.file) : nothing
-    end
+    # Handle flushing of file
+    maybe_flush!(output)
 
     # Check if first value is NaN, if one value is NaN the whole Array will turn NaN after FFT
     assert_no_nan(state, time)
@@ -777,6 +839,13 @@ end
     # end
 """
 
+function maybe_flush!(output)
+    # Time based flushing
+    if now() - output.last_flush_time >= Minute(output.flush_interval)
+        output.store_hdf ? flush(output.simulation.file) : nothing
+        output.last_flush_time = now()
+    end
+end
 # -------------------------------------- Checkpoint ----------------------------------------
 
 """
@@ -835,8 +904,7 @@ end
   Restores Cache for `scheme` from checkpoint stored in `simulation`.
 """
 function restore_checkpoint(simulation::HDF5.Group, prob::SOP,
-                            scheme::SA) where {
-                                               SOP<:SpectralODEProblem,
+                            scheme::SA) where {SOP<:SpectralODEProblem,
                                                SA<:AbstractODEAlgorithm}
 
     #validate_simulation_group TODO check that dt remains the same, and other parameters
